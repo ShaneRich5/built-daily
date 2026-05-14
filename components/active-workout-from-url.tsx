@@ -2,20 +2,24 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { ActiveWorkoutView } from "@/components/active-workout-view";
 import { resolveCatalogExercises } from "@/lib/exercise-catalog";
+import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
+import { saveCompletedWorkoutSession } from "@/lib/workout-session-repository";
 
 const QUERY_EXERCISES = "e";
 const QUERY_TITLE = "t";
+const QUERY_PLAN = "p";
 
 export function ActiveWorkoutFromUrl() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { title, exercises } = useMemo(() => {
+  const { title, exercises, planId } = useMemo(() => {
     const raw = searchParams.get(QUERY_EXERCISES);
     const titleParam = searchParams.get(QUERY_TITLE);
+    const planParam = searchParams.get(QUERY_PLAN);
     const ids = raw
       ? raw
           .split(",")
@@ -27,8 +31,21 @@ export function ActiveWorkoutFromUrl() {
       titleParam && titleParam.trim().length > 0
         ? titleParam.trim()
         : "Workout";
-    return { title, exercises: resolved };
+    const planId =
+      planParam && planParam.trim().length > 0 ? planParam.trim() : null;
+    return { title, exercises: resolved, planId };
   }, [searchParams]);
+
+  const handleFinish = useCallback(
+    async (snapshot: ActiveWorkoutFinishSnapshot) => {
+      await saveCompletedWorkoutSession({
+        ...snapshot,
+        planId: planId ?? snapshot.planId,
+      });
+      router.push("/");
+    },
+    [planId, router],
+  );
 
   if (exercises.length === 0) {
     return (
@@ -51,7 +68,8 @@ export function ActiveWorkoutFromUrl() {
     <ActiveWorkoutView
       title={title}
       exercises={exercises}
-      onFinish={() => router.push("/")}
+      planId={planId}
+      onFinish={handleFinish}
     />
   );
 }

@@ -90,6 +90,7 @@ export function WorkoutPickAndStart() {
     const params = new URLSearchParams();
     params.set("e", selectedExerciseIds.join(","));
     if (selectedPlan?.name) params.set("t", selectedPlan.name);
+    if (selectedPlan?.id) params.set("p", selectedPlan.id);
     router.push(`/workout?${params.toString()}`);
   }, [router, selectedExerciseIds, selectedPlan]);
 

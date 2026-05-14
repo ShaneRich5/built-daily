@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function nonEmptyString(v, maxLen) {
+      return v is string && v.size() > 0 && v.size() <= maxLen;
+    }
+
+    function optionalString(v, maxLen) {
+      return v == null || (v is string && v.size() <= maxLen);
+    }
+
+    function validExerciseNotesMap(m) {
+      return m == null || (m is map && m.size() <= 30);
+    }
+
+    /** Structural checks only; client + app code validate nested sets. */
+    function validWorkoutSessionCreate() {
+      let d = request.resource.data;
+      return d.keys().hasAll([
+            'status', 'title', 'planId', 'startedAt', 'endedAt',
+            'activeDurationSec', 'workoutNote', 'exerciseNotesByLineId',
+            'lines', 'exerciseCount', 'setCount', 'previewExerciseNames'
+          ])
+        && d.status == 'completed'
+        && nonEmptyString(d.title, 200)
+        && (d.planId == null || (d.planId is string && d.planId.size() <= 128))
+        && d.startedAt is timestamp
+        && d.endedAt is timestamp
+        && (d.activeDurationSec == null || (d.activeDurationSec is int && d.activeDurationSec >= 0 && d.activeDurationSec <= 86400))
+        && optionalString(d.workoutNote, 500)
+        && validExerciseNotesMap(d.exerciseNotesByLineId)
+        && d.lines is list && d.lines.size() > 0 && d.lines.size() <= 40
+        && d.exerciseCount is int && d.exerciseCount == d.lines.size()
+        && d.setCount is int && d.setCount > 0
+        && d.previewExerciseNames is list && d.previewExerciseNames.size() <= 5;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      match /sessions/{sessionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && validWorkoutSessionCreate();
+        allow update, delete: if false;
+      }
+
+      match /plans/{planId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+  }
+}

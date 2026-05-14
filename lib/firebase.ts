@@ -1,15 +1,45 @@
+import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+function hasBrowserConfig(): boolean {
+  if (typeof window === "undefined") return false;
+  return Boolean(
+    firebaseConfig.apiKey &&
+      firebaseConfig.authDomain &&
+      firebaseConfig.projectId &&
+      firebaseConfig.appId,
+  );
+}
+
+let app: FirebaseApp | null = null;
+
 /**
- * Firebase client bootstrap (stub).
- *
- * When you add Firebase: `npm i firebase`, create a web app in the console,
- * set NEXT_PUBLIC_* env vars, and initialize `getAuth` / `getFirestore` here.
+ * Lazily initializes the Firebase web app on the client when env vars are set.
  */
+export function getFirebaseApp(): FirebaseApp | null {
+  if (!hasBrowserConfig()) return null;
+  if (!app) {
+    app = getApps().length > 0 ? getApps()[0]! : initializeApp(firebaseConfig);
+  }
+  return app;
+}
 
-/** Replace with `Auth` from `firebase/auth` after installing firebase. */
-export type AuthExport = null;
+export function getFirebaseAuth(): Auth | null {
+  const a = getFirebaseApp();
+  return a ? getAuth(a) : null;
+}
 
-/** Replace with `Firestore` from `firebase/firestore` after installing firebase. */
-export type FirestoreExport = null;
-
-export const auth: AuthExport = null;
-export const db: FirestoreExport = null;
+export function getFirestoreDb(): Firestore | null {
+  const a = getFirebaseApp();
+  return a ? getFirestore(a) : null;
+}

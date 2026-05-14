@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
+import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
 
 /** One row of logged fields; only fields relevant to `metric` are shown. */
 type SetRow = {
@@ -44,7 +45,8 @@ function metricHint(metric: ExerciseMetric): string {
 type ActiveWorkoutViewProps = {
   title: string;
   exercises: CatalogExercise[];
-  onFinish?: () => void;
+  planId?: string | null;
+  onFinish?: (snapshot: ActiveWorkoutFinishSnapshot) => void | Promise<void>;
 };
 
 type SetTimerActive = {
@@ -56,8 +58,11 @@ type SetTimerActive = {
 export function ActiveWorkoutView({
   title,
   exercises,
+  planId: planIdProp = null,
   onFinish,
 }: ActiveWorkoutViewProps) {
+  const [sessionStartedAtMs] = useState(() => Date.now());
+
   const [setsByExercise, setSetsByExercise] = useState<SetRow[][]>(() =>
     exercises.map(() => [emptySetRow()]),
   );
@@ -198,6 +203,31 @@ export function ActiveWorkoutView({
       return next;
     });
   }, []);
+
+  const handleFinish = useCallback(async () => {
+    if (!onFinish) return;
+    const snapshot: ActiveWorkoutFinishSnapshot = {
+      title,
+      exercises,
+      setsByExercise,
+      workoutNote,
+      exerciseNotesByExerciseId: exerciseNotesById,
+      activeDurationMs: displayedMs,
+      sessionStartedAtMs,
+      planId: planIdProp,
+    };
+    await onFinish(snapshot);
+  }, [
+    onFinish,
+    title,
+    exercises,
+    setsByExercise,
+    workoutNote,
+    exerciseNotesById,
+    displayedMs,
+    planIdProp,
+    sessionStartedAtMs,
+  ]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -353,7 +383,7 @@ export function ActiveWorkoutView({
           </p>
           <button
             type="button"
-            onClick={onFinish}
+            onClick={handleFinish}
             className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white dark:bg-emerald-500"
           >
             Finish workout
