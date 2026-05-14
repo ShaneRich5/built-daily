@@ -63,6 +63,8 @@ export type WorkoutSessionDoc = {
   status: WorkoutSessionStatus;
   title: string;
   planId: string | null;
+  /** Calendar day for this session (`YYYY-MM-DD`, local timezone at finish). */
+  workoutDate: string;
   startedAt: Date;
   endedAt: Date;
   /** Whole seconds from the session timer UI when finished. */

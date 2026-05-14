@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
 import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
+import { formatWorkoutHeaderDate } from "@/lib/workout-date";
 
 /** One row of logged fields; only fields relevant to `metric` are shown. */
 type SetRow = {
@@ -229,6 +230,11 @@ export function ActiveWorkoutView({
     sessionStartedAtMs,
   ]);
 
+  const sessionDateLabel = useMemo(
+    () => formatWorkoutHeaderDate(sessionStartedAtMs),
+    [sessionStartedAtMs],
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex shrink-0 items-start justify-between gap-3">
@@ -283,6 +289,9 @@ export function ActiveWorkoutView({
           <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {title}
           </h1>
+          <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+            {sessionDateLabel}
+          </p>
           <p className="mt-0.5 text-xs text-zinc-500">
             {exercises.length} exercise
             {exercises.length === 1 ? "" : "s"} · {setCountLabel} set

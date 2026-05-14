@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
+import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
   NOTE_LIMITS,
   type SessionLine,
@@ -126,10 +127,13 @@ export function buildWorkoutSessionDoc(
       ? Math.max(0, Math.round(snap.activeDurationMs / 1000))
       : null;
 
+  const workoutDate = localDateKeyFromMs(endedAt.getTime());
+
   return {
     status: "completed",
     title: snap.title.trim().slice(0, NOTE_LIMITS.title) || "Workout",
     planId: snap.planId ?? null,
+    workoutDate,
     startedAt,
     endedAt,
     activeDurationSec,
@@ -153,6 +157,7 @@ export function sessionDocToFirestore(
     status: doc.status,
     title: doc.title,
     planId: doc.planId,
+    workoutDate: doc.workoutDate,
     startedAt: Timestamp.fromDate(doc.startedAt),
     endedAt: Timestamp.fromDate(doc.endedAt),
     activeDurationSec: doc.activeDurationSec,
