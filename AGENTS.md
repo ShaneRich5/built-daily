@@ -149,9 +149,9 @@ Prefer:
 
 Use descriptive component names:
 
-- WorkoutCard
-- ExerciseHistoryList
-- ActiveWorkoutView
+- workout-card
+- exercise-history-list
+- active-workout-view
 
 Avoid vague names like:
 
