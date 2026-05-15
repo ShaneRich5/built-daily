@@ -224,6 +224,7 @@ The app is designed primarily for phones.
 - Next.js
 - TypeScript
 - Tailwind CSS
+- Shadcn
 
 ## Backend / Infrastructure
 

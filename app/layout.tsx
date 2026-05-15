@@ -7,11 +7,15 @@ import "./globals.css";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  adjustFontFallback: true,
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+  adjustFontFallback: true,
 });
 
 export const metadata: Metadata = {
@@ -49,11 +53,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full`}
     >
-      <body className="min-h-full bg-background text-foreground font-sans text-base leading-normal">
+      <body
+        className={`${geistSans.className} min-h-full bg-background text-foreground text-base leading-normal subpixel-antialiased`}
+      >
         <AuthProvider>
-          <div className="mx-auto flex min-h-full w-full max-w-lg flex-col px-4 py-6 sm:px-5 sm:py-8">
+          <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col px-4 py-6 sm:px-5 sm:py-8">
             <AccountBar />
             {children}
           </div>

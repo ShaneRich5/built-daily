@@ -32,6 +32,7 @@ Every feature should reduce friction and encourage users to continue showing up.
 - Tailwind CSS
 - Firebase Auth
 - Firestore
+- Shadcn
 
 ---
 

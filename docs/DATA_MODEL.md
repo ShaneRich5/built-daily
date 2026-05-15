@@ -13,7 +13,8 @@ All mutable user data lives under:
 | Path | Purpose |
 |------|---------|
 | `users/{userId}/sessions/{sessionId}` | One workout session (currently **completed** writes on finish) |
-| `users/{userId}/plans/{planId}` | Reusable plan templates (type defined; write path can follow later) |
+| `users/{userId}/plans/{planId}` | Reusable workout templates (CRUD via [`lib/workout-plan-repository.ts`](../lib/workout-plan-repository.ts)) |
+| `users/{userId}/scheduledWorkouts/{entryId}` | Planner entries: a **calendar day** (`dateKey`), optional **exercise list** + `planId` for starting `/workout`, or **reminder-only** (`exerciseIds` empty) — see [`lib/planner-repository.ts`](../lib/planner-repository.ts) |
 
 Security rules: see [`firestore.rules`](firestore.rules) (owner-only; session **create** has structural validation).
 
@@ -131,7 +132,7 @@ UI row shape: `UiSetRow` (`weight`, `reps`, `seconds`, `timedSetSec`, `note` str
 
 ## `WorkoutPlanDoc` / `PlanLine` (planned templates)
 
-Types are defined for reusable plans under `users/{userId}/plans/{planId}`. **Persistence for plans** is not wired in the same path as sessions yet; this is the intended shape.
+Templates live under `users/{userId}/plans/{planId}`. The app maps Firestore payloads with [`lib/plan-mapper.ts`](../lib/plan-mapper.ts) and reads/writes through [`lib/workout-plan-repository.ts`](../lib/workout-plan-repository.ts). The home screen subscribes to plans ordered by `updatedAt` descending.
 
 ### `WorkoutPlanDoc`
 
@@ -141,6 +142,9 @@ Types are defined for reusable plans under `users/{userId}/plans/{planId}`. **Pe
 | `createdAt`, `updatedAt` | `Date` |
 | `source` | `"starter_copy" \| "custom"` |
 | `lines` | `PlanLine[]` |
+| `restPreferences` | optional `{ autoRestTimer: boolean; defaultRestSec: 30 \| 60 \| 90 \| 120 }` — used by the template editor; live workout wiring can follow |
+
+Custom exercises use `exerciseId` values prefixed with `custom-` and rely on `nameSnapshot` + `metric`; the active workout URL resolver loads the saved plan when needed to rebuild `CatalogExercise` rows for those ids.
 
 ### `PlanLine`
 
@@ -155,6 +159,7 @@ Types are defined for reusable plans under `users/{userId}/plans/{planId}`. **Pe
 ## Queries and indexes
 
 - **Recent completed sessions** (typical): `users/{uid}/sessions` where `status == "completed"` order by `endedAt` desc.
+- **Planner year window**: `users/{uid}/scheduledWorkouts` where `dateKey` between `YYYY-01-01` and `YYYY-12-31` (client subscribes per visible year).
 - Composite index: [`firestore.indexes.json`](firestore.indexes.json) — `sessions`: `status` ASC, `endedAt` DESC (collection group id `sessions`).
 
 ---
@@ -166,9 +171,11 @@ Types are defined for reusable plans under `users/{userId}/plans/{planId}`. **Pe
 | [`lib/workout-types.ts`](lib/workout-types.ts) | Domain types + `NOTE_LIMITS` |
 | [`lib/workout-session-mapper.ts`](lib/workout-session-mapper.ts) | `buildWorkoutSessionDoc`, `sessionDocToFirestore`, `ActiveWorkoutFinishSnapshot` |
 | [`lib/workout-session-repository.ts`](lib/workout-session-repository.ts) | `addDoc` to `users/{uid}/sessions` |
+| [`lib/plan-mapper.ts`](lib/plan-mapper.ts) | `workoutPlanDocToFirestore` / `firestoreToWorkoutPlanDoc` |
+| [`lib/workout-plan-repository.ts`](lib/workout-plan-repository.ts) | Plan `onSnapshot`, `createWorkoutPlan`, `updateWorkoutPlan`, `deleteWorkoutPlan` |
 | [`lib/workout-date.ts`](lib/workout-date.ts) | `workoutDate` (`YYYY-MM-DD`) and header formatting |
 | [`lib/firebase.ts`](lib/firebase.ts) | Lazy Firebase app / Auth / Firestore |
 | [`firestore.rules`](firestore.rules) | Owner rules + session create validation |
 | [`firebase.json`](firebase.json) | Rules + indexes paths for CLI |
 
-When you change persisted fields, update **this doc**, **`workout-types`**, the **mapper**, **`firestore.rules`** (`validWorkoutSessionCreate`), and **`firestore.indexes.json`** if new queries need indexes.
+When you change persisted fields, update **this doc**, **`workout-types`**, the **mapper**, **`firestore.rules`** (`validWorkoutSessionCreate` for sessions; plan document checks under `plans/{planId}`), and **`firestore.indexes.json`** if new queries need indexes.

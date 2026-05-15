@@ -1,208 +1,262 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+} from "react";
+import { useAuth } from "@/components/auth-provider";
 import { EXERCISE_CATALOG } from "@/lib/exercise-catalog";
+import type { PlanLine } from "@/lib/workout-types";
+import {
+  subscribeUserWorkoutPlans,
+  type SavedWorkoutPlan,
+} from "@/lib/workout-plan-repository";
 
-type Plan = {
+type StarterMeta = {
+  kind: "starter";
   id: string;
   name: string;
   exerciseCount: number;
-  source: "starter" | "custom";
 };
 
-const STARTERS: Plan[] = [
+type TemplateMeta = {
+  kind: "template";
+  id: string;
+  name: string;
+  exerciseCount: number;
+  lines: PlanLine[];
+};
+
+type SelectedLibrary = StarterMeta | TemplateMeta | null;
+
+type PickState = {
+  library: SelectedLibrary;
+  exerciseIds: string[];
+};
+
+type PickAction =
+  | { type: "toggleStarter"; starter: StarterMeta }
+  | { type: "toggleTemplate"; template: TemplateMeta }
+  | { type: "toggleExercise"; exerciseId: string };
+
+const STARTERS: StarterMeta[] = [
   {
+    kind: "starter",
     id: "starter-full-body",
     name: "Full body",
     exerciseCount: 6,
-    source: "starter",
   },
   {
+    kind: "starter",
     id: "starter-upper",
     name: "Upper body",
     exerciseCount: 5,
-    source: "starter",
   },
   {
+    kind: "starter",
     id: "starter-lower",
     name: "Lower body",
     exerciseCount: 5,
-    source: "starter",
   },
   {
+    kind: "starter",
     id: "starter-push",
     name: "Push",
     exerciseCount: 6,
-    source: "starter",
   },
   {
+    kind: "starter",
     id: "starter-pull",
     name: "Pull",
     exerciseCount: 6,
-    source: "starter",
   },
 ];
 
+function pickReducer(state: PickState, action: PickAction): PickState {
+  switch (action.type) {
+    case "toggleStarter": {
+      const s = action.starter;
+      const off =
+        state.library?.kind === "starter" && state.library.id === s.id;
+      return {
+        ...state,
+        library: off ? null : s,
+      };
+    }
+    case "toggleTemplate": {
+      const t = action.template;
+      const off =
+        state.library?.kind === "template" && state.library.id === t.id;
+      if (off) {
+        return { ...state, library: null };
+      }
+      return {
+        library: t,
+        exerciseIds: t.lines.map((line) => line.exerciseId),
+      };
+    }
+    case "toggleExercise": {
+      const id = action.exerciseId;
+      const has = state.exerciseIds.includes(id);
+      return {
+        ...state,
+        exerciseIds: has
+          ? state.exerciseIds.filter((x) => x !== id)
+          : [...state.exerciseIds, id],
+      };
+    }
+  }
+}
+
+function toTemplateMeta(p: SavedWorkoutPlan): TemplateMeta {
+  return {
+    kind: "template",
+    id: p.id,
+    name: p.plan.name,
+    exerciseCount: p.plan.lines.length,
+    lines: p.plan.lines,
+  };
+}
+
 export function WorkoutPickAndStart() {
   const router = useRouter();
-  const [customPlans, setCustomPlans] = useState<Plan[]>([]);
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
-  const [newName, setNewName] = useState("");
+  const { user, firebaseReady } = useAuth();
+  const savedPlans = useSavedWorkoutPlans(user, firebaseReady);
+  const [pick, dispatch] = useReducer(pickReducer, {
+    library: null,
+    exerciseIds: [],
+  });
 
-  const allPlans = useMemo(
-    () => [...STARTERS, ...customPlans],
-    [customPlans],
-  );
-
-  const selectedPlan = useMemo(
-    () => allPlans.find((p) => p.id === selectedPlanId) ?? null,
-    [allPlans, selectedPlanId],
-  );
-
-  const toggleExercise = useCallback((id: string) => {
-    setSelectedExerciseIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
+  const toggleStarter = useCallback((s: StarterMeta) => {
+    dispatch({ type: "toggleStarter", starter: s });
   }, []);
 
-  const addCustom = useCallback(() => {
-    const name = newName.trim();
-    if (!name) return;
-    const id =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? `custom-${crypto.randomUUID()}`
-        : `custom-${Date.now()}`;
-    const plan: Plan = {
-      id,
-      name,
-      exerciseCount: 0,
-      source: "custom",
-    };
-    setCustomPlans((prev) => [...prev, plan]);
-    setSelectedPlanId(id);
-    setNewName("");
-  }, [newName]);
+  const toggleTemplate = useCallback((t: TemplateMeta) => {
+    dispatch({ type: "toggleTemplate", template: t });
+  }, []);
+
+  const toggleExercise = useCallback((id: string) => {
+    dispatch({ type: "toggleExercise", exerciseId: id });
+  }, []);
+
+  const selectedPlanLabel = useMemo(() => {
+    if (!pick.library) return null;
+    return pick.library.name;
+  }, [pick.library]);
+
+  const planIdForUrl = useMemo(() => {
+    if (pick.library?.kind === "template") return pick.library.id;
+    if (pick.library?.kind === "starter") return pick.library.id;
+    return null;
+  }, [pick.library]);
 
   const startWorkout = useCallback(() => {
-    if (selectedExerciseIds.length === 0) return;
+    if (pick.exerciseIds.length === 0) return;
     const params = new URLSearchParams();
-    params.set("e", selectedExerciseIds.join(","));
-    if (selectedPlan?.name) params.set("t", selectedPlan.name);
-    if (selectedPlan?.id) params.set("p", selectedPlan.id);
+    params.set("e", pick.exerciseIds.join(","));
+    if (selectedPlanLabel) params.set("t", selectedPlanLabel);
+    if (planIdForUrl) params.set("p", planIdForUrl);
     router.push(`/workout?${params.toString()}`);
-  }, [router, selectedExerciseIds, selectedPlan]);
+  }, [router, pick.exerciseIds, selectedPlanLabel, planIdForUrl]);
 
-  const canStart = selectedExerciseIds.length > 0;
+  const canStart = pick.exerciseIds.length > 0;
 
   return (
     <div className="space-y-6">
-      <section className="space-y-3" aria-labelledby="library-heading">
-        <div className="flex items-end justify-between gap-2">
-          <h2
-            id="library-heading"
-            className="text-sm font-semibold uppercase tracking-wide text-zinc-500"
-          >
-            Workout library
-          </h2>
-          <span className="text-xs text-zinc-400">Optional label</span>
-        </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Naming your session is optional. You will always pick concrete
-          exercises next.
-        </p>
-        <ul className="space-y-2">
-          {STARTERS.map((plan) => (
-            <li key={plan.id}>
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedPlanId((cur) =>
-                    cur === plan.id ? null : plan.id,
-                  )
-                }
-                className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                  selectedPlanId === plan.id
-                    ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800"
-                    : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
-                }`}
-              >
-                <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                  {plan.name}
-                </span>
-                <span className="shrink-0 text-xs tabular-nums text-zinc-500">
-                  {plan.exerciseCount} exercises
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+      
 
       <section className="space-y-3" aria-labelledby="yours-heading">
-        <h2
-          id="yours-heading"
-          className="text-sm font-semibold uppercase tracking-wide text-zinc-500"
-        >
-          Your workouts
-        </h2>
-        {customPlans.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
-            <p>No custom workouts yet.</p>
-            <p className="mt-1 text-zinc-400 dark:text-zinc-500">
-              Add a name below—treat it like a reusable label for now.
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <h2
+            id="yours-heading"
+            className="text-sm font-semibold uppercase tracking-wide text-zinc-500"
+          >
+            Your templates
+          </h2>
+          {user && firebaseReady ? (
+            <Link
+              href="/templates/new"
+              className="text-xs font-semibold text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+            >
+              New template
+            </Link>
+          ) : null}
+        </div>
+
+        {!user || !firebaseReady ? (
+          <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
+            <p>Sign in to create reusable workout templates.</p>
+            <p className="mt-2 text-xs text-zinc-500">
+              Templates sync to your account and show up here.
             </p>
+            <Link
+              href="/login"
+              className="mt-3 inline-block text-sm font-semibold text-zinc-900 underline dark:text-zinc-100"
+            >
+              Sign in
+            </Link>
+          </div>
+        ) : savedPlans.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
+            <p>No saved templates yet.</p>
+            <p className="mt-1 text-zinc-400 dark:text-zinc-500">
+              Build a list of exercises and optional notes, then reuse it any
+              time.
+            </p>
+            <Link
+              href="/templates/new"
+              className="mt-3 inline-block text-sm font-semibold text-zinc-900 underline dark:text-zinc-100"
+            >
+              Create your first template
+            </Link>
           </div>
         ) : (
           <ul className="space-y-2">
-            {customPlans.map((plan) => (
-              <li key={plan.id}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSelectedPlanId((cur) =>
-                      cur === plan.id ? null : plan.id,
-                    )
-                  }
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                    selectedPlanId === plan.id
-                      ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800"
-                      : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
-                  }`}
-                >
-                  <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {plan.name}
-                  </span>
-                  <span className="shrink-0 text-xs text-zinc-400">Yours</span>
-                </button>
-              </li>
-            ))}
+            {savedPlans.map((p) => {
+              const meta = toTemplateMeta(p);
+              const selected =
+                pick.library?.kind === "template" &&
+                pick.library.id === meta.id;
+              return (
+                <li key={p.id}>
+                  <div
+                    className={`flex flex-col gap-2 rounded-xl border px-4 py-3 transition sm:flex-row sm:items-center sm:justify-between ${
+                      selected
+                        ? "border-zinc-900 bg-zinc-100 dark:border-zinc-100 dark:bg-zinc-800"
+                        : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleTemplate(meta)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                        {meta.name}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-zinc-500">
+                        {meta.exerciseCount} exercise
+                        {meta.exerciseCount === 1 ? "" : "s"}
+                      </span>
+                    </button>
+                    <Link
+                      href={`/templates/${p.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="shrink-0 text-xs font-semibold text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
+                    >
+                      Edit
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
-
-        <div className="flex gap-2">
-          <label className="sr-only" htmlFor="new-workout-name">
-            New workout name
-          </label>
-          <input
-            id="new-workout-name"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") addCustom();
-            }}
-            placeholder="e.g. Garage circuit"
-            className="min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900 outline-none ring-zinc-900/10 placeholder:text-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10"
-          />
-          <button
-            type="button"
-            onClick={addCustom}
-            className="shrink-0 rounded-xl border border-zinc-200 bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900 transition hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-700"
-          >
-            Add
-          </button>
-        </div>
       </section>
 
       <section className="space-y-3" aria-labelledby="exercises-heading">
@@ -216,12 +270,12 @@ export function WorkoutPickAndStart() {
           <span className="text-xs text-zinc-400">Tap to toggle</span>
         </div>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Pick one or more moves. This list is static for now; later it can come
-          from your library or search.
+          Pick one or more moves. Choosing a template above fills this list; you
+          can still add or remove exercises.
         </p>
         <ul className="space-y-2">
           {EXERCISE_CATALOG.map((ex) => {
-            const on = selectedExerciseIds.includes(ex.id);
+            const on = pick.exerciseIds.includes(ex.id);
             return (
               <li key={ex.id}>
                 <button
@@ -260,17 +314,34 @@ export function WorkoutPickAndStart() {
           onClick={startWorkout}
           className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
         >
-          {!canStart
-            ? "Select at least one exercise"
-            : selectedPlan
-              ? `Start: ${selectedPlan.name}`
-              : "Start workout"}
+          {!canStart ? "Select at least one exercise" : "Start workout"}
         </button>
         <p className="text-center text-xs text-zinc-500">
-          Opens the live session screen. Prototype: no save yet—finish returns
-          you home.
+          Finishing a session saves it to your account when you are signed in.
         </p>
       </div>
     </div>
   );
+}
+
+function useSavedWorkoutPlans(
+  user: ReturnType<typeof useAuth>["user"],
+  firebaseReady: boolean,
+): SavedWorkoutPlan[] {
+  const [savedPlans, setSavedPlans] = useState<SavedWorkoutPlan[]>([]);
+
+  useEffect(() => {
+    if (!user || !firebaseReady) {
+      return () => {
+        setSavedPlans([]);
+      };
+    }
+    const unsub = subscribeUserWorkoutPlans(setSavedPlans);
+    return () => {
+      unsub();
+      setSavedPlans([]);
+    };
+  }, [user, firebaseReady]);
+
+  return savedPlans;
 }

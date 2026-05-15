@@ -49,6 +49,7 @@ Users should be able to:
 - Next.js (App Router)
 - TypeScript
 - Tailwind CSS
+- Shadcn
 
 ## Backend
 

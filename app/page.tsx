@@ -1,13 +1,24 @@
+import Link from "next/link";
 import { WorkoutPickAndStart } from "@/components/workout-pick-and-start";
 
 export default function HomePage() {
   return (
     <div className="flex flex-1 flex-col gap-8">
       <header className="space-y-1">
-        <p className="text-sm font-medium text-zinc-500">Workout journal</p>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl dark:text-zinc-50">
-          Built Daily
-        </h1>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-zinc-500">Workout journal</p>
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl dark:text-zinc-50">
+              Built Daily
+            </h1>
+          </div>
+          <Link
+            href="/planner"
+            className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+          >
+            Planner
+          </Link>
+        </div>
       </header>
 
       <WorkoutPickAndStart />

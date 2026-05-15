@@ -18,6 +18,12 @@ export type WorkoutSessionStatus = "in_progress" | "completed" | "discarded";
 
 export type PlanSource = "starter_copy" | "custom";
 
+/** Optional rest defaults stored on workout templates (used when starting from this plan). */
+export type PlanRestPreferences = {
+  autoRestTimer: boolean;
+  defaultRestSec: 30 | 60 | 90 | 120;
+};
+
 /** One logged set (persisted shape; numbers nullable when empty). */
 export type SetLog = {
   weight: number | null;
@@ -56,6 +62,8 @@ export type WorkoutPlanDoc = {
   updatedAt: Date;
   source: PlanSource;
   lines: PlanLine[];
+  /** Rest timer hints for future active-workout behavior; optional for older docs. */
+  restPreferences?: PlanRestPreferences | null;
 };
 
 /** Single performed (or draft) workout under `users/{uid}/sessions/{sessionId}`. */

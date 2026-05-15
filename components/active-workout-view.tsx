@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { Pause, Play, RotateCcw, Timer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
+import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
+import {
+  catalogExerciseFromCustomName,
+  getCatalogExerciseById,
+  type CatalogExercise,
+  type ExerciseMetric,
+} from "@/lib/exercise-catalog";
 import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
 import { formatWorkoutHeaderDate } from "@/lib/workout-date";
 
@@ -50,6 +57,8 @@ type ActiveWorkoutViewProps = {
   onFinish?: (snapshot: ActiveWorkoutFinishSnapshot) => void | Promise<void>;
 };
 
+const MAX_SESSION_EXERCISES = 40;
+
 type SetTimerActive = {
   exerciseIndex: number;
   setIndex: number;
@@ -64,9 +73,41 @@ export function ActiveWorkoutView({
 }: ActiveWorkoutViewProps) {
   const [sessionStartedAtMs] = useState(() => Date.now());
 
+  const [activeExercises, setActiveExercises] =
+    useState<CatalogExercise[]>(exercises);
+
   const [setsByExercise, setSetsByExercise] = useState<SetRow[][]>(() =>
     exercises.map(() => [emptySetRow()]),
   );
+
+  const handleAddCatalogExercise = useCallback((exerciseId: string) => {
+    const ex = getCatalogExerciseById(exerciseId);
+    if (!ex) return;
+    setActiveExercises((prev) => {
+      if (prev.length >= MAX_SESSION_EXERCISES) return prev;
+      setSetsByExercise((setsPrev) => {
+        if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
+        return [...setsPrev, [emptySetRow()]];
+      });
+      return [...prev, ex];
+    });
+  }, []);
+
+  const handleAddCustomExercise = useCallback((trimmed: string): boolean => {
+    const ex = catalogExerciseFromCustomName(trimmed);
+    if (!ex) return false;
+    let didAppend = false;
+    setActiveExercises((prev) => {
+      if (prev.length >= MAX_SESSION_EXERCISES) return prev;
+      didAppend = true;
+      setSetsByExercise((setsPrev) => {
+        if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
+        return [...setsPrev, [emptySetRow()]];
+      });
+      return [...prev, ex];
+    });
+    return didAppend;
+  }, []);
 
   const [workoutNote, setWorkoutNote] = useState("");
   const [exerciseNotesById, setExerciseNotesById] = useState<
@@ -122,6 +163,13 @@ export function ActiveWorkoutView({
     setSegmentStart(null);
     setTimerPhase("paused");
   }, [accumulatedMs, segmentStart]);
+
+  const resetTimer = useCallback(() => {
+    setAccumulatedMs(0);
+    setDisplayedMs(0);
+    setSegmentStart(null);
+    setTimerPhase("idle");
+  }, []);
 
   /** Separate per-set stopwatch (at most one active). */
   const [setTimerActive, setSetTimerActive] = useState<SetTimerActive | null>(
@@ -185,7 +233,7 @@ export function ActiveWorkoutView({
     if (setTimerActive === null) return;
     const { exerciseIndex, setIndex, startedAt } = setTimerActive;
     const sec = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-    const metric = exercises[exerciseIndex]?.metric;
+    const metric = activeExercises[exerciseIndex]?.metric;
     if (metric === "duration") {
       updateSet(exerciseIndex, setIndex, "seconds", String(sec));
     } else {
@@ -193,7 +241,7 @@ export function ActiveWorkoutView({
     }
     setSetTimerActive(null);
     setSetTimerLiveMs(0);
-  }, [exercises, setTimerActive, updateSet]);
+  }, [activeExercises, setTimerActive, updateSet]);
 
   const addSet = useCallback((exerciseIndex: number) => {
     setSetsByExercise((prev) => {
@@ -209,7 +257,7 @@ export function ActiveWorkoutView({
     if (!onFinish) return;
     const snapshot: ActiveWorkoutFinishSnapshot = {
       title,
-      exercises,
+      exercises: activeExercises,
       setsByExercise,
       workoutNote,
       exerciseNotesByExerciseId: exerciseNotesById,
@@ -221,7 +269,7 @@ export function ActiveWorkoutView({
   }, [
     onFinish,
     title,
-    exercises,
+    activeExercises,
     setsByExercise,
     workoutNote,
     exerciseNotesById,
@@ -239,52 +287,73 @@ export function ActiveWorkoutView({
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex shrink-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
               In progress
             </p>
-            <p
-              className="font-mono text-xs font-semibold tabular-nums text-zinc-700 dark:text-zinc-300"
-              aria-live="polite"
-              aria-atomic="true"
+            <div
+              className="inline-flex items-center gap-4 rounded-full bg-zinc-100 px-3 py-1.5 text-zinc-900 dark:bg-zinc-800/90 dark:text-zinc-50"
+              role="group"
+              aria-label="Workout session timer"
             >
-              {formatElapsed(displayedMs)}
-            </p>
-            {timerPhase === "paused" && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900 dark:bg-amber-950/80 dark:text-amber-100">
-                Paused
-              </span>
-            )}
-            {timerPhase === "idle" && (
-              <button
-                type="button"
-                onClick={startOrResumeTimer}
-                aria-label="Start workout timer"
-                className="rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-              >
-                Start timer
-              </button>
-            )}
-            {timerPhase === "running" && (
-              <button
-                type="button"
-                onClick={pauseTimer}
-                aria-label="Pause workout timer"
-                className="rounded-lg border border-zinc-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-zinc-800 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-              >
-                Pause
-              </button>
-            )}
-            {timerPhase === "paused" && (
-              <button
-                type="button"
-                onClick={startOrResumeTimer}
-                aria-label="Resume workout timer"
-                className="rounded-lg bg-zinc-900 px-2.5 py-1 text-[11px] font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-              >
-                Resume
-              </button>
-            )}
+              <div className="flex items-center gap-2">
+                <Timer
+                  className="h-4 w-4 shrink-0 text-zinc-700 dark:text-zinc-300"
+                  aria-hidden
+                />
+                <p
+                  className="text-sm font-semibold tabular-nums tracking-tight"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {formatElapsed(displayedMs)}
+                </p>
+                {timerPhase === "paused" && (
+                  <span className="sr-only">Timer paused</span>
+                )}
+              </div>
+              <div className="flex items-center gap-0.5">
+                {timerPhase === "idle" && (
+                  <button
+                    type="button"
+                    onClick={startOrResumeTimer}
+                    aria-label="Start workout timer"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 dark:text-zinc-50 dark:hover:bg-zinc-700"
+                  >
+                    <Play className="h-4 w-4" />
+                  </button>
+                )}
+                {timerPhase === "running" && (
+                  <button
+                    type="button"
+                    onClick={pauseTimer}
+                    aria-label="Pause workout timer"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 dark:text-zinc-50 dark:hover:bg-zinc-700"
+                  >
+                    <Pause className="h-4 w-4" />
+                  </button>
+                )}
+                {timerPhase === "paused" && (
+                  <button
+                    type="button"
+                    onClick={startOrResumeTimer}
+                    aria-label="Resume workout timer"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 dark:text-zinc-50 dark:hover:bg-zinc-700"
+                  >
+                    <Play className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={resetTimer}
+                  disabled={timerPhase === "idle" && displayedMs === 0}
+                  aria-label="Reset workout timer"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 disabled:pointer-events-none disabled:opacity-30 dark:text-zinc-50 dark:hover:bg-zinc-700"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
           <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {title}
@@ -293,8 +362,8 @@ export function ActiveWorkoutView({
             {sessionDateLabel}
           </p>
           <p className="mt-0.5 text-xs text-zinc-500">
-            {exercises.length} exercise
-            {exercises.length === 1 ? "" : "s"} · {setCountLabel} set
+            {activeExercises.length} exercise
+            {activeExercises.length === 1 ? "" : "s"} · {setCountLabel} set
             {setCountLabel === "1" ? "" : "s"}
           </p>
           <CollapsibleNote
@@ -314,10 +383,17 @@ export function ActiveWorkoutView({
         </Link>
       </header>
 
+      <WorkoutAddExerciseCard
+        currentCount={activeExercises.length}
+        maxExercises={MAX_SESSION_EXERCISES}
+        onAddCatalog={handleAddCatalogExercise}
+        onAddCustom={handleAddCustomExercise}
+      />
+
       <ul className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-28">
-        {exercises.map((exercise, exerciseIndex) => (
+        {activeExercises.map((exercise, exerciseIndex) => (
           <li
-            key={exercise.id}
+            key={`${exerciseIndex}-${exercise.id}`}
             className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
           >
             <div className="flex items-start justify-between gap-2">
@@ -363,7 +439,7 @@ export function ActiveWorkoutView({
             <div className="mt-3 space-y-2">
               {(setsByExercise[exerciseIndex] ?? []).map((set, setIndex) => (
                 <SetRowFields
-                  key={`${exercise.id}-${setIndex}`}
+                  key={`${exerciseIndex}-${exercise.id}-${setIndex}`}
                   exercise={exercise}
                   exerciseIndex={exerciseIndex}
                   setIndex={setIndex}
@@ -385,7 +461,7 @@ export function ActiveWorkoutView({
       </ul>
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-        <div className="mx-auto w-full max-w-lg px-4 sm:px-5">
+        <div className="mx-auto w-full max-w-2xl px-4 sm:px-5">
           <p className="mb-2 text-center text-xs text-zinc-500">
             Session: Start / Pause above. Optional notes live on the workout,
             each exercise, and each set until you add persistence.
