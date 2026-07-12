@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { RecentWorkoutsList } from "@/components/recent-workouts-list";
 import { WorkoutPickAndStart } from "@/components/workout-pick-and-start";
 
 export default function HomePage() {
@@ -30,13 +31,7 @@ export default function HomePage() {
         >
           Recent workouts
         </h2>
-        <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
-          <p>No workouts logged yet.</p>
-          <p className="mt-1 text-zinc-400 dark:text-zinc-500">
-            Choose exercises on this page, then start a session to see it here
-            later.
-          </p>
-        </div>
+        <RecentWorkoutsList />
       </section>
 
       <section

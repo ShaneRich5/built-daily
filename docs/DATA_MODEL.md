@@ -1,6 +1,6 @@
 # Built Daily — data model
 
-This document describes the domain and Firestore shapes used in the app. **Source of truth** for TypeScript types is [`lib/workout-types.ts`](lib/workout-types.ts); persistence mapping lives in [`lib/workout-session-mapper.ts`](lib/workout-session-mapper.ts) and [`lib/workout-session-repository.ts`](lib/workout-session-repository.ts).
+This document describes the domain and Firestore shapes used in the app. **Source of truth** for TypeScript types is [`lib/workout-types.ts`](lib/workout-types.ts) (sessions, plans) and [`lib/planner-types.ts`](lib/planner-types.ts) (scheduled workouts); persistence mapping lives in [`lib/workout-session-mapper.ts`](lib/workout-session-mapper.ts), [`lib/workout-session-repository.ts`](lib/workout-session-repository.ts), and [`lib/planner-repository.ts`](lib/planner-repository.ts).
 
 ---
 
@@ -23,9 +23,25 @@ flowchart LR
   subgraph userPath [users_userId]
     sessions[sessions]
     plans[plans]
+    scheduled[scheduledWorkouts]
   end
   sessions -->|addDoc on finish| completed[completed session doc]
+  scheduled -->|addDoc planner row| plannerRow[dateKey + label + planId + exerciseIds]
 ```
+
+---
+
+## `ScheduledWorkoutDoc` (`users/{userId}/scheduledWorkouts/{entryId}`)
+
+Planner calendar entries. Types in [`lib/planner-types.ts`](../lib/planner-types.ts); writes in [`lib/planner-repository.ts`](../lib/planner-repository.ts). **Create-only** in rules (no updates); delete allowed.
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `dateKey` | `string` | Local calendar `YYYY-MM-DD` |
+| `label` | `string` | Non-empty, max 200 (aligned with `NOTE_LIMITS.title`) |
+| `planId` | `string \| null` | Firestore plan id, starter id (`starter-*`), or null for reminder-only |
+| `exerciseIds` | `string[]` | For `/workout` `e` param; empty array when note-only |
+| `createdAt` | `Timestamp` | `serverTimestamp()` on create |
 
 ---
 
@@ -173,9 +189,12 @@ Custom exercises use `exerciseId` values prefixed with `custom-` and rely on `na
 | [`lib/workout-session-repository.ts`](lib/workout-session-repository.ts) | `addDoc` to `users/{uid}/sessions` |
 | [`lib/plan-mapper.ts`](lib/plan-mapper.ts) | `workoutPlanDocToFirestore` / `firestoreToWorkoutPlanDoc` |
 | [`lib/workout-plan-repository.ts`](lib/workout-plan-repository.ts) | Plan `onSnapshot`, `createWorkoutPlan`, `updateWorkoutPlan`, `deleteWorkoutPlan` |
+| [`lib/planner-types.ts`](lib/planner-types.ts) | `ScheduledWorkoutDoc` / `ScheduledWorkoutEntry` |
+| [`lib/planner-repository.ts`](lib/planner-repository.ts) | Subscribe, add, and delete `scheduledWorkouts` |
 | [`lib/workout-date.ts`](lib/workout-date.ts) | `workoutDate` (`YYYY-MM-DD`) and header formatting |
 | [`lib/firebase.ts`](lib/firebase.ts) | Lazy Firebase app / Auth / Firestore |
 | [`firestore.rules`](firestore.rules) | Owner rules + session create validation |
 | [`firebase.json`](firebase.json) | Rules + indexes paths for CLI |
+| [`.firebaserc`](../.firebaserc) | Default Firebase project id for `firebase deploy` |
 
-When you change persisted fields, update **this doc**, **`workout-types`**, the **mapper**, **`firestore.rules`** (`validWorkoutSessionCreate` for sessions; plan document checks under `plans/{planId}`), and **`firestore.indexes.json`** if new queries need indexes.
+When you change persisted fields, update **this doc**, **`workout-types`** / **`planner-types`**, the **mapper**, **`firestore.rules`** (`validWorkoutSessionCreate` for sessions; `validScheduledWorkoutCreate` for planner rows; plan document checks under `plans/{planId}`), and **`firestore.indexes.json`** if new queries need indexes. Push rules and indexes to Firebase with `firebase deploy --only firestore` after `firebase login` (uses the default project in `.firebaserc`).

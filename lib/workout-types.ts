@@ -71,11 +71,12 @@ export type WorkoutSessionDoc = {
   status: WorkoutSessionStatus;
   title: string;
   planId: string | null;
-  /** Calendar day for this session (`YYYY-MM-DD`, local timezone at finish). */
+  /** Calendar day for this session (`YYYY-MM-DD`, local timezone). */
   workoutDate: string;
   startedAt: Date;
-  endedAt: Date;
-  /** Whole seconds from the session timer UI when finished. */
+  /** Set when finished; null while `in_progress`. */
+  endedAt: Date | null;
+  /** Whole seconds from the session timer UI. */
   activeDurationSec: number | null;
   workoutNote: string | null;
   exerciseNotesByLineId: Record<string, string> | null;

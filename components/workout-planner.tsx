@@ -412,29 +412,32 @@ export function WorkoutPlanner() {
                 ) : (
                   <ul className="space-y-2">
                     {selectedSessions.map((s) => (
-                      <li
-                        key={s.id}
-                        className="rounded-lg border border-zinc-100 bg-zinc-50/80 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900/50"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                            {s.title}
+                      <li key={s.id}>
+                        <Link
+                          href={`/sessions/${s.id}`}
+                          className="block rounded-lg border border-zinc-100 bg-zinc-50/80 px-3 py-2 text-sm transition hover:border-zinc-200 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                              {s.title}
+                            </p>
+                            <time
+                              className="shrink-0 text-xs tabular-nums text-zinc-500"
+                              dateTime={(s.endedAt ?? s.startedAt).toISOString()}
+                            >
+                              {formatSessionTime(s.endedAt ?? s.startedAt)}
+                            </time>
+                          </div>
+                          <p className="mt-0.5 text-xs text-zinc-500">
+                            {s.exerciseCount} exercise
+                            {s.exerciseCount === 1 ? "" : "s"} · {s.setCount}{" "}
+                            set
+                            {s.setCount === 1 ? "" : "s"}
+                            {s.previewExerciseNames.length > 0
+                              ? ` · ${s.previewExerciseNames.slice(0, 3).join(", ")}`
+                              : ""}
                           </p>
-                          <time
-                            className="shrink-0 text-xs tabular-nums text-zinc-500"
-                            dateTime={s.endedAt.toISOString()}
-                          >
-                            {formatSessionTime(s.endedAt)}
-                          </time>
-                        </div>
-                        <p className="mt-0.5 text-xs text-zinc-500">
-                          {s.exerciseCount} exercise
-                          {s.exerciseCount === 1 ? "" : "s"} · {s.setCount} set
-                          {s.setCount === 1 ? "" : "s"}
-                          {s.previewExerciseNames.length > 0
-                            ? ` · ${s.previewExerciseNames.slice(0, 3).join(", ")}`
-                            : ""}
-                        </p>
+                        </Link>
                       </li>
                     ))}
                   </ul>

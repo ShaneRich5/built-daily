@@ -427,7 +427,11 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
                           </Label>
                           <Input
                             id={`target-${line.lineId}`}
+                            type="number"
                             inputMode="numeric"
+                            min={1}
+                            max={99}
+                            step={1}
                             value={
                               line.targetSets === undefined ||
                               line.targetSets === null
@@ -438,6 +442,7 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
                               setTargetSets(index, e.target.value)
                             }
                             placeholder="e.g. 3"
+                            className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                           />
                         </div>
                         <div className="space-y-1.5 sm:col-span-2">

@@ -6,6 +6,7 @@ import {
   type SessionLine,
   type SetLog,
   type WorkoutSessionDoc,
+  type WorkoutSessionStatus,
 } from "@/lib/workout-types";
 
 /** UI set row shape (matches active workout component). */
@@ -17,18 +18,20 @@ export type UiSetRow = {
   note: string;
 };
 
-/** Snapshot passed from the active workout screen on finish. */
+/** Snapshot passed from the active workout screen on finish or autosave. */
 export type ActiveWorkoutFinishSnapshot = {
   title: string;
   exercises: CatalogExercise[];
   setsByExercise: UiSetRow[][];
   workoutNote: string;
   exerciseNotesByExerciseId: Record<string, string>;
-  /** Milliseconds shown on the session timer at finish (0 if never started). */
+  /** Milliseconds shown on the session timer (0 if never started). */
   activeDurationMs: number;
-  /** `Date.now()` when the session screen mounted. */
+  /** `Date.now()` when the session screen mounted / original start. */
   sessionStartedAtMs: number;
   planId?: string | null;
+  /** Stable line ids parallel to `exercises` (required for updates). */
+  lineIds: string[];
 };
 
 function trimToNull(s: string, max: number): string | null {
@@ -93,14 +96,40 @@ function newLineId(): string {
   return `line-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+export function createLineId(): string {
+  return newLineId();
+}
+
+/** Convert a persisted set back into active-workout UI fields. */
+export function setLogToUiSetRow(set: SetLog): UiSetRow {
+  return {
+    weight: set.weight != null ? String(set.weight) : "",
+    reps: set.reps != null ? String(set.reps) : "",
+    seconds: set.durationSec != null ? String(set.durationSec) : "",
+    timedSetSec: set.timedSetSec != null ? String(set.timedSetSec) : "",
+    note: set.note ?? "",
+  };
+}
+
 export function buildWorkoutSessionDoc(
   snap: ActiveWorkoutFinishSnapshot,
+  options?: {
+    status?: WorkoutSessionStatus;
+    endedAt?: Date | null;
+  },
 ): WorkoutSessionDoc {
-  const endedAt = new Date();
+  const status = options?.status ?? "completed";
+  const endedAt =
+    options?.endedAt !== undefined
+      ? options.endedAt
+      : status === "completed"
+        ? new Date()
+        : null;
   const startedAt = new Date(snap.sessionStartedAtMs);
 
+  const lineIds = snap.lineIds;
   const lines: SessionLine[] = snap.exercises.map((ex, i) => {
-    const lineId = newLineId();
+    const lineId = lineIds[i] && lineIds[i]!.length > 0 ? lineIds[i]! : newLineId();
     const rows = snap.setsByExercise[i] ?? [];
     const sets = rows.map((row) => uiSetRowToSetLog(row, ex.metric));
     return {
@@ -127,10 +156,11 @@ export function buildWorkoutSessionDoc(
       ? Math.max(0, Math.round(snap.activeDurationMs / 1000))
       : null;
 
-  const workoutDate = localDateKeyFromMs(endedAt.getTime());
+  const dateMs = endedAt?.getTime() ?? startedAt.getTime();
+  const workoutDate = localDateKeyFromMs(dateMs);
 
   return {
-    status: "completed",
+    status,
     title: snap.title.trim().slice(0, NOTE_LIMITS.title) || "Workout",
     planId: snap.planId ?? null,
     workoutDate,
@@ -159,7 +189,7 @@ export function sessionDocToFirestore(
     planId: doc.planId,
     workoutDate: doc.workoutDate,
     startedAt: Timestamp.fromDate(doc.startedAt),
-    endedAt: Timestamp.fromDate(doc.endedAt),
+    endedAt: doc.endedAt ? Timestamp.fromDate(doc.endedAt) : null,
     activeDurationSec: doc.activeDurationSec,
     workoutNote: doc.workoutNote,
     exerciseNotesByLineId: doc.exerciseNotesByLineId,
@@ -179,5 +209,174 @@ export function sessionDocToFirestore(
     exerciseCount: doc.exerciseCount,
     setCount: doc.setCount,
     previewExerciseNames: doc.previewExerciseNames,
+  };
+}
+
+function asTimestamp(v: unknown): Date | null {
+  if (v instanceof Timestamp) return v.toDate();
+  if (
+    v &&
+    typeof v === "object" &&
+    "seconds" in v &&
+    typeof (v as { seconds: unknown }).seconds === "number"
+  ) {
+    return new Timestamp(
+      (v as { seconds: number }).seconds,
+      "nanoseconds" in v &&
+        typeof (v as { nanoseconds: unknown }).nanoseconds === "number"
+        ? (v as { nanoseconds: number }).nanoseconds
+        : 0,
+    ).toDate();
+  }
+  return null;
+}
+
+function asMetric(v: unknown): ExerciseMetric | null {
+  if (v === "weight_reps" || v === "bodyweight_reps" || v === "duration") {
+    return v;
+  }
+  return null;
+}
+
+function asStatus(v: unknown): WorkoutSessionStatus | null {
+  if (v === "in_progress" || v === "completed" || v === "discarded") return v;
+  return null;
+}
+
+function asNullableNumber(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  return null;
+}
+
+function parseSetLog(raw: unknown): SetLog | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const note =
+    o.note == null
+      ? null
+      : typeof o.note === "string"
+        ? o.note.slice(0, NOTE_LIMITS.setNote)
+        : null;
+  return {
+    weight: asNullableNumber(o.weight),
+    reps: asNullableNumber(o.reps),
+    durationSec: asNullableNumber(o.durationSec),
+    timedSetSec: asNullableNumber(o.timedSetSec),
+    note: note && note.trim().length > 0 ? note : null,
+  };
+}
+
+function parseSessionLine(raw: unknown): SessionLine | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const lineId = typeof o.lineId === "string" ? o.lineId : "";
+  const exerciseId = typeof o.exerciseId === "string" ? o.exerciseId : "";
+  const nameSnapshot =
+    typeof o.nameSnapshot === "string" ? o.nameSnapshot.slice(0, 200) : "";
+  const metric = asMetric(o.metric);
+  if (!lineId || !exerciseId || !nameSnapshot || !metric) return null;
+  if (!Array.isArray(o.sets)) return null;
+  const sets: SetLog[] = [];
+  for (const item of o.sets) {
+    const set = parseSetLog(item);
+    if (set) sets.push(set);
+  }
+  return { lineId, exerciseId, nameSnapshot, metric, sets };
+}
+
+function parseExerciseNotesMap(
+  raw: unknown,
+): Record<string, string> | null {
+  if (raw == null) return null;
+  if (!raw || typeof raw !== "object") return null;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && v.trim()) {
+      out[k] = v.slice(0, NOTE_LIMITS.exerciseNote);
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/** Parse a Firestore session document into `WorkoutSessionDoc`, or null if invalid. */
+export function firestoreToWorkoutSessionDoc(
+  data: Record<string, unknown>,
+): WorkoutSessionDoc | null {
+  const status = asStatus(data.status);
+  const title =
+    typeof data.title === "string"
+      ? data.title.trim().slice(0, NOTE_LIMITS.title)
+      : "";
+  const workoutDate =
+    typeof data.workoutDate === "string" ? data.workoutDate : "";
+  const startedAt = asTimestamp(data.startedAt);
+  const endedAtRaw = data.endedAt;
+  const endedAt =
+    endedAtRaw == null ? null : asTimestamp(endedAtRaw);
+  if (!status || !title || !startedAt) return null;
+  if (status === "completed" && !endedAt) return null;
+  if (status === "in_progress" && endedAt != null) {
+    /* tolerate legacy docs that still have endedAt */
+  }
+  if (workoutDate.length !== 10) return null;
+  if (data.planId != null && typeof data.planId !== "string") return null;
+  if (!Array.isArray(data.lines) || data.lines.length === 0) return null;
+
+  const lines: SessionLine[] = [];
+  for (const item of data.lines) {
+    const line = parseSessionLine(item);
+    if (line) lines.push(line);
+  }
+  if (lines.length === 0) return null;
+
+  const exerciseCount =
+    typeof data.exerciseCount === "number"
+      ? data.exerciseCount
+      : lines.length;
+  const setCount =
+    typeof data.setCount === "number"
+      ? data.setCount
+      : lines.reduce((acc, l) => acc + l.sets.length, 0);
+
+  const previewRaw = data.previewExerciseNames;
+  const previewExerciseNames = Array.isArray(previewRaw)
+    ? previewRaw
+        .filter((x): x is string => typeof x === "string")
+        .slice(0, 5)
+    : lines.slice(0, 3).map((l) => l.nameSnapshot);
+
+  const workoutNote =
+    data.workoutNote == null
+      ? null
+      : typeof data.workoutNote === "string"
+        ? data.workoutNote.trim().slice(0, NOTE_LIMITS.workoutNote) || null
+        : null;
+
+  const activeDurationSec =
+    data.activeDurationSec == null
+      ? null
+      : typeof data.activeDurationSec === "number" &&
+          Number.isFinite(data.activeDurationSec)
+        ? data.activeDurationSec
+        : null;
+
+  return {
+    status,
+    title,
+    planId:
+      data.planId == null || data.planId === ""
+        ? null
+        : (data.planId as string),
+    workoutDate,
+    startedAt,
+    endedAt: status === "in_progress" ? null : endedAt,
+    activeDurationSec,
+    workoutNote,
+    exerciseNotesByLineId: parseExerciseNotesMap(data.exerciseNotesByLineId),
+    lines,
+    exerciseCount,
+    setCount,
+    previewExerciseNames,
   };
 }

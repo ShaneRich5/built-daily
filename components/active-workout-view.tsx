@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Pause, Play, RotateCcw, Timer } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Pause, Play, RotateCcw, Timer, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import {
   catalogExerciseFromCustomName,
@@ -11,6 +11,7 @@ import {
   type ExerciseMetric,
 } from "@/lib/exercise-catalog";
 import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
+import { createLineId } from "@/lib/workout-session-mapper";
 import { formatWorkoutHeaderDate } from "@/lib/workout-date";
 
 /** One row of logged fields; only fields relevant to `metric` are shown. */
@@ -54,7 +55,20 @@ type ActiveWorkoutViewProps = {
   title: string;
   exercises: CatalogExercise[];
   planId?: string | null;
+  /** Stable line ids parallel to `exercises` when resuming. */
+  initialLineIds?: string[];
+  initialSetsByExercise?: SetRow[][];
+  initialWorkoutNote?: string;
+  initialExerciseNotesById?: Record<string, string>;
+  /** Prior session timer value when resuming (ms). */
+  initialActiveDurationMs?: number;
+  /** Original session start time. */
+  sessionStartedAtMs?: number;
+  /** Debounced while editing; also used before finish. */
+  onPersist?: (snapshot: ActiveWorkoutFinishSnapshot) => void | Promise<void>;
   onFinish?: (snapshot: ActiveWorkoutFinishSnapshot) => void | Promise<void>;
+  /** Discard / delete this session (signed-in in-progress workouts). */
+  onDiscard?: () => void | Promise<void>;
 };
 
 const MAX_SESSION_EXERCISES = 40;
@@ -69,15 +83,34 @@ export function ActiveWorkoutView({
   title,
   exercises,
   planId: planIdProp = null,
+  initialLineIds,
+  initialSetsByExercise,
+  initialWorkoutNote = "",
+  initialExerciseNotesById,
+  initialActiveDurationMs = 0,
+  sessionStartedAtMs: sessionStartedAtMsProp,
+  onPersist,
   onFinish,
+  onDiscard,
 }: ActiveWorkoutViewProps) {
-  const [sessionStartedAtMs] = useState(() => Date.now());
+  const [sessionStartedAtMs] = useState(
+    () => sessionStartedAtMsProp ?? Date.now(),
+  );
 
   const [activeExercises, setActiveExercises] =
     useState<CatalogExercise[]>(exercises);
 
+  const [lineIds, setLineIds] = useState<string[]>(() =>
+    initialLineIds && initialLineIds.length === exercises.length
+      ? initialLineIds
+      : exercises.map(() => createLineId()),
+  );
+
   const [setsByExercise, setSetsByExercise] = useState<SetRow[][]>(() =>
-    exercises.map(() => [emptySetRow()]),
+    initialSetsByExercise &&
+    initialSetsByExercise.length === exercises.length
+      ? initialSetsByExercise
+      : exercises.map(() => [emptySetRow()]),
   );
 
   const handleAddCatalogExercise = useCallback((exerciseId: string) => {
@@ -85,6 +118,10 @@ export function ActiveWorkoutView({
     if (!ex) return;
     setActiveExercises((prev) => {
       if (prev.length >= MAX_SESSION_EXERCISES) return prev;
+      setLineIds((idsPrev) => {
+        if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
+        return [...idsPrev, createLineId()];
+      });
       setSetsByExercise((setsPrev) => {
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
         return [...setsPrev, [emptySetRow()]];
@@ -100,6 +137,10 @@ export function ActiveWorkoutView({
     setActiveExercises((prev) => {
       if (prev.length >= MAX_SESSION_EXERCISES) return prev;
       didAppend = true;
+      setLineIds((idsPrev) => {
+        if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
+        return [...idsPrev, createLineId()];
+      });
       setSetsByExercise((setsPrev) => {
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
         return [...setsPrev, [emptySetRow()]];
@@ -109,10 +150,10 @@ export function ActiveWorkoutView({
     return didAppend;
   }, []);
 
-  const [workoutNote, setWorkoutNote] = useState("");
+  const [workoutNote, setWorkoutNote] = useState(initialWorkoutNote);
   const [exerciseNotesById, setExerciseNotesById] = useState<
     Record<string, string>
-  >({});
+  >(() => initialExerciseNotesById ?? {});
 
   const updateExerciseNote = useCallback((exerciseId: string, value: string) => {
     setExerciseNotesById((prev) => ({ ...prev, [exerciseId]: value }));
@@ -132,11 +173,11 @@ export function ActiveWorkoutView({
 
   /** `idle` = timer not started; `running` = counting; `paused` = stopped mid-session */
   const [timerPhase, setTimerPhase] = useState<"idle" | "running" | "paused">(
-    "idle",
+    () => (initialActiveDurationMs > 0 ? "paused" : "idle"),
   );
-  const [accumulatedMs, setAccumulatedMs] = useState(0);
+  const [accumulatedMs, setAccumulatedMs] = useState(initialActiveDurationMs);
   const [segmentStart, setSegmentStart] = useState<number | null>(null);
-  const [displayedMs, setDisplayedMs] = useState(0);
+  const [displayedMs, setDisplayedMs] = useState(initialActiveDurationMs);
 
   useEffect(() => {
     if (timerPhase !== "running" || segmentStart === null) return;
@@ -253,9 +294,50 @@ export function ActiveWorkoutView({
     });
   }, []);
 
-  const handleFinish = useCallback(async () => {
-    if (!onFinish) return;
-    const snapshot: ActiveWorkoutFinishSnapshot = {
+  const removeExercise = useCallback((exerciseIndex: number) => {
+    setActiveExercises((prev) => {
+      if (prev.length <= 1) return prev;
+      const removed = prev[exerciseIndex];
+      setLineIds((ids) => ids.filter((_, i) => i !== exerciseIndex));
+      setSetsByExercise((sets) => sets.filter((_, i) => i !== exerciseIndex));
+      if (removed) {
+        setExerciseNotesById((notes) => {
+          const next = { ...notes };
+          delete next[removed.id];
+          return next;
+        });
+        setDurationTimerOnlyById((flags) => {
+          const next = { ...flags };
+          delete next[removed.id];
+          return next;
+        });
+      }
+      setSetTimerActive((active) => {
+        if (!active) return null;
+        if (active.exerciseIndex === exerciseIndex) return null;
+        if (active.exerciseIndex > exerciseIndex) {
+          return { ...active, exerciseIndex: active.exerciseIndex - 1 };
+        }
+        return active;
+      });
+      return prev.filter((_, i) => i !== exerciseIndex);
+    });
+  }, []);
+
+  const handleDiscard = useCallback(async () => {
+    if (!onDiscard) return;
+    if (
+      !window.confirm(
+        "Delete this workout? Progress will be removed and cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    await onDiscard();
+  }, [onDiscard]);
+
+  const buildSnapshot = useCallback((): ActiveWorkoutFinishSnapshot => {
+    return {
       title,
       exercises: activeExercises,
       setsByExercise,
@@ -264,19 +346,55 @@ export function ActiveWorkoutView({
       activeDurationMs: displayedMs,
       sessionStartedAtMs,
       planId: planIdProp,
+      lineIds,
     };
-    await onFinish(snapshot);
   }, [
-    onFinish,
     title,
     activeExercises,
     setsByExercise,
     workoutNote,
     exerciseNotesById,
     displayedMs,
-    planIdProp,
     sessionStartedAtMs,
+    planIdProp,
+    lineIds,
   ]);
+
+  const displayedMsRef = useRef(displayedMs);
+  displayedMsRef.current = displayedMs;
+
+  useEffect(() => {
+    if (!onPersist) return;
+    const id = window.setTimeout(() => {
+      void onPersist({
+        title,
+        exercises: activeExercises,
+        setsByExercise,
+        workoutNote,
+        exerciseNotesByExerciseId: exerciseNotesById,
+        activeDurationMs: displayedMsRef.current,
+        sessionStartedAtMs,
+        planId: planIdProp,
+        lineIds,
+      });
+    }, 1200);
+    return () => window.clearTimeout(id);
+  }, [
+    onPersist,
+    title,
+    activeExercises,
+    setsByExercise,
+    workoutNote,
+    exerciseNotesById,
+    sessionStartedAtMs,
+    planIdProp,
+    lineIds,
+  ]);
+
+  const handleFinish = useCallback(async () => {
+    if (!onFinish) return;
+    await onFinish(buildSnapshot());
+  }, [onFinish, buildSnapshot]);
 
   const sessionDateLabel = useMemo(
     () => formatWorkoutHeaderDate(sessionStartedAtMs),
@@ -390,7 +508,7 @@ export function ActiveWorkoutView({
         onAddCustom={handleAddCustomExercise}
       />
 
-      <ul className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-28">
+      <ul className={`flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto ${onDiscard ? "pb-40" : "pb-28"}`}>
         {activeExercises.map((exercise, exerciseIndex) => (
           <li
             key={`${exerciseIndex}-${exercise.id}`}
@@ -419,13 +537,25 @@ export function ActiveWorkoutView({
                   </label>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => addSet(exerciseIndex)}
-                className="shrink-0 text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
-              >
-                Add set
-              </button>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => addSet(exerciseIndex)}
+                  className="text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
+                >
+                  Add set
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeExercise(exerciseIndex)}
+                  disabled={activeExercises.length <= 1}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 disabled:opacity-30 dark:hover:text-red-300"
+                  aria-label={`Remove ${exercise.name}`}
+                >
+                  <Trash2 className="size-3" />
+                  Remove
+                </button>
+              </div>
             </div>
             <CollapsibleNote
               id={`exercise-note-${exercise.id}`}
@@ -463,8 +593,8 @@ export function ActiveWorkoutView({
       <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-5">
           <p className="mb-2 text-center text-xs text-zinc-500">
-            Session: Start / Pause above. Optional notes live on the workout,
-            each exercise, and each set until you add persistence.
+            Progress saves automatically when you&apos;re signed in. You can
+            leave and continue later from Recent workouts.
           </p>
           <button
             type="button"
@@ -473,6 +603,16 @@ export function ActiveWorkoutView({
           >
             Finish workout
           </button>
+          {onDiscard ? (
+            <button
+              type="button"
+              onClick={() => void handleDiscard()}
+              className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+            >
+              <Trash2 className="size-4" />
+              Delete workout
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -634,6 +774,9 @@ function SetRowFields({
     />
   );
 
+  const numberFieldClassName =
+    "h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
   if (exercise.metric === "duration") {
     return (
       <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
@@ -645,14 +788,17 @@ function SetRowFields({
               </label>
               <input
                 id={`sec-${idBase}`}
+                type="number"
                 inputMode="numeric"
+                min={0}
+                step={1}
                 autoComplete="off"
                 value={set.seconds}
                 onChange={(e) =>
                   updateSet(exerciseIndex, setIndex, "seconds", e.target.value)
                 }
                 placeholder="Seconds"
-                className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-zinc-800 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                className={numberFieldClassName}
               />
             </div>
             <span className="w-8 text-center text-xs text-zinc-400">{setNo}</span>
@@ -693,14 +839,17 @@ function SetRowFields({
             </label>
             <input
               id={`r-${idBase}`}
+              type="number"
               inputMode="numeric"
+              min={0}
+              step={1}
               autoComplete="off"
               value={set.reps}
               onChange={(e) =>
                 updateSet(exerciseIndex, setIndex, "reps", e.target.value)
               }
               placeholder="Reps"
-              className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-zinc-800 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              className={numberFieldClassName}
             />
           </div>
           <span className="w-8 text-center text-xs text-zinc-400">{setNo}</span>
@@ -728,14 +877,17 @@ function SetRowFields({
           </label>
           <input
             id={`w-${idBase}`}
+            type="number"
             inputMode="decimal"
+            min={0}
+            step="any"
             autoComplete="off"
             value={set.weight}
             onChange={(e) =>
               updateSet(exerciseIndex, setIndex, "weight", e.target.value)
             }
             placeholder="lb"
-            className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-zinc-800 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            className={numberFieldClassName}
           />
         </div>
         <div>
@@ -744,14 +896,17 @@ function SetRowFields({
           </label>
           <input
             id={`r-${idBase}`}
+            type="number"
             inputMode="numeric"
+            min={0}
+            step={1}
             autoComplete="off"
             value={set.reps}
             onChange={(e) =>
               updateSet(exerciseIndex, setIndex, "reps", e.target.value)
             }
             placeholder="reps"
-            className="h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-zinc-800 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+            className={numberFieldClassName}
           />
         </div>
         <span className="w-8 text-center text-xs text-zinc-400">{setNo}</span>
