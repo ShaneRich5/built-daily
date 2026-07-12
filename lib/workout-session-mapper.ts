@@ -321,14 +321,15 @@ export function firestoreToWorkoutSessionDoc(
   }
   if (workoutDate.length !== 10) return null;
   if (data.planId != null && typeof data.planId !== "string") return null;
-  if (!Array.isArray(data.lines) || data.lines.length === 0) return null;
+  if (!Array.isArray(data.lines)) return null;
 
   const lines: SessionLine[] = [];
   for (const item of data.lines) {
     const line = parseSessionLine(item);
     if (line) lines.push(line);
   }
-  if (lines.length === 0) return null;
+  if (lines.length === 0 && status !== "in_progress") return null;
+  if (data.lines.length > 0 && lines.length === 0) return null;
 
   const exerciseCount =
     typeof data.exerciseCount === "number"

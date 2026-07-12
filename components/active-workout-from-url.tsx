@@ -195,7 +195,7 @@ export function ActiveWorkoutFromUrl() {
 
   useEffect(() => {
     if (sessionIdParam) return;
-    if (!urlExercises || urlExercises.length === 0) return;
+    if (urlExercises === null) return;
     if (!firebaseReady || !user) return;
     if (createOnceRef.current) return;
     createOnceRef.current = true;
@@ -358,23 +358,6 @@ export function ActiveWorkoutFromUrl() {
     );
   }
 
-  if (ids.length === 0) {
-    return (
-      <div className="flex flex-1 flex-col gap-4 py-2">
-        <p className="text-sm text-muted-foreground">
-          No exercises in this session link. Pick at least one exercise on the
-          home screen, then tap start.
-        </p>
-        <Link
-          href="/"
-          className="inline-flex h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
-        >
-          Back to home
-        </Link>
-      </div>
-    );
-  }
-
   if (needsPlanFetch && !planReady) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
@@ -383,7 +366,15 @@ export function ActiveWorkoutFromUrl() {
     );
   }
 
-  if (!urlExercises || urlExercises.length === 0) {
+  if (urlExercises === null) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
+        <p className="text-sm text-muted-foreground">Loading workout…</p>
+      </div>
+    );
+  }
+
+  if (ids.length > 0 && urlExercises.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-4 py-2">
         <p className="text-sm text-muted-foreground">
@@ -408,15 +399,15 @@ export function ActiveWorkoutFromUrl() {
     );
   }
 
-  // Local session (unsigned, or create failed) — still usable; signed-in
-  // users normally redirect to ?s= before reaching here.
   return (
     <ActiveWorkoutView
-      key={`local:${ids.join(",")}`}
+      key={liveSessionId ?? `local:${ids.join(",") || "empty"}`}
       title={title}
       exercises={urlExercises}
       planId={planId}
+      onPersist={liveSessionId ? handlePersist : undefined}
       onFinish={handleFinish}
+      onDiscard={liveSessionId ? handleDiscard : undefined}
     />
   );
 }

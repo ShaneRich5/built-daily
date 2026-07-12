@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { EXERCISE_CATALOG } from "@/lib/exercise-catalog";
+import { filterCatalogExercises } from "@/lib/exercise-catalog";
 import type { PlanLine } from "@/lib/workout-types";
 import {
   subscribeUserWorkoutPlans,
@@ -131,6 +131,12 @@ export function WorkoutPickAndStart() {
     library: null,
     exerciseIds: [],
   });
+  const [exerciseQuery, setExerciseQuery] = useState("");
+
+  const filteredExercises = useMemo(
+    () => filterCatalogExercises(exerciseQuery),
+    [exerciseQuery],
+  );
 
   const toggleStarter = useCallback((s: StarterMeta) => {
     dispatch({ type: "toggleStarter", starter: s });
@@ -156,15 +162,15 @@ export function WorkoutPickAndStart() {
   }, [pick.library]);
 
   const startWorkout = useCallback(() => {
-    if (pick.exerciseIds.length === 0) return;
     const params = new URLSearchParams();
-    params.set("e", pick.exerciseIds.join(","));
+    if (pick.exerciseIds.length > 0) {
+      params.set("e", pick.exerciseIds.join(","));
+    }
     if (selectedPlanLabel) params.set("t", selectedPlanLabel);
     if (planIdForUrl) params.set("p", planIdForUrl);
-    router.push(`/workout?${params.toString()}`);
+    const qs = params.toString();
+    router.push(qs ? `/workout?${qs}` : "/workout");
   }, [router, pick.exerciseIds, selectedPlanLabel, planIdForUrl]);
-
-  const canStart = pick.exerciseIds.length > 0;
 
   return (
     <div className="space-y-6">
@@ -270,11 +276,24 @@ export function WorkoutPickAndStart() {
           <span className="text-xs text-zinc-400">Tap to toggle</span>
         </div>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Pick one or more moves. Choosing a template above fills this list; you
-          can still add or remove exercises.
+          Optionally pick moves now, or start empty and add exercises during the
+          session. Choosing a template above fills this list.
         </p>
-        <ul className="space-y-2">
-          {EXERCISE_CATALOG.map((ex) => {
+        <input
+          type="search"
+          value={exerciseQuery}
+          onChange={(e) => setExerciseQuery(e.target.value)}
+          placeholder="Search exercises (e.g. leg press, cable…)"
+          className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
+          aria-label="Search exercises"
+        />
+        <ul className="max-h-[min(28rem,55vh)] space-y-2 overflow-y-auto">
+          {filteredExercises.length === 0 ? (
+            <li className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
+              No exercises match “{exerciseQuery.trim()}”.
+            </li>
+          ) : (
+            filteredExercises.map((ex) => {
             const on = pick.exerciseIds.includes(ex.id);
             return (
               <li key={ex.id}>
@@ -298,23 +317,25 @@ export function WorkoutPickAndStart() {
                         : "border-zinc-200 text-zinc-400 dark:border-zinc-700"
                     }`}
                   >
-                    {on ? "✓" : ""}
+                    {on ? "✓" : "+"}
                   </span>
                 </button>
               </li>
             );
-          })}
+          })
+          )}
         </ul>
       </section>
 
       <div className="space-y-2">
         <button
           type="button"
-          disabled={!canStart}
           onClick={startWorkout}
-          className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition enabled:active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900"
+          className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition active:scale-[0.99] dark:bg-zinc-50 dark:text-zinc-900"
         >
-          {!canStart ? "Select at least one exercise" : "Start workout"}
+          {pick.exerciseIds.length === 0
+            ? "Start empty workout"
+            : "Start workout"}
         </button>
         <p className="text-center text-xs text-zinc-500">
           Finishing a session saves it to your account when you are signed in.

@@ -40,13 +40,14 @@ service cloud.firestore {
         && (d.activeDurationSec == null || (d.activeDurationSec is int && d.activeDurationSec >= 0 && d.activeDurationSec <= 86400))
         && optionalString(d.workoutNote, 500)
         && validExerciseNotesMap(d.exerciseNotesByLineId)
-        && d.lines is list && d.lines.size() > 0 && d.lines.size() <= 40
+        && d.lines is list && d.lines.size() <= 40
         && d.exerciseCount is int && d.exerciseCount == d.lines.size()
         && d.setCount is int && d.setCount >= 0
         && d.previewExerciseNames is list && d.previewExerciseNames.size() <= 5
         && (
           (d.status == 'completed'
             && d.endedAt is timestamp
+            && d.lines.size() > 0
             && d.setCount > 0)
           || (d.status == 'in_progress'
             && d.endedAt == null

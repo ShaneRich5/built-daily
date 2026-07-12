@@ -174,7 +174,9 @@ export function subscribeRecentCompletedSessions(
 
 function normalizeSessionForWrite(draft: WorkoutSessionDoc): WorkoutSessionDoc | null {
   const normalizedLines = draft.lines;
-  if (normalizedLines.length === 0) return null;
+  if (normalizedLines.length === 0 && draft.status !== "in_progress") {
+    return null;
+  }
 
   const setCount = normalizedLines.reduce((acc, l) => acc + l.sets.length, 0);
   if (draft.status === "completed" && setCount <= 0) return null;

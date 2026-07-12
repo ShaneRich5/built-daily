@@ -138,7 +138,11 @@ export function WorkoutPlanner() {
       else map.set(s.workoutDate, [s]);
     }
     for (const list of map.values()) {
-      list.sort((a, b) => b.endedAt.getTime() - a.endedAt.getTime());
+      list.sort(
+        (a, b) =>
+          (b.endedAt ?? b.startedAt).getTime() -
+          (a.endedAt ?? a.startedAt).getTime(),
+      );
     }
     return map;
   }, [sessions]);

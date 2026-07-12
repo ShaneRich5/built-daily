@@ -593,15 +593,19 @@ export function ActiveWorkoutView({
       <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-5">
           <p className="mb-2 text-center text-xs text-zinc-500">
-            Progress saves automatically when you&apos;re signed in. You can
-            leave and continue later from Recent workouts.
+            {activeExercises.length === 0
+              ? "Add an exercise above to start logging sets."
+              : "Progress saves automatically when you’re signed in. You can leave and continue later from Recent workouts."}
           </p>
           <button
             type="button"
             onClick={handleFinish}
-            className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white dark:bg-emerald-500"
+            disabled={activeExercises.length === 0}
+            className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-500"
           >
-            Finish workout
+            {activeExercises.length === 0
+              ? "Add an exercise to finish"
+              : "Finish workout"}
           </button>
           {onDiscard ? (
             <button
