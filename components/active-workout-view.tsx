@@ -12,6 +12,11 @@ import {
 } from "@/lib/exercise-catalog";
 import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
 import { createLineId } from "@/lib/workout-session-mapper";
+import {
+  combineToTotalSeconds,
+  formatMinutesSecondsLabel,
+  splitTotalSeconds,
+} from "@/lib/duration-input";
 import { formatWorkoutHeaderDate } from "@/lib/workout-date";
 
 /** One row of logged fields; only fields relevant to `metric` are shown. */
@@ -531,8 +536,8 @@ export function ActiveWorkoutView({
                       onChange={() => toggleDurationTimerOnly(exercise.id)}
                     />
                     <span>
-                      Use only the set timer for hold time (hide manual seconds
-                      field)
+                      Use only the set timer for hold time (hide min / sec
+                      fields)
                     </span>
                   </label>
                 )}
@@ -782,30 +787,73 @@ function SetRowFields({
     "h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
   if (exercise.metric === "duration") {
+    const parts = splitTotalSeconds(set.seconds);
+    const setDuration = (minutes: string, seconds: string) => {
+      updateSet(
+        exerciseIndex,
+        setIndex,
+        "seconds",
+        combineToTotalSeconds(minutes, seconds),
+      );
+    };
+
     return (
       <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
         {!hideManualSeconds && (
-          <div className="grid grid-cols-[1fr_auto] items-center gap-2 text-sm">
+          <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 text-sm">
             <div>
-              <label className="sr-only" htmlFor={`sec-${idBase}`}>
-                Hold time in seconds, set {setNo}
+              <label
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+                htmlFor={`min-${idBase}`}
+              >
+                Min
+              </label>
+              <input
+                id={`min-${idBase}`}
+                type="number"
+                inputMode="numeric"
+                min={0}
+                step={1}
+                autoComplete="off"
+                value={parts.minutes}
+                onChange={(e) => setDuration(e.target.value, parts.seconds)}
+                placeholder="0"
+                className={numberFieldClassName}
+              />
+            </div>
+            <div>
+              <label
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+                htmlFor={`sec-${idBase}`}
+              >
+                Sec
               </label>
               <input
                 id={`sec-${idBase}`}
                 type="number"
                 inputMode="numeric"
                 min={0}
+                max={59}
                 step={1}
                 autoComplete="off"
-                value={set.seconds}
-                onChange={(e) =>
-                  updateSet(exerciseIndex, setIndex, "seconds", e.target.value)
-                }
-                placeholder="Seconds"
+                value={parts.seconds}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  if (raw === "") {
+                    setDuration(parts.minutes, "");
+                    return;
+                  }
+                  const n = parseInt(raw, 10);
+                  if (!Number.isFinite(n)) return;
+                  setDuration(parts.minutes, String(Math.min(59, Math.max(0, n))));
+                }}
+                placeholder="0"
                 className={numberFieldClassName}
               />
             </div>
-            <span className="w-8 text-center text-xs text-zinc-400">{setNo}</span>
+            <span className="mb-3 w-8 text-center text-xs text-zinc-400">
+              {setNo}
+            </span>
           </div>
         )}
         {hideManualSeconds && (
@@ -814,7 +862,9 @@ function SetRowFields({
               {set.seconds ? (
                 <>
                   <span className="font-medium">Hold:</span>{" "}
-                  <span className="font-mono tabular-nums">{set.seconds}s</span>
+                  <span className="font-mono tabular-nums">
+                    {formatMinutesSecondsLabel(Number(set.seconds))}
+                  </span>
                 </>
               ) : (
                 <span className="text-zinc-500">

@@ -15,6 +15,10 @@ import {
   workoutJournalFilename,
 } from "@/lib/workout-journal-export";
 import { formatWorkoutHeaderDate } from "@/lib/workout-date";
+import {
+  combineToTotalSeconds,
+  splitTotalSeconds,
+} from "@/lib/duration-input";
 import { uiSetRowToSetLog, type UiSetRow } from "@/lib/workout-session-mapper";
 import {
   deleteWorkoutSession,
@@ -639,20 +643,73 @@ function SetEditors({
   const ui = setLogToUi(set);
 
   if (metric === "duration") {
+    const parts = splitTotalSeconds(ui.seconds);
+    const setDuration = (minutes: string, seconds: string) => {
+      onChange(
+        lineIndex,
+        setIndex,
+        metric,
+        "seconds",
+        combineToTotalSeconds(minutes, seconds),
+      );
+    };
+
     return (
-      <Input
-        type="number"
-        inputMode="numeric"
-        min={0}
-        step={1}
-        value={ui.seconds}
-        onChange={(e) =>
-          onChange(lineIndex, setIndex, metric, "seconds", e.target.value)
-        }
-        placeholder="Seconds"
-        className={numberFieldClassName}
-        aria-label={`Hold seconds, set ${setIndex + 1}`}
-      />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label
+            className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+            htmlFor={`min-${lineIndex}-${setIndex}`}
+          >
+            Min
+          </label>
+          <Input
+            id={`min-${lineIndex}-${setIndex}`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            value={parts.minutes}
+            onChange={(e) => setDuration(e.target.value, parts.seconds)}
+            placeholder="0"
+            className={numberFieldClassName}
+            aria-label={`Minutes, set ${setIndex + 1}`}
+          />
+        </div>
+        <div>
+          <label
+            className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+            htmlFor={`sec-${lineIndex}-${setIndex}`}
+          >
+            Sec
+          </label>
+          <Input
+            id={`sec-${lineIndex}-${setIndex}`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={59}
+            step={1}
+            value={parts.seconds}
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") {
+                setDuration(parts.minutes, "");
+                return;
+              }
+              const n = parseInt(raw, 10);
+              if (!Number.isFinite(n)) return;
+              setDuration(
+                parts.minutes,
+                String(Math.min(59, Math.max(0, n))),
+              );
+            }}
+            placeholder="0"
+            className={numberFieldClassName}
+            aria-label={`Seconds, set ${setIndex + 1}`}
+          />
+        </div>
+      </div>
     );
   }
 
