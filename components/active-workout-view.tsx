@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Pause, Play, RotateCcw, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
+import { WorkoutMetaFields } from "@/components/workout-meta-fields";
 import {
   catalogExerciseFromCustomName,
   getCatalogExerciseById,
@@ -17,7 +18,9 @@ import {
   formatMinutesSecondsLabel,
   splitTotalSeconds,
 } from "@/lib/duration-input";
-import { formatWorkoutHeaderDate } from "@/lib/workout-date";
+import {
+  localDateKeyFromMs,
+} from "@/lib/workout-date";
 
 /** One row of logged fields; only fields relevant to `metric` are shown. */
 type SetRow = {
@@ -65,6 +68,12 @@ type ActiveWorkoutViewProps = {
   initialSetsByExercise?: SetRow[][];
   initialWorkoutNote?: string;
   initialExerciseNotesById?: Record<string, string>;
+  /** Journal date `YYYY-MM-DD`; defaults to today when omitted. */
+  initialWorkoutDate?: string | null;
+  /** Local `HH:mm`; empty when omitted. */
+  initialWorkoutTime?: string | null;
+  /** When false, start with empty title (shows default placeholder). */
+  titleIsCustom?: boolean;
   /** Prior session timer value when resuming (ms). */
   initialActiveDurationMs?: number;
   /** Original session start time. */
@@ -85,13 +94,16 @@ type SetTimerActive = {
 };
 
 export function ActiveWorkoutView({
-  title,
+  title: titleProp,
   exercises,
   planId: planIdProp = null,
   initialLineIds,
   initialSetsByExercise,
   initialWorkoutNote = "",
   initialExerciseNotesById,
+  initialWorkoutDate,
+  initialWorkoutTime,
+  titleIsCustom = true,
   initialActiveDurationMs = 0,
   sessionStartedAtMs: sessionStartedAtMsProp,
   onPersist,
@@ -100,6 +112,19 @@ export function ActiveWorkoutView({
 }: ActiveWorkoutViewProps) {
   const [sessionStartedAtMs] = useState(
     () => sessionStartedAtMsProp ?? Date.now(),
+  );
+
+  const [title, setTitle] = useState(() =>
+    titleIsCustom ? titleProp : "",
+  );
+  const [workoutDate, setWorkoutDate] = useState(
+    () =>
+      initialWorkoutDate === null
+        ? ""
+        : (initialWorkoutDate ?? localDateKeyFromMs(sessionStartedAtMsProp ?? Date.now())),
+  );
+  const [workoutTime, setWorkoutTime] = useState(
+    () => initialWorkoutTime ?? "",
   );
 
   const [activeExercises, setActiveExercises] =
@@ -299,24 +324,31 @@ export function ActiveWorkoutView({
     });
   }, []);
 
-  const removeExercise = useCallback((exerciseIndex: number) => {
-    setActiveExercises((prev) => {
-      if (prev.length <= 1) return prev;
-      const removed = prev[exerciseIndex];
+  const removeExercise = useCallback(
+    (exerciseIndex: number) => {
+      if (activeExercises.length <= 1) return;
+      const removed = activeExercises[exerciseIndex];
+      if (!removed) return;
+      if (
+        !window.confirm(
+          `Remove “${removed.name}” and all of its sets from this workout?`,
+        )
+      ) {
+        return;
+      }
+      setActiveExercises((prev) => prev.filter((_, i) => i !== exerciseIndex));
       setLineIds((ids) => ids.filter((_, i) => i !== exerciseIndex));
       setSetsByExercise((sets) => sets.filter((_, i) => i !== exerciseIndex));
-      if (removed) {
-        setExerciseNotesById((notes) => {
-          const next = { ...notes };
-          delete next[removed.id];
-          return next;
-        });
-        setDurationTimerOnlyById((flags) => {
-          const next = { ...flags };
-          delete next[removed.id];
-          return next;
-        });
-      }
+      setExerciseNotesById((notes) => {
+        const next = { ...notes };
+        delete next[removed.id];
+        return next;
+      });
+      setDurationTimerOnlyById((flags) => {
+        const next = { ...flags };
+        delete next[removed.id];
+        return next;
+      });
       setSetTimerActive((active) => {
         if (!active) return null;
         if (active.exerciseIndex === exerciseIndex) return null;
@@ -325,15 +357,15 @@ export function ActiveWorkoutView({
         }
         return active;
       });
-      return prev.filter((_, i) => i !== exerciseIndex);
-    });
-  }, []);
+    },
+    [activeExercises],
+  );
 
   const handleDiscard = useCallback(async () => {
     if (!onDiscard) return;
     if (
       !window.confirm(
-        "Delete this workout? Progress will be removed and cannot be undone.",
+        "Delete this workout permanently? Progress will be removed and cannot be undone.",
       )
     ) {
       return;
@@ -344,6 +376,8 @@ export function ActiveWorkoutView({
   const buildSnapshot = useCallback((): ActiveWorkoutFinishSnapshot => {
     return {
       title,
+      workoutDate,
+      workoutTime,
       exercises: activeExercises,
       setsByExercise,
       workoutNote,
@@ -355,6 +389,8 @@ export function ActiveWorkoutView({
     };
   }, [
     title,
+    workoutDate,
+    workoutTime,
     activeExercises,
     setsByExercise,
     workoutNote,
@@ -373,6 +409,8 @@ export function ActiveWorkoutView({
     const id = window.setTimeout(() => {
       void onPersist({
         title,
+        workoutDate,
+        workoutTime,
         exercises: activeExercises,
         setsByExercise,
         workoutNote,
@@ -387,6 +425,8 @@ export function ActiveWorkoutView({
   }, [
     onPersist,
     title,
+    workoutDate,
+    workoutTime,
     activeExercises,
     setsByExercise,
     workoutNote,
@@ -400,11 +440,6 @@ export function ActiveWorkoutView({
     if (!onFinish) return;
     await onFinish(buildSnapshot());
   }, [onFinish, buildSnapshot]);
-
-  const sessionDateLabel = useMemo(
-    () => formatWorkoutHeaderDate(sessionStartedAtMs),
-    [sessionStartedAtMs],
-  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -478,25 +513,11 @@ export function ActiveWorkoutView({
               </div>
             </div>
           </div>
-          <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {title}
-          </h1>
-          <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-            {sessionDateLabel}
-          </p>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-1 text-xs text-zinc-500">
             {activeExercises.length} exercise
             {activeExercises.length === 1 ? "" : "s"} · {setCountLabel} set
             {setCountLabel === "1" ? "" : "s"}
           </p>
-          <CollapsibleNote
-            id="workout-session-note"
-            summary="Workout note"
-            value={workoutNote}
-            onChange={setWorkoutNote}
-            maxLength={500}
-            placeholder="How you felt, sleep, context for this session…"
-          />
         </div>
         <Link
           href="/"
@@ -505,6 +526,26 @@ export function ActiveWorkoutView({
           Home
         </Link>
       </header>
+
+      <section className="shrink-0 space-y-3 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+        <WorkoutMetaFields
+          title={title}
+          workoutDate={workoutDate}
+          workoutTime={workoutTime}
+          onTitleChange={setTitle}
+          onWorkoutDateChange={setWorkoutDate}
+          onWorkoutTimeChange={setWorkoutTime}
+          titleFallbackMs={sessionStartedAtMs}
+        />
+        <CollapsibleNote
+          id="workout-session-note"
+          summary="Workout note"
+          value={workoutNote}
+          onChange={setWorkoutNote}
+          maxLength={500}
+          placeholder="How you felt, sleep, context for this session…"
+        />
+      </section>
 
       <WorkoutAddExerciseCard
         currentCount={activeExercises.length}

@@ -27,6 +27,10 @@ import {
   upsertWorkoutSession,
 } from "@/lib/workout-session-repository";
 import type { WorkoutPlanDoc, WorkoutSessionDoc } from "@/lib/workout-types";
+import {
+  isDefaultWorkoutTitle,
+  localDateKeyFromMs,
+} from "@/lib/workout-date";
 
 const QUERY_EXERCISES = "e";
 const QUERY_TITLE = "t";
@@ -36,6 +40,9 @@ const QUERY_SESSION = "s";
 type ResumeBundle = {
   sessionId: string;
   title: string;
+  titleIsCustom: boolean;
+  workoutDate: string | null;
+  workoutTime: string | null;
   planId: string | null;
   exercises: CatalogExercise[];
   lineIds: string[];
@@ -71,6 +78,13 @@ function sessionToResumeBundle(
   return {
     sessionId,
     title: session.title,
+    titleIsCustom: !isDefaultWorkoutTitle(
+      session.title,
+      session.workoutDate,
+      session.startedAt.getTime(),
+    ),
+    workoutDate: session.workoutDate,
+    workoutTime: session.workoutTime,
     planId: session.planId,
     exercises,
     lineIds,
@@ -92,7 +106,7 @@ export function ActiveWorkoutFromUrl() {
 
   const sessionIdParam = searchParams.get(QUERY_SESSION)?.trim() || null;
 
-  const { title, ids, planId } = useMemo(() => {
+  const { title, titleIsCustom, ids, planId } = useMemo(() => {
     const raw = searchParams.get(QUERY_EXERCISES);
     const titleParam = searchParams.get(QUERY_TITLE);
     const planParam = searchParams.get(QUERY_PLAN);
@@ -102,13 +116,16 @@ export function ActiveWorkoutFromUrl() {
           .map((s) => s.trim())
           .filter(Boolean)
       : [];
-    const titleResolved =
-      titleParam && titleParam.trim().length > 0
-        ? titleParam.trim()
-        : "Workout";
+    const hasCustomTitle = Boolean(titleParam && titleParam.trim().length > 0);
+    const titleResolved = hasCustomTitle ? titleParam!.trim() : "";
     const planResolved =
       planParam && planParam.trim().length > 0 ? planParam.trim() : null;
-    return { title: titleResolved, ids: parsedIds, planId: planResolved };
+    return {
+      title: titleResolved,
+      titleIsCustom: hasCustomTitle,
+      ids: parsedIds,
+      planId: planResolved,
+    };
   }, [searchParams]);
 
   const needsPlanFetch = Boolean(
@@ -202,14 +219,17 @@ export function ActiveWorkoutFromUrl() {
     setCreating(true);
 
     const lineIds = urlExercises.map(() => createLineId());
+    const startedAtMs = Date.now();
     const snap: ActiveWorkoutFinishSnapshot = {
-      title,
+      title: titleIsCustom ? title : "",
+      workoutDate: localDateKeyFromMs(startedAtMs),
+      workoutTime: "",
       exercises: urlExercises,
       setsByExercise: urlExercises.map(() => [emptyUiSet()]),
       workoutNote: "",
       exerciseNotesByExerciseId: {},
       activeDurationMs: 0,
-      sessionStartedAtMs: Date.now(),
+      sessionStartedAtMs: startedAtMs,
       planId,
       lineIds,
     };
@@ -234,6 +254,7 @@ export function ActiveWorkoutFromUrl() {
     firebaseReady,
     user,
     title,
+    titleIsCustom,
     planId,
     router,
   ]);
@@ -343,6 +364,9 @@ export function ActiveWorkoutFromUrl() {
       <ActiveWorkoutView
         key={resume.sessionId}
         title={resume.title}
+        titleIsCustom={resume.titleIsCustom}
+        initialWorkoutDate={resume.workoutDate}
+        initialWorkoutTime={resume.workoutTime}
         exercises={resume.exercises}
         planId={resume.planId}
         initialLineIds={resume.lineIds}
@@ -403,6 +427,7 @@ export function ActiveWorkoutFromUrl() {
     <ActiveWorkoutView
       key={liveSessionId ?? `local:${ids.join(",") || "empty"}`}
       title={title}
+      titleIsCustom={titleIsCustom}
       exercises={urlExercises}
       planId={planId}
       onPersist={liveSessionId ? handlePersist : undefined}

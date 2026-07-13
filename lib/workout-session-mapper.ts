@@ -1,6 +1,11 @@
 import { Timestamp } from "firebase/firestore";
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
-import { localDateKeyFromMs } from "@/lib/workout-date";
+import {
+  localDateKeyFromMs,
+  normalizeWorkoutDate,
+  normalizeWorkoutTime,
+  resolveWorkoutTitle,
+} from "@/lib/workout-date";
 import {
   NOTE_LIMITS,
   type SessionLine,
@@ -21,6 +26,10 @@ export type UiSetRow = {
 /** Snapshot passed from the active workout screen on finish or autosave. */
 export type ActiveWorkoutFinishSnapshot = {
   title: string;
+  /** Journal day `YYYY-MM-DD`, or empty when unset. */
+  workoutDate: string;
+  /** Local `HH:mm`, or empty when unset. */
+  workoutTime: string;
   exercises: CatalogExercise[];
   setsByExercise: UiSetRow[][];
   workoutNote: string;
@@ -157,13 +166,15 @@ export function buildWorkoutSessionDoc(
       : null;
 
   const dateMs = endedAt?.getTime() ?? startedAt.getTime();
-  const workoutDate = localDateKeyFromMs(dateMs);
+  const workoutDate = normalizeWorkoutDate(snap.workoutDate);
+  const workoutTime = normalizeWorkoutTime(snap.workoutTime);
 
   return {
     status,
-    title: snap.title.trim().slice(0, NOTE_LIMITS.title) || "Workout",
+    title: resolveWorkoutTitle(snap.title, workoutDate, dateMs),
     planId: snap.planId ?? null,
     workoutDate,
+    workoutTime,
     startedAt,
     endedAt,
     activeDurationSec,
@@ -188,6 +199,7 @@ export function sessionDocToFirestore(
     title: doc.title,
     planId: doc.planId,
     workoutDate: doc.workoutDate,
+    workoutTime: doc.workoutTime,
     startedAt: Timestamp.fromDate(doc.startedAt),
     endedAt: doc.endedAt ? Timestamp.fromDate(doc.endedAt) : null,
     activeDurationSec: doc.activeDurationSec,
@@ -308,8 +320,23 @@ export function firestoreToWorkoutSessionDoc(
     typeof data.title === "string"
       ? data.title.trim().slice(0, NOTE_LIMITS.title)
       : "";
+  const workoutDateRaw = data.workoutDate;
   const workoutDate =
-    typeof data.workoutDate === "string" ? data.workoutDate : "";
+    workoutDateRaw == null || workoutDateRaw === ""
+      ? null
+      : typeof workoutDateRaw === "string" &&
+          workoutDateRaw.length === 10 &&
+          /^\d{4}-\d{2}-\d{2}$/.test(workoutDateRaw)
+        ? workoutDateRaw
+        : null;
+  const workoutTimeRaw = data.workoutTime;
+  const workoutTime =
+    workoutTimeRaw == null || workoutTimeRaw === ""
+      ? null
+      : typeof workoutTimeRaw === "string" &&
+          /^([01]\d|2[0-3]):[0-5]\d$/.test(workoutTimeRaw)
+        ? workoutTimeRaw
+        : null;
   const startedAt = asTimestamp(data.startedAt);
   const endedAtRaw = data.endedAt;
   const endedAt =
@@ -319,7 +346,6 @@ export function firestoreToWorkoutSessionDoc(
   if (status === "in_progress" && endedAt != null) {
     /* tolerate legacy docs that still have endedAt */
   }
-  if (workoutDate.length !== 10) return null;
   if (data.planId != null && typeof data.planId !== "string") return null;
   if (!Array.isArray(data.lines)) return null;
 
@@ -370,6 +396,7 @@ export function firestoreToWorkoutSessionDoc(
         ? null
         : (data.planId as string),
     workoutDate,
+    workoutTime,
     startedAt,
     endedAt: status === "in_progress" ? null : endedAt,
     activeDurationSec,

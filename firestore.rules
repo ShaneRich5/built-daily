@@ -26,16 +26,21 @@ service cloud.firestore {
     function validWorkoutSessionWrite() {
       let d = request.resource.data;
       return d.keys().hasAll([
-            'status', 'title', 'planId', 'workoutDate', 'startedAt', 'endedAt',
+            'status', 'title', 'planId', 'workoutDate', 'workoutTime',
+            'startedAt', 'endedAt',
             'activeDurationSec', 'workoutNote', 'exerciseNotesByLineId',
             'lines', 'exerciseCount', 'setCount', 'previewExerciseNames'
           ])
         && d.status in ['completed', 'in_progress']
         && nonEmptyString(d.title, 200)
         && (d.planId == null || (d.planId is string && d.planId.size() <= 128))
-        && d.workoutDate is string
-        && d.workoutDate.size() == 10
-        && d.workoutDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (d.workoutDate == null
+            || (d.workoutDate is string
+              && d.workoutDate.size() == 10
+              && d.workoutDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
+        && (d.workoutTime == null
+            || (d.workoutTime is string
+              && d.workoutTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
         && d.startedAt is timestamp
         && (d.activeDurationSec == null || (d.activeDurationSec is int && d.activeDurationSec >= 0 && d.activeDurationSec <= 86400))
         && optionalString(d.workoutNote, 500)

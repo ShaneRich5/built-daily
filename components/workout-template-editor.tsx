@@ -119,9 +119,23 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
     return true;
   }, []);
 
-  const removeLine = useCallback((index: number) => {
-    setLines((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+  const removeLine = useCallback(
+    (index: number) => {
+      if (lines.length <= 1) {
+        window.alert("Keep at least one exercise in the template.");
+        return;
+      }
+      const line = lines[index];
+      if (!line) return;
+      if (
+        !window.confirm(`Remove “${line.nameSnapshot}” from this template?`)
+      ) {
+        return;
+      }
+      setLines((prev) => prev.filter((_, i) => i !== index));
+    },
+    [lines],
+  );
 
   const moveLine = useCallback((index: number, delta: -1 | 1) => {
     setLines((prev) => {

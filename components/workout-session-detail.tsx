@@ -14,7 +14,13 @@ import {
   formatWorkoutJournalEntry,
   workoutJournalFilename,
 } from "@/lib/workout-journal-export";
-import { formatWorkoutHeaderDate } from "@/lib/workout-date";
+import {
+  formatSessionJournalMeta,
+  isDefaultWorkoutTitle,
+  normalizeWorkoutDate,
+  normalizeWorkoutTime,
+  resolveWorkoutTitle,
+} from "@/lib/workout-date";
 import {
   combineToTotalSeconds,
   splitTotalSeconds,
@@ -31,6 +37,7 @@ import {
   type SetLog,
   type WorkoutSessionDoc,
 } from "@/lib/workout-types";
+import { WorkoutMetaFields } from "@/components/workout-meta-fields";
 
 type WorkoutSessionDetailProps = {
   sessionId: string;
@@ -72,6 +79,8 @@ function cloneSession(session: WorkoutSessionDoc): WorkoutSessionDoc {
 
 function draftFromSession(session: WorkoutSessionDoc): {
   title: string;
+  workoutDate: string;
+  workoutTime: string;
   workoutNote: string;
   exerciseNotes: Record<string, string>;
   lines: SessionLine[];
@@ -80,8 +89,15 @@ function draftFromSession(session: WorkoutSessionDoc): {
   for (const line of session.lines) {
     notes[line.lineId] = session.exerciseNotesByLineId?.[line.lineId] ?? "";
   }
+  const titleIsDefault = isDefaultWorkoutTitle(
+    session.title,
+    session.workoutDate,
+    session.startedAt.getTime(),
+  );
   return {
-    title: session.title,
+    title: titleIsDefault ? "" : session.title,
+    workoutDate: session.workoutDate ?? "",
+    workoutTime: session.workoutTime ?? "",
     workoutNote: session.workoutNote ?? "",
     exerciseNotes: notes,
     lines: session.lines.map((line) => ({
@@ -132,6 +148,8 @@ function downloadTextFile(filename: string, text: string) {
 function buildSaveDoc(
   base: WorkoutSessionDoc,
   title: string,
+  workoutDate: string,
+  workoutTime: string,
   workoutNote: string,
   exerciseNotes: Record<string, string>,
   lines: SessionLine[],
@@ -142,10 +160,14 @@ function buildSaveDoc(
     if (n) cleanedNotes[line.lineId] = n;
   }
   const setCount = lines.reduce((acc, l) => acc + l.sets.length, 0);
+  const date = normalizeWorkoutDate(workoutDate);
+  const time = normalizeWorkoutTime(workoutTime);
   return {
     ...base,
     status: "completed",
-    title: title.trim().slice(0, NOTE_LIMITS.title) || "Workout",
+    title: resolveWorkoutTitle(title, date, base.startedAt.getTime()),
+    workoutDate: date,
+    workoutTime: time,
     workoutNote:
       workoutNote.trim().slice(0, NOTE_LIMITS.workoutNote) || null,
     exerciseNotesByLineId:
@@ -165,13 +187,16 @@ export function WorkoutSessionDetail({
 }: WorkoutSessionDetailProps) {
   const router = useRouter();
   const [base, setBase] = useState(() => cloneSession(session));
-  const [title, setTitle] = useState(session.title);
-  const [workoutNote, setWorkoutNote] = useState(session.workoutNote ?? "");
+  const initialDraft = draftFromSession(session);
+  const [title, setTitle] = useState(initialDraft.title);
+  const [workoutDate, setWorkoutDate] = useState(initialDraft.workoutDate);
+  const [workoutTime, setWorkoutTime] = useState(initialDraft.workoutTime);
+  const [workoutNote, setWorkoutNote] = useState(initialDraft.workoutNote);
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>(
-    () => draftFromSession(session).exerciseNotes,
+    () => initialDraft.exerciseNotes,
   );
   const [lines, setLines] = useState<SessionLine[]>(
-    () => draftFromSession(session).lines,
+    () => initialDraft.lines,
   );
   const [saving, setSaving] = useState(false);
   const [reopening, setReopening] = useState(false);
@@ -184,6 +209,8 @@ export function WorkoutSessionDetail({
     const d = draftFromSession(session);
     setBase(cloneSession(session));
     setTitle(d.title);
+    setWorkoutDate(d.workoutDate);
+    setWorkoutTime(d.workoutTime);
     setWorkoutNote(d.workoutNote);
     setExerciseNotes(d.exerciseNotes);
     setLines(d.lines);
@@ -191,19 +218,31 @@ export function WorkoutSessionDetail({
   }, [session]);
 
   const previewDoc = useMemo(
-    () => buildSaveDoc(base, title, workoutNote, exerciseNotes, lines),
-    [base, title, workoutNote, exerciseNotes, lines],
+    () =>
+      buildSaveDoc(
+        base,
+        title,
+        workoutDate,
+        workoutTime,
+        workoutNote,
+        exerciseNotes,
+        lines,
+      ),
+    [base, title, workoutDate, workoutTime, workoutNote, exerciseNotes, lines],
   );
 
   const journalText = formatWorkoutJournalEntry(previewDoc);
   const canSave =
-    title.trim().length > 0 &&
     lines.length > 0 &&
     lines.every((l) => l.sets.length > 0) &&
     lines.reduce((acc, l) => acc + l.sets.length, 0) > 0;
 
   const metaParts = [
-    formatWorkoutHeaderDate((base.endedAt ?? base.startedAt).getTime()),
+    formatSessionJournalMeta(
+      normalizeWorkoutDate(workoutDate),
+      normalizeWorkoutTime(workoutTime),
+      (base.endedAt ?? base.startedAt).getTime(),
+    ),
     base.activeDurationSec != null && base.activeDurationSec > 0
       ? formatDurationSec(base.activeDurationSec)
       : null,
@@ -244,26 +283,44 @@ export function WorkoutSessionDetail({
   };
 
   const removeSet = (lineIndex: number, setIndex: number) => {
+    const line = lines[lineIndex];
+    if (!line || line.sets.length <= 1) return;
+    if (
+      !window.confirm(
+        `Remove set ${setIndex + 1} from ${line.nameSnapshot}?`,
+      )
+    ) {
+      return;
+    }
     setLines((prev) =>
-      prev.map((line, li) => {
-        if (li !== lineIndex) return line;
-        if (line.sets.length <= 1) return line;
+      prev.map((l, li) => {
+        if (li !== lineIndex) return l;
+        if (l.sets.length <= 1) return l;
         return {
-          ...line,
-          sets: line.sets.filter((_, si) => si !== setIndex),
+          ...l,
+          sets: l.sets.filter((_, si) => si !== setIndex),
         };
       }),
     );
   };
 
   const removeExercise = (lineIndex: number) => {
+    const removed = lines[lineIndex];
+    if (!removed || lines.length <= 1) return;
+    if (
+      !window.confirm(
+        `Remove “${removed.nameSnapshot}” and all of its sets from this workout?`,
+      )
+    ) {
+      return;
+    }
     setLines((prev) => {
       if (prev.length <= 1) return prev;
-      const removed = prev[lineIndex];
-      if (!removed) return prev;
+      const target = prev[lineIndex];
+      if (!target) return prev;
       setExerciseNotes((notes) => {
         const next = { ...notes };
-        delete next[removed.lineId];
+        delete next[target.lineId];
         return next;
       });
       return prev.filter((_, i) => i !== lineIndex);
@@ -275,7 +332,15 @@ export function WorkoutSessionDetail({
     setSaving(true);
     setSaveError(null);
     try {
-      const doc = buildSaveDoc(base, title, workoutNote, exerciseNotes, lines);
+      const doc = buildSaveDoc(
+        base,
+        title,
+        workoutDate,
+        workoutTime,
+        workoutNote,
+        exerciseNotes,
+        lines,
+      );
       const saved = await updateCompletedWorkoutSession(sessionId, doc);
       if (!saved) {
         setSaveError("Couldn’t save. Check that you’re signed in.");
@@ -301,6 +366,8 @@ export function WorkoutSessionDetail({
     saving,
     sessionId,
     title,
+    workoutDate,
+    workoutTime,
     workoutNote,
   ]);
 
@@ -326,7 +393,7 @@ export function WorkoutSessionDetail({
     if (deleting) return;
     if (
       !window.confirm(
-        "Delete this workout? This cannot be undone.",
+        "Delete this workout permanently? This cannot be undone.",
       )
     ) {
       return;
@@ -365,22 +432,21 @@ export function WorkoutSessionDetail({
           <ArrowLeft className="size-4" />
           Back
         </Link>
-        <header className="space-y-1">
+        <header className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
               Finished
             </p>
           </div>
-          <Label htmlFor="session-title" className="sr-only">
-            Workout title
-          </Label>
-          <Input
-            id="session-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={NOTE_LIMITS.title}
-            className="h-12 rounded-xl text-xl font-semibold"
-            placeholder="Workout title"
+          <WorkoutMetaFields
+            title={title}
+            workoutDate={workoutDate}
+            workoutTime={workoutTime}
+            onTitleChange={setTitle}
+            onWorkoutDateChange={setWorkoutDate}
+            onWorkoutTimeChange={setWorkoutTime}
+            titleFallbackMs={base.startedAt.getTime()}
+            compact
           />
           <p className="text-sm text-zinc-500">{metaParts.join(" · ")}</p>
         </header>

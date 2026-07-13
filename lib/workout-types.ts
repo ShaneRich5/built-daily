@@ -71,8 +71,15 @@ export type WorkoutSessionDoc = {
   status: WorkoutSessionStatus;
   title: string;
   planId: string | null;
-  /** Calendar day for this session (`YYYY-MM-DD`, local timezone). */
-  workoutDate: string;
+  /**
+   * Journal calendar day (`YYYY-MM-DD`), optional.
+   * Null when the user leaves date blank (logged without anchoring to a day).
+   */
+  workoutDate: string | null;
+  /**
+   * Local clock time `HH:mm` (24h), optional and independent of `workoutDate`.
+   */
+  workoutTime: string | null;
   startedAt: Date;
   /** Set when finished; null while `in_progress`. */
   endedAt: Date | null;

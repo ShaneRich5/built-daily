@@ -133,6 +133,7 @@ export function WorkoutPlanner() {
   const sessionsByDate = useMemo(() => {
     const map = new Map<string, CompletedSessionSummary[]>();
     for (const s of sessions) {
+      if (!s.workoutDate) continue;
       const list = map.get(s.workoutDate);
       if (list) list.push(s);
       else map.set(s.workoutDate, [s]);
@@ -240,6 +241,9 @@ export function WorkoutPlanner() {
   }, [selectedDateKey, user, firebaseReady, planPick, plans, reminderLabel]);
 
   const handleRemoveScheduled = useCallback(async (entryId: string) => {
+    if (!window.confirm("Remove this scheduled workout from the calendar?")) {
+      return;
+    }
     await deleteScheduledWorkout(entryId);
   }, []);
 

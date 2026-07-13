@@ -115,9 +115,10 @@ Logical shape before/after mapping (see `sessionDocToFirestore` for `Timestamp` 
 | Field | Type | Notes |
 |-------|------|--------|
 | `status` | `"in_progress" \| "completed" \| "discarded"` | Current writes use **`completed`** |
-| `title` | `string` | Session title |
+| `title` | `string` | Always stored; blank name resolves to `Workout on {date}` |
 | `planId` | `string \| null` | Optional link to a plan (e.g. from URL `p` param) |
-| `workoutDate` | `string` | Local calendar **`YYYY-MM-DD`** at finish (see [`lib/workout-date.ts`](lib/workout-date.ts)) |
+| `workoutDate` | `string \| null` | Optional local calendar **`YYYY-MM-DD`** (clearable) |
+| `workoutTime` | `string \| null` | Optional local **`HH:mm`** (independent of date) |
 | `startedAt` | `Date` / `Timestamp` | Session screen / logical start |
 | `endedAt` | `Date` / `Timestamp` | When user finished |
 | `activeDurationSec` | `number \| null` | Session timer total seconds, if greater than 0 |
@@ -136,7 +137,7 @@ Built in the active workout UI and passed into [`saveCompletedWorkoutSession`](l
 
 | Field | Notes |
 |-------|--------|
-| `title`, `exercises`, `setsByExercise` | Mirror UI state |
+| `title`, `workoutDate`, `workoutTime`, `exercises`, `setsByExercise` | Mirror UI state (`workoutDate`/`workoutTime` may be empty strings) |
 | `workoutNote`, `exerciseNotesByExerciseId` | UI keys exercise by **catalog `exerciseId`**; mapper copies onto **`lineId`** keys |
 | `activeDurationMs` | Session timer display at finish |
 | `sessionStartedAtMs` | When session screen mounted |

@@ -23,12 +23,14 @@ import type {
   WorkoutSessionDoc,
   WorkoutSessionStatus,
 } from "@/lib/workout-types";
+import { resolveWorkoutTitle } from "@/lib/workout-date";
 
 /** Slim row for home / history lists. */
 export type SessionSummary = {
   id: string;
   status: Extract<WorkoutSessionStatus, "completed" | "in_progress">;
-  workoutDate: string;
+  workoutDate: string | null;
+  workoutTime: string | null;
   title: string;
   planId: string | null;
   startedAt: Date;
@@ -54,7 +56,20 @@ function parseSessionSummary(
 ): SessionSummary | null {
   const status = data.status;
   if (status !== "completed" && status !== "in_progress") return null;
-  const workoutDate = data.workoutDate;
+  const workoutDateRaw = data.workoutDate;
+  const workoutDate =
+    workoutDateRaw == null || workoutDateRaw === ""
+      ? null
+      : typeof workoutDateRaw === "string" && workoutDateRaw.length === 10
+        ? workoutDateRaw
+        : null;
+  const workoutTimeRaw = data.workoutTime;
+  const workoutTime =
+    workoutTimeRaw == null || workoutTimeRaw === ""
+      ? null
+      : typeof workoutTimeRaw === "string"
+        ? workoutTimeRaw
+        : null;
   const title = data.title;
   const planId = data.planId;
   const startedAt = data.startedAt;
@@ -62,7 +77,6 @@ function parseSessionSummary(
   const exerciseCount = data.exerciseCount;
   const setCount = data.setCount;
   const previewExerciseNames = data.previewExerciseNames;
-  if (typeof workoutDate !== "string" || workoutDate.length !== 10) return null;
   if (typeof title !== "string" || title.length === 0) return null;
   if (planId != null && typeof planId !== "string") return null;
   if (!(startedAt instanceof Timestamp)) return null;
@@ -80,6 +94,7 @@ function parseSessionSummary(
     id,
     status,
     workoutDate,
+    workoutTime,
     title: title.slice(0, 200),
     planId: planId == null || planId === "" ? null : planId,
     startedAt: startedAt.toDate(),
@@ -193,7 +208,13 @@ function normalizeSessionForWrite(draft: WorkoutSessionDoc): WorkoutSessionDoc |
 
   return {
     ...draft,
-    title: draft.title.trim().slice(0, 200) || "Workout",
+    title: resolveWorkoutTitle(
+      draft.title,
+      draft.workoutDate,
+      draft.startedAt.getTime(),
+    ),
+    workoutDate: draft.workoutDate,
+    workoutTime: draft.workoutTime,
     lines: normalizedLines,
     exerciseCount: normalizedLines.length,
     setCount,

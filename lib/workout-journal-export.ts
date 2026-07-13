@@ -1,4 +1,7 @@
-import { formatWorkoutHeaderDate } from "@/lib/workout-date";
+import {
+  formatSessionJournalMeta,
+  formatWorkoutHeaderDate,
+} from "@/lib/workout-date";
 import type {
   SessionLine,
   SetLog,
@@ -78,10 +81,10 @@ function formatExerciseBlock(
  * Plain-text workout log for pasting into a journal (Notes, Day One, Notion, etc.).
  */
 export function formatWorkoutJournalEntry(doc: WorkoutSessionDoc): string {
-  const dateLabel = formatWorkoutHeaderDate(
-    (doc.endedAt ?? doc.startedAt).getTime(),
-  );
-  const meta: string[] = [dateLabel];
+  const fallbackMs = (doc.endedAt ?? doc.startedAt).getTime();
+  const meta: string[] = [
+    formatSessionJournalMeta(doc.workoutDate, doc.workoutTime, fallbackMs),
+  ];
 
   if (doc.activeDurationSec != null && doc.activeDurationSec > 0) {
     meta.push(formatDurationSec(doc.activeDurationSec));
@@ -116,5 +119,11 @@ export function workoutJournalFilename(doc: WorkoutSessionDoc): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
-  return `${doc.workoutDate}-${stem || "workout"}.txt`;
+  const dateStem =
+    doc.workoutDate ??
+    formatWorkoutHeaderDate((doc.endedAt ?? doc.startedAt).getTime())
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  return `${dateStem}-${stem || "workout"}.txt`;
 }

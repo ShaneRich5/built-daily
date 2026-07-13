@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { WorkoutCard } from "@/components/workout-card";
-import { formatWorkoutHeaderDate } from "@/lib/workout-date";
+import { formatSessionJournalMeta } from "@/lib/workout-date";
 import {
   subscribeRecentSessions,
   type SessionSummary,
@@ -97,7 +97,11 @@ export function RecentWorkoutsList() {
           <li key={s.id}>
             <WorkoutCard
               name={s.title}
-              dateLabel={formatWorkoutHeaderDate(dateMs)}
+              dateLabel={formatSessionJournalMeta(
+                s.workoutDate,
+                s.workoutTime,
+                dateMs,
+              )}
               exerciseCount={s.exerciseCount}
               setCount={s.setCount}
               previewNames={s.previewExerciseNames}
