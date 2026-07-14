@@ -150,34 +150,35 @@ export function ActiveWorkoutView({
       if (prev.length >= MAX_SESSION_EXERCISES) return prev;
       setLineIds((idsPrev) => {
         if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
-        return [...idsPrev, createLineId()];
+        return [createLineId(), ...idsPrev];
       });
       setSetsByExercise((setsPrev) => {
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
-        return [...setsPrev, [emptySetRow()]];
+        return [[emptySetRow()], ...setsPrev];
       });
-      return [...prev, ex];
+      // Newest first — keeps the new exercise near the add control.
+      return [ex, ...prev];
     });
   }, []);
 
   const handleAddCustomExercise = useCallback((trimmed: string): boolean => {
     const ex = catalogExerciseFromCustomName(trimmed);
     if (!ex) return false;
-    let didAppend = false;
+    let didAdd = false;
     setActiveExercises((prev) => {
       if (prev.length >= MAX_SESSION_EXERCISES) return prev;
-      didAppend = true;
+      didAdd = true;
       setLineIds((idsPrev) => {
         if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
-        return [...idsPrev, createLineId()];
+        return [createLineId(), ...idsPrev];
       });
       setSetsByExercise((setsPrev) => {
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
-        return [...setsPrev, [emptySetRow()]];
+        return [[emptySetRow()], ...setsPrev];
       });
-      return [...prev, ex];
+      return [ex, ...prev];
     });
-    return didAppend;
+    return didAdd;
   }, []);
 
   const [workoutNote, setWorkoutNote] = useState(initialWorkoutNote);
