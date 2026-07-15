@@ -22,12 +22,12 @@ export function WorkoutMetaFields({
   onTitleChange,
   onWorkoutDateChange,
   onWorkoutTimeChange,
-  titleFallbackMs = Date.now(),
+  titleFallbackMs,
   compact = false,
 }: WorkoutMetaFieldsProps) {
   const placeholder = defaultWorkoutTitle(
     workoutDate.trim() || null,
-    titleFallbackMs,
+    titleFallbackMs ?? 0,
   );
 
   const inputClass = compact

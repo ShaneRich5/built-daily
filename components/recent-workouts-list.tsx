@@ -12,24 +12,18 @@ import {
 
 export function RecentWorkoutsList() {
   const { user, loading, firebaseReady } = useAuth();
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [ready, setReady] = useState(false);
+  const [data, setData] = useState<{
+    uid: string;
+    sessions: SessionSummary[];
+  } | null>(null);
 
   useEffect(() => {
-    if (!firebaseReady || loading) {
-      setReady(false);
-      return;
-    }
-    if (!user) {
-      setSessions([]);
-      setReady(true);
-      return;
-    }
+    if (!firebaseReady || loading || !user) return;
 
+    const uid = user.uid;
     const unsub = subscribeRecentSessions(
       (rows) => {
-        setSessions(rows);
-        setReady(true);
+        setData({ uid, sessions: rows });
       },
       { maxDocs: 30 },
     );
@@ -47,13 +41,8 @@ export function RecentWorkoutsList() {
     );
   }
 
-  if (loading || !ready) {
-    return (
-      <div className="space-y-2">
-        <div className="h-20 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
-        <div className="h-20 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
-      </div>
-    );
+  if (loading) {
+    return <LoadingSkeleton />;
   }
 
   if (!user) {
@@ -71,6 +60,11 @@ export function RecentWorkoutsList() {
         }
       />
     );
+  }
+
+  const sessions = data?.uid === user.uid ? data.sessions : null;
+  if (sessions === null) {
+    return <LoadingSkeleton />;
   }
 
   if (sessions.length === 0) {
@@ -112,6 +106,15 @@ export function RecentWorkoutsList() {
         );
       })}
     </ul>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-2">
+      <div className="h-20 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
+      <div className="h-20 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
+    </div>
   );
 }
 

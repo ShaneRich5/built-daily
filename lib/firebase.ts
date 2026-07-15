@@ -11,14 +11,18 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-function hasBrowserConfig(): boolean {
-  if (typeof window === "undefined") return false;
+/** True when public Firebase env vars are present (safe on server + client). */
+export function isFirebaseConfigured(): boolean {
   return Boolean(
     firebaseConfig.apiKey &&
       firebaseConfig.authDomain &&
       firebaseConfig.projectId &&
       firebaseConfig.appId,
   );
+}
+
+function hasBrowserConfig(): boolean {
+  return typeof window !== "undefined" && isFirebaseConfigured();
 }
 
 let app: FirebaseApp | null = null;

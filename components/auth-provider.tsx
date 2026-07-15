@@ -19,7 +19,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { getFirebaseAuth } from "@/lib/firebase";
+import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
 
 const googleAuthProvider = new GoogleAuthProvider();
 googleAuthProvider.setCustomParameters({ prompt: "select_account" });
@@ -53,8 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsub();
   }, []);
 
-  const firebaseReady =
-    typeof window !== "undefined" && getFirebaseAuth() !== null;
+  // Config-only: must match on server and client to avoid hydration mismatches.
+  // Actual Auth/Firestore init stays client-only via getFirebaseAuth().
+  const firebaseReady = isFirebaseConfigured();
 
   const signIn = useCallback(async (email: string, password: string) => {
     const auth = getFirebaseAuth();

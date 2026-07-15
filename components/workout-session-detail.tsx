@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Copy, Download, Play, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, CopyPlus, Download, Play, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -282,6 +282,26 @@ export function WorkoutSessionDetail({
     );
   };
 
+  const duplicateSet = (lineIndex: number, setIndex: number) => {
+    setLines((prev) =>
+      prev.map((line, li) => {
+        if (li !== lineIndex) return line;
+        const source = line.sets[setIndex];
+        if (!source) return line;
+        const copy = {
+          weight: source.weight,
+          reps: source.reps,
+          durationSec: source.durationSec,
+          timedSetSec: null,
+          note: null,
+        };
+        const sets = [...line.sets];
+        sets.splice(setIndex + 1, 0, copy);
+        return { ...line, sets };
+      }),
+    );
+  };
+
   const removeSet = (lineIndex: number, setIndex: number) => {
     const line = lines[lineIndex];
     if (!line || line.sets.length <= 1) return;
@@ -549,19 +569,31 @@ export function WorkoutSessionDetail({
                     key={`${line.lineId}-${setIndex}`}
                     className="rounded-lg border border-zinc-100 p-2 dark:border-zinc-800"
                   >
-                    <div className="mb-1.5 flex items-center justify-between">
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
                       <span className="text-xs font-medium text-zinc-400">
                         Set {setIndex + 1}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => removeSet(lineIndex, setIndex)}
-                        disabled={line.sets.length <= 1}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                        aria-label={`Remove set ${setIndex + 1}`}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          type="button"
+                          onClick={() => duplicateSet(lineIndex, setIndex)}
+                          className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                          aria-label={`Duplicate set ${setIndex + 1}`}
+                          title="Duplicate this set’s weight and reps"
+                        >
+                          <CopyPlus className="size-3.5" />
+                          Duplicate
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeSet(lineIndex, setIndex)}
+                          disabled={line.sets.length <= 1}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                          aria-label={`Remove set ${setIndex + 1}`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <SetEditors
                       metric={line.metric}

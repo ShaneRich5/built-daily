@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Pause, Play, RotateCcw, Timer, Trash2 } from "lucide-react";
+import { CopyPlus, Pause, Play, RotateCcw, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
@@ -35,6 +35,17 @@ type SetRow = {
 
 function emptySetRow(): SetRow {
   return { weight: "", reps: "", seconds: "", timedSetSec: "", note: "" };
+}
+
+/** Copy weight/reps/duration into a new set; leave timer + note blank. */
+function duplicateSetRow(row: SetRow): SetRow {
+  return {
+    weight: row.weight,
+    reps: row.reps,
+    seconds: row.seconds,
+    timedSetSec: "",
+    note: "",
+  };
 }
 
 function formatElapsed(ms: number) {
@@ -324,6 +335,27 @@ export function ActiveWorkoutView({
       return next;
     });
   }, []);
+
+  const duplicateSet = useCallback(
+    (exerciseIndex: number, setIndex: number) => {
+      setSetsByExercise((prev) => {
+        const next = prev.map((sets) => [...sets]);
+        const sets = next[exerciseIndex];
+        const source = sets?.[setIndex];
+        if (!sets || !source) return prev;
+        sets.splice(setIndex + 1, 0, duplicateSetRow(source));
+        return next;
+      });
+      setSetTimerActive((active) => {
+        if (!active || active.exerciseIndex !== exerciseIndex) return active;
+        if (active.setIndex > setIndex) {
+          return { ...active, setIndex: active.setIndex + 1 };
+        }
+        return active;
+      });
+    },
+    [],
+  );
 
   const removeExercise = useCallback(
     (exerciseIndex: number) => {
@@ -622,6 +654,7 @@ export function ActiveWorkoutView({
                   setIndex={setIndex}
                   set={set}
                   updateSet={updateSet}
+                  onDuplicateSet={duplicateSet}
                   hideManualSeconds={Boolean(
                     durationTimerOnlyById[exercise.id],
                   )}
@@ -738,6 +771,7 @@ type SetRowFieldsProps = {
   onStartSetTimer: (exerciseIndex: number, setIndex: number) => void;
   onSaveSetTimer: () => void;
   onCancelSetTimer: () => void;
+  onDuplicateSet: (exerciseIndex: number, setIndex: number) => void;
   updateSet: (
     exerciseIndex: number,
     setIndex: number,
@@ -757,10 +791,29 @@ function SetRowFields({
   onStartSetTimer,
   onSaveSetTimer,
   onCancelSetTimer,
+  onDuplicateSet,
   updateSet,
 }: SetRowFieldsProps) {
   const setNo = setIndex + 1;
   const idBase = `${exercise.id}-${setIndex}`;
+
+  const setHeader = (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+        Set {setNo}
+      </span>
+      <button
+        type="button"
+        onClick={() => onDuplicateSet(exerciseIndex, setIndex)}
+        className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+        aria-label={`Duplicate set ${setNo}`}
+        title="Duplicate this set’s weight and reps"
+      >
+        <CopyPlus className="size-3.5" aria-hidden />
+        Duplicate
+      </button>
+    </div>
+  );
 
   const setTimerThis =
     setTimerActive !== null &&
@@ -841,8 +894,9 @@ function SetRowFields({
 
     return (
       <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
+        {setHeader}
         {!hideManualSeconds && (
-          <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 text-sm">
+          <div className="grid grid-cols-2 items-end gap-2 text-sm">
             <div>
               <label
                 className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
@@ -893,13 +947,10 @@ function SetRowFields({
                 className={numberFieldClassName}
               />
             </div>
-            <span className="mb-3 w-8 text-center text-xs text-zinc-400">
-              {setNo}
-            </span>
           </div>
         )}
         {hideManualSeconds && (
-          <div className="flex items-center justify-between gap-2 text-sm">
+          <div className="flex items-center gap-2 text-sm">
             <p className="text-zinc-700 dark:text-zinc-200">
               {set.seconds ? (
                 <>
@@ -914,9 +965,6 @@ function SetRowFields({
                 </span>
               )}
             </p>
-            <span className="w-8 shrink-0 text-center text-xs text-zinc-400">
-              {setNo}
-            </span>
           </div>
         )}
         {setTimerStrip}
@@ -928,27 +976,25 @@ function SetRowFields({
   if (exercise.metric === "bodyweight_reps") {
     return (
       <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
-        <div className="grid grid-cols-[1fr_auto] items-center gap-2 text-sm">
-          <div>
-            <label className="sr-only" htmlFor={`r-${idBase}`}>
-              Reps, set {setNo}
-            </label>
-            <input
-              id={`r-${idBase}`}
-              type="number"
-              inputMode="numeric"
-              min={0}
-              step={1}
-              autoComplete="off"
-              value={set.reps}
-              onChange={(e) =>
-                updateSet(exerciseIndex, setIndex, "reps", e.target.value)
-              }
-              placeholder="Reps"
-              className={numberFieldClassName}
-            />
-          </div>
-          <span className="w-8 text-center text-xs text-zinc-400">{setNo}</span>
+        {setHeader}
+        <div className="text-sm">
+          <label className="sr-only" htmlFor={`r-${idBase}`}>
+            Reps, set {setNo}
+          </label>
+          <input
+            id={`r-${idBase}`}
+            type="number"
+            inputMode="numeric"
+            min={0}
+            step={1}
+            autoComplete="off"
+            value={set.reps}
+            onChange={(e) =>
+              updateSet(exerciseIndex, setIndex, "reps", e.target.value)
+            }
+            placeholder="Reps"
+            className={numberFieldClassName}
+          />
         </div>
         {set.timedSetSec ? (
           <p className="text-[11px] text-zinc-500">
@@ -966,7 +1012,8 @@ function SetRowFields({
 
   return (
     <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
-      <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-sm">
+      {setHeader}
+      <div className="grid grid-cols-2 items-center gap-2 text-sm">
         <div>
           <label className="sr-only" htmlFor={`w-${idBase}`}>
             Weight for set {setNo}
@@ -1005,7 +1052,6 @@ function SetRowFields({
             className={numberFieldClassName}
           />
         </div>
-        <span className="w-8 text-center text-xs text-zinc-400">{setNo}</span>
       </div>
       {set.timedSetSec ? (
         <p className="text-[11px] text-zinc-500">
