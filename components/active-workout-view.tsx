@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CopyPlus, Pause, Play, RotateCcw, Timer, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
+import { ExerciseHistoryControls } from "@/components/exercise-history-controls";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
 import {
   catalogExerciseFromCustomName,
@@ -11,8 +12,16 @@ import {
   type CatalogExercise,
   type ExerciseMetric,
 } from "@/lib/exercise-catalog";
-import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
-import { createLineId } from "@/lib/workout-session-mapper";
+import {
+  createLineId,
+  setLogToUiSetRow,
+  type ActiveWorkoutFinishSnapshot,
+} from "@/lib/workout-session-mapper";
+import {
+  getExerciseHistories,
+  type ExerciseHistoryById,
+} from "@/lib/workout-session-repository";
+import type { SetLog } from "@/lib/workout-types";
 import {
   combineToTotalSeconds,
   formatMinutesSecondsLabel,
@@ -46,6 +55,25 @@ function duplicateSetRow(row: SetRow): SetRow {
     timedSetSec: "",
     note: "",
   };
+}
+
+function historySetToRow(set: SetLog): SetRow {
+  const row = setLogToUiSetRow(set);
+  return {
+    ...row,
+    timedSetSec: "",
+    note: "",
+  };
+}
+
+function setRowHasValues(row: SetRow): boolean {
+  return Boolean(
+    row.weight.trim() ||
+      row.reps.trim() ||
+      row.seconds.trim() ||
+      row.timedSetSec.trim() ||
+      row.note.trim(),
+  );
 }
 
 function formatElapsed(ms: number) {
@@ -153,6 +181,36 @@ export function ActiveWorkoutView({
       ? initialSetsByExercise
       : exercises.map(() => [emptySetRow()]),
   );
+  const exerciseHistoryKey = activeExercises
+    .map((exercise) => `${exercise.id}:${exercise.metric}:${exercise.name}`)
+    .join("|");
+  const [historyResult, setHistoryResult] = useState<{
+    key: string;
+    history: ExerciseHistoryById;
+  }>({ key: "", history: {} });
+  const exerciseHistory =
+    historyResult.key === exerciseHistoryKey ? historyResult.history : {};
+  const historyLoading = historyResult.key !== exerciseHistoryKey;
+
+  useEffect(() => {
+    let cancelled = false;
+    void getExerciseHistories(activeExercises)
+      .then((history) => {
+        if (!cancelled) {
+          setHistoryResult({ key: exerciseHistoryKey, history });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHistoryResult({ key: exerciseHistoryKey, history: {} });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // The stable string prevents refetches when unrelated workout state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exerciseHistoryKey]);
 
   const handleAddCatalogExercise = useCallback((exerciseId: string) => {
     const ex = getCatalogExerciseById(exerciseId);
@@ -357,6 +415,36 @@ export function ActiveWorkoutView({
     [],
   );
 
+  const applyHistoricalSets = useCallback(
+    (
+      exerciseIndex: number,
+      historicalSets: SetLog[],
+      mode: "replace" | "append",
+    ) => {
+      const copied = historicalSets.map(historySetToRow);
+      if (copied.length === 0) return;
+
+      setSetsByExercise((prev) => {
+        const next = prev.map((sets) => [...sets]);
+        const current = next[exerciseIndex];
+        if (!current) return prev;
+
+        if (mode === "replace") {
+          next[exerciseIndex] = copied;
+        } else {
+          const hasValues = current.some(setRowHasValues);
+          next[exerciseIndex] = hasValues ? [...current, ...copied] : copied;
+        }
+        return next;
+      });
+      setSetTimerActive((active) =>
+        active?.exerciseIndex === exerciseIndex ? null : active,
+      );
+      setSetTimerLiveMs(0);
+    },
+    [],
+  );
+
   const removeExercise = useCallback(
     (exerciseIndex: number) => {
       if (activeExercises.length <= 1) return;
@@ -435,7 +523,9 @@ export function ActiveWorkoutView({
   ]);
 
   const displayedMsRef = useRef(displayedMs);
-  displayedMsRef.current = displayedMs;
+  useEffect(() => {
+    displayedMsRef.current = displayedMs;
+  }, [displayedMs]);
 
   useEffect(() => {
     if (!onPersist) return;
@@ -644,6 +734,17 @@ export function ActiveWorkoutView({
               maxLength={400}
               placeholder="Equipment swaps, pain/limitations, cues for this lift…"
               className="mt-2"
+            />
+            <ExerciseHistoryControls
+              exerciseName={exercise.name}
+              entries={exerciseHistory[exercise.id] ?? []}
+              loading={historyLoading}
+              hasCurrentValues={(setsByExercise[exerciseIndex] ?? []).some(
+                setRowHasValues,
+              )}
+              onUseSets={(sets, mode) =>
+                applyHistoricalSets(exerciseIndex, sets, mode)
+              }
             />
             <div className="mt-3 space-y-2">
               {(setsByExercise[exerciseIndex] ?? []).map((set, setIndex) => (

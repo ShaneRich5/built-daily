@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   limit,
   onSnapshot,
   orderBy,
@@ -20,9 +21,11 @@ import {
   type ActiveWorkoutFinishSnapshot,
 } from "@/lib/workout-session-mapper";
 import type {
+  SessionLine,
   WorkoutSessionDoc,
   WorkoutSessionStatus,
 } from "@/lib/workout-types";
+import type { CatalogExercise } from "@/lib/exercise-catalog";
 import { resolveWorkoutTitle } from "@/lib/workout-date";
 
 /** Slim row for home / history lists. */
@@ -42,6 +45,16 @@ export type SessionSummary = {
 
 /** @deprecated Prefer SessionSummary */
 export type CompletedSessionSummary = SessionSummary;
+
+export type ExerciseHistoryEntry = {
+  sessionId: string;
+  sessionTitle: string;
+  performedAt: Date;
+  workoutDate: string | null;
+  line: SessionLine;
+};
+
+export type ExerciseHistoryById = Record<string, ExerciseHistoryEntry[]>;
 
 function sessionsCollectionRef() {
   const db = getFirestoreDb();
@@ -185,6 +198,72 @@ export function subscribeRecentCompletedSessions(
       onSessions([]);
     },
   );
+}
+
+/**
+ * Load recent completed sets for several exercises with one Firestore query.
+ * We scan a bounded recent window so this also works for older session docs
+ * that do not have a denormalized exercise-id array.
+ */
+export async function getExerciseHistories(
+  exercises: CatalogExercise[],
+  options?: { maxSessions?: number; maxPerExercise?: number },
+): Promise<ExerciseHistoryById> {
+  const col = sessionsCollectionRef();
+  if (!col || exercises.length === 0) return {};
+
+  const maxSessions = options?.maxSessions ?? 80;
+  const maxPerExercise = options?.maxPerExercise ?? 10;
+  const result: ExerciseHistoryById = Object.fromEntries(
+    exercises.map((exercise) => [exercise.id, []]),
+  );
+  const byId = new Map(exercises.map((exercise) => [exercise.id, exercise]));
+  const byNormalizedName = new Map(
+    exercises.map((exercise) => [
+      `${exercise.metric}:${exercise.name.trim().toLocaleLowerCase()}`,
+      exercise,
+    ]),
+  );
+
+  const snap = await getDocs(
+    query(
+      col,
+      where("status", "==", "completed"),
+      orderBy("endedAt", "desc"),
+      limit(maxSessions),
+    ),
+  );
+
+  for (const sessionSnap of snap.docs) {
+    const session = firestoreToWorkoutSessionDoc(
+      sessionSnap.data() as Record<string, unknown>,
+    );
+    if (!session || session.status !== "completed") continue;
+
+    for (const line of session.lines) {
+      const exercise =
+        byId.get(line.exerciseId) ??
+        byNormalizedName.get(
+          `${line.metric}:${line.nameSnapshot.trim().toLocaleLowerCase()}`,
+        );
+      if (!exercise) continue;
+
+      const entries = result[exercise.id]!;
+      if (entries.length >= maxPerExercise) continue;
+      entries.push({
+        sessionId: sessionSnap.id,
+        sessionTitle: session.title,
+        performedAt: session.endedAt ?? session.startedAt,
+        workoutDate: session.workoutDate,
+        line: {
+          ...line,
+          sets: line.sets.map((set) => ({ ...set })),
+        },
+      });
+    }
+  }
+
+  return result;
 }
 
 function normalizeSessionForWrite(draft: WorkoutSessionDoc): WorkoutSessionDoc | null {
