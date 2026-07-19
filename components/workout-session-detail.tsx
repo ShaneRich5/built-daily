@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Copy, CopyPlus, Download, Play, Plus, Save, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,10 +31,12 @@ import {
   reopenSessionAsInProgress,
   updateCompletedWorkoutSession,
 } from "@/lib/workout-session-repository";
+import { createWorkoutPlan } from "@/lib/workout-plan-repository";
 import {
   NOTE_LIMITS,
   type SessionLine,
   type SetLog,
+  type WorkoutPlanDoc,
   type WorkoutSessionDoc,
 } from "@/lib/workout-types";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
@@ -201,21 +203,10 @@ export function WorkoutSessionDetail({
   const [saving, setSaving] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    const d = draftFromSession(session);
-    setBase(cloneSession(session));
-    setTitle(d.title);
-    setWorkoutDate(d.workoutDate);
-    setWorkoutTime(d.workoutTime);
-    setWorkoutNote(d.workoutNote);
-    setExerciseNotes(d.exerciseNotes);
-    setLines(d.lines);
-    setSaveError(null);
-  }, [session]);
 
   const previewDoc = useMemo(
     () =>
@@ -442,6 +433,43 @@ export function WorkoutSessionDetail({
     }
   }, [journalText]);
 
+  const handleCreateTemplate = useCallback(async () => {
+    if (creatingTemplate || previewDoc.lines.length === 0) return;
+    setCreatingTemplate(true);
+    setSaveError(null);
+
+    const now = new Date();
+    const template: WorkoutPlanDoc = {
+      name:
+        previewDoc.title.trim().slice(0, NOTE_LIMITS.title) ||
+        "Workout template",
+      createdAt: now,
+      updatedAt: now,
+      source: "custom",
+      lines: previewDoc.lines.map((line) => ({
+        lineId: line.lineId,
+        exerciseId: line.exerciseId,
+        nameSnapshot: line.nameSnapshot,
+        metric: line.metric,
+        targetSets: Math.max(1, line.sets.length),
+        notes: previewDoc.exerciseNotesByLineId?.[line.lineId] ?? null,
+      })),
+    };
+
+    try {
+      const templateId = await createWorkoutPlan(template);
+      if (!templateId) {
+        setSaveError("Couldn’t create a template. Check that you’re signed in.");
+        return;
+      }
+      router.push(`/templates/${encodeURIComponent(templateId)}`);
+    } catch {
+      setSaveError("Couldn’t create a template from this workout.");
+    } finally {
+      setCreatingTemplate(false);
+    }
+  }, [creatingTemplate, previewDoc, router]);
+
   return (
     <div className="flex flex-1 flex-col gap-6 pb-28">
       <div className="space-y-3">
@@ -648,6 +676,17 @@ export function WorkoutSessionDetail({
           {saveError}
         </p>
       ) : null}
+
+      <Button
+        type="button"
+        variant="outline"
+        className="h-11 w-full gap-2 rounded-xl"
+        disabled={creatingTemplate || previewDoc.lines.length === 0}
+        onClick={() => void handleCreateTemplate()}
+      >
+        <CopyPlus className="size-4" />
+        {creatingTemplate ? "Creating template…" : "Save as template"}
+      </Button>
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button

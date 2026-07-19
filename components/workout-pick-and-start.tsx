@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Play, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -17,13 +18,6 @@ import {
   type SavedWorkoutPlan,
 } from "@/lib/workout-plan-repository";
 
-type StarterMeta = {
-  kind: "starter";
-  id: string;
-  name: string;
-  exerciseCount: number;
-};
-
 type TemplateMeta = {
   kind: "template";
   id: string;
@@ -32,7 +26,7 @@ type TemplateMeta = {
   lines: PlanLine[];
 };
 
-type SelectedLibrary = StarterMeta | TemplateMeta | null;
+type SelectedLibrary = TemplateMeta | null;
 
 type PickState = {
   library: SelectedLibrary;
@@ -40,54 +34,11 @@ type PickState = {
 };
 
 type PickAction =
-  | { type: "toggleStarter"; starter: StarterMeta }
   | { type: "toggleTemplate"; template: TemplateMeta }
   | { type: "toggleExercise"; exerciseId: string };
 
-const STARTERS: StarterMeta[] = [
-  {
-    kind: "starter",
-    id: "starter-full-body",
-    name: "Full body",
-    exerciseCount: 6,
-  },
-  {
-    kind: "starter",
-    id: "starter-upper",
-    name: "Upper body",
-    exerciseCount: 5,
-  },
-  {
-    kind: "starter",
-    id: "starter-lower",
-    name: "Lower body",
-    exerciseCount: 5,
-  },
-  {
-    kind: "starter",
-    id: "starter-push",
-    name: "Push",
-    exerciseCount: 6,
-  },
-  {
-    kind: "starter",
-    id: "starter-pull",
-    name: "Pull",
-    exerciseCount: 6,
-  },
-];
-
 function pickReducer(state: PickState, action: PickAction): PickState {
   switch (action.type) {
-    case "toggleStarter": {
-      const s = action.starter;
-      const off =
-        state.library?.kind === "starter" && state.library.id === s.id;
-      return {
-        ...state,
-        library: off ? null : s,
-      };
-    }
     case "toggleTemplate": {
       const t = action.template;
       const off =
@@ -138,10 +89,6 @@ export function WorkoutPickAndStart() {
     [exerciseQuery],
   );
 
-  const toggleStarter = useCallback((s: StarterMeta) => {
-    dispatch({ type: "toggleStarter", starter: s });
-  }, []);
-
   const toggleTemplate = useCallback((t: TemplateMeta) => {
     dispatch({ type: "toggleTemplate", template: t });
   }, []);
@@ -156,9 +103,7 @@ export function WorkoutPickAndStart() {
   }, [pick.library]);
 
   const planIdForUrl = useMemo(() => {
-    if (pick.library?.kind === "template") return pick.library.id;
-    if (pick.library?.kind === "starter") return pick.library.id;
-    return null;
+    return pick.library?.id ?? null;
   }, [pick.library]);
 
   const startWorkout = useCallback(() => {
@@ -171,6 +116,18 @@ export function WorkoutPickAndStart() {
     const qs = params.toString();
     router.push(qs ? `/workout?${qs}` : "/workout");
   }, [router, pick.exerciseIds, selectedPlanLabel, planIdForUrl]);
+
+  const startTemplate = useCallback(
+    (template: TemplateMeta) => {
+      const params = new URLSearchParams({
+        e: template.lines.map((line) => line.exerciseId).join(","),
+        t: template.name,
+        p: template.id,
+      });
+      router.push(`/workout?${params.toString()}`);
+    },
+    [router],
+  );
 
   return (
     <div className="space-y-6">
@@ -187,9 +144,10 @@ export function WorkoutPickAndStart() {
           {user && firebaseReady ? (
             <Link
               href="/templates/new"
-              className="text-xs font-semibold text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
             >
-              New template
+              <Plus className="size-3.5" aria-hidden />
+              Create template
             </Link>
           ) : null}
         </div>
@@ -250,13 +208,22 @@ export function WorkoutPickAndStart() {
                         {meta.exerciseCount === 1 ? "" : "s"}
                       </span>
                     </button>
-                    <Link
-                      href={`/templates/${p.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="shrink-0 text-xs font-semibold text-zinc-600 underline-offset-2 hover:underline dark:text-zinc-400"
-                    >
-                      Edit
-                    </Link>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => startTemplate(meta)}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                      >
+                        <Play className="size-3.5" aria-hidden />
+                        Start
+                      </button>
+                      <Link
+                        href={`/templates/${p.id}`}
+                        className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+                      >
+                        Edit
+                      </Link>
+                    </div>
                   </div>
                 </li>
               );

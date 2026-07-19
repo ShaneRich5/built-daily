@@ -136,6 +136,7 @@ function SessionDetailLoader({ sessionId }: { sessionId: string }) {
 
   return (
     <WorkoutSessionDetail
+      key={loaded.id}
       sessionId={loaded.id}
       session={loaded.session}
       backHref="/"

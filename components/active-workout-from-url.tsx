@@ -7,7 +7,6 @@ import { ActiveWorkoutView } from "@/components/active-workout-view";
 import { useAuth } from "@/components/auth-provider";
 import { WorkoutSavedExport } from "@/components/workout-saved-export";
 import {
-  getCatalogExerciseById,
   resolveExercisesFromUrl,
   type CatalogExercise,
 } from "@/lib/exercise-catalog";
@@ -128,11 +127,10 @@ export function ActiveWorkoutFromUrl() {
     };
   }, [searchParams]);
 
+  // Always load a saved template. Catalog-only templates still contain useful
+  // defaults such as target sets and exercise notes.
   const needsPlanFetch = Boolean(
-    !sessionIdParam &&
-      planId &&
-      !planId.startsWith("starter-") &&
-      ids.some((id) => !getCatalogExerciseById(id)),
+    !sessionIdParam && planId && !planId.startsWith("starter-"),
   );
 
   const fetchKey =
@@ -142,9 +140,15 @@ export function ActiveWorkoutFromUrl() {
     key: string;
     doc: WorkoutPlanDoc | null;
   } | null>(null);
-  const [resume, setResume] = useState<ResumeBundle | null | "loading">(
-    sessionIdParam ? "loading" : null,
-  );
+  const [resumeLoad, setResumeLoad] = useState<{
+    sessionId: string;
+    resume: ResumeBundle | null;
+  } | null>(null);
+  const resume: ResumeBundle | null | "loading" = sessionIdParam
+    ? resumeLoad?.sessionId === sessionIdParam
+      ? resumeLoad.resume
+      : "loading"
+    : null;
   const [liveSessionId, setLiveSessionId] = useState<string | null>(
     sessionIdParam,
   );
@@ -169,18 +173,14 @@ export function ActiveWorkoutFromUrl() {
   }, [fetchKey, planId]);
 
   useEffect(() => {
-    if (!sessionIdParam) {
-      setResume(null);
-      return;
-    }
+    if (!sessionIdParam) return;
     if (!firebaseReady || !user) return;
 
     let cancelled = false;
-    setResume("loading");
     void getWorkoutSession(sessionIdParam).then(async (res) => {
       if (cancelled) return;
       if (!res || res.session.lines.length === 0) {
-        setResume(null);
+        setResumeLoad({ sessionId: sessionIdParam, resume: null });
         return;
       }
       let session = res.session;
@@ -193,7 +193,10 @@ export function ActiveWorkoutFromUrl() {
         if (saved) session = saved;
       }
       if (cancelled) return;
-      setResume(sessionToResumeBundle(res.id, session));
+      setResumeLoad({
+        sessionId: sessionIdParam,
+        resume: sessionToResumeBundle(res.id, session),
+      });
       setLiveSessionId(res.id);
     });
     return () => {
@@ -210,6 +213,20 @@ export function ActiveWorkoutFromUrl() {
     return resolveExercisesFromUrl(ids, lines);
   }, [sessionIdParam, planReady, needsPlanFetch, planLoad, ids]);
 
+  const planDefaults = useMemo(() => {
+    const plan = needsPlanFetch ? planLoad?.doc : null;
+    const notes: Record<string, string> = {};
+    const setsByExercise = (urlExercises ?? []).map((exercise) => {
+      const line = plan?.lines.find(
+        (candidate) => candidate.exerciseId === exercise.id,
+      );
+      if (line?.notes) notes[exercise.id] = line.notes;
+      const targetSets = Math.max(1, Math.min(99, line?.targetSets ?? 1));
+      return Array.from({ length: targetSets }, emptyUiSet);
+    });
+    return { notes, setsByExercise };
+  }, [needsPlanFetch, planLoad, urlExercises]);
+
   useEffect(() => {
     if (sessionIdParam) return;
     if (urlExercises === null) return;
@@ -225,9 +242,9 @@ export function ActiveWorkoutFromUrl() {
       workoutDate: localDateKeyFromMs(startedAtMs),
       workoutTime: "",
       exercises: urlExercises,
-      setsByExercise: urlExercises.map(() => [emptyUiSet()]),
+      setsByExercise: planDefaults.setsByExercise,
       workoutNote: "",
-      exerciseNotesByExerciseId: {},
+      exerciseNotesByExerciseId: planDefaults.notes,
       activeDurationMs: 0,
       sessionStartedAtMs: startedAtMs,
       planId,
@@ -256,6 +273,7 @@ export function ActiveWorkoutFromUrl() {
     title,
     titleIsCustom,
     planId,
+    planDefaults,
     router,
   ]);
 
@@ -430,6 +448,8 @@ export function ActiveWorkoutFromUrl() {
       titleIsCustom={titleIsCustom}
       exercises={urlExercises}
       planId={planId}
+      initialSetsByExercise={planDefaults.setsByExercise}
+      initialExerciseNotesById={planDefaults.notes}
       onPersist={liveSessionId ? handlePersist : undefined}
       onFinish={handleFinish}
       onDiscard={liveSessionId ? handleDiscard : undefined}

@@ -89,6 +89,8 @@ export const EXERCISE_CATALOG: CatalogExercise[] = ([
   { id: "hip-thrust-machine", name: "Hip thrust machine", metric: "weight_reps" },
   { id: "calf-raise-machine", name: "Standing calf raise machine", metric: "weight_reps" },
   { id: "seated-calf-raise", name: "Seated calf raise machine", metric: "weight_reps" },
+  { id: "calf-extension-machine", name: "Calf extension machine", metric: "weight_reps" },
+  { id: "donkey-calf-raise-machine", name: "Donkey calf raise machine", metric: "weight_reps" },
   { id: "leg-press-calf-raise", name: "Leg press calf raise", metric: "weight_reps" },
   { id: "adductor-machine", name: "Adductor machine", metric: "weight_reps" },
   { id: "abductor-machine", name: "Abductor machine", metric: "weight_reps" },
