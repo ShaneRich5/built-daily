@@ -28,10 +28,18 @@ export type PlanRestPreferences = {
 export type SetLog = {
   weight: number | null;
   reps: number | null;
-  /** Hold duration for `duration` metric (seconds). */
+  /** Hold / cardio duration (seconds). */
   durationSec: number | null;
   /** Set stopwatch seconds for non-duration metrics (optional). */
   timedSetSec: number | null;
+  /** Cardio pace / speed in mph (optional). */
+  paceMph: number | null;
+  /** Treadmill incline percent (optional). */
+  inclinePercent: number | null;
+  /** Bike / elliptical resistance level (optional). */
+  resistanceLevel: number | null;
+  /** Cardio distance in miles (optional). */
+  distanceMiles: number | null;
   note: string | null;
 };
 

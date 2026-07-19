@@ -1,7 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
 import {
-  localDateKeyFromMs,
   normalizeWorkoutDate,
   normalizeWorkoutTime,
   resolveWorkoutTitle,
@@ -20,6 +19,10 @@ export type UiSetRow = {
   reps: string;
   seconds: string;
   timedSetSec: string;
+  paceMph: string;
+  inclinePercent: string;
+  resistanceLevel: string;
+  distanceMiles: string;
   note: string;
 };
 
@@ -62,6 +65,18 @@ function parseIntLoose(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function emptyCardioFields(): Pick<
+  SetLog,
+  "paceMph" | "inclinePercent" | "resistanceLevel" | "distanceMiles"
+> {
+  return {
+    paceMph: null,
+    inclinePercent: null,
+    resistanceLevel: null,
+    distanceMiles: null,
+  };
+}
+
 export function uiSetRowToSetLog(row: UiSetRow, metric: ExerciseMetric): SetLog {
   const note = trimToNull(row.note, NOTE_LIMITS.setNote);
   const timedSetSec = parseIntLoose(row.timedSetSec);
@@ -73,6 +88,7 @@ export function uiSetRowToSetLog(row: UiSetRow, metric: ExerciseMetric): SetLog 
         reps: parseIntLoose(row.reps),
         durationSec: null,
         timedSetSec,
+        ...emptyCardioFields(),
         note,
       };
     case "bodyweight_reps":
@@ -81,6 +97,7 @@ export function uiSetRowToSetLog(row: UiSetRow, metric: ExerciseMetric): SetLog 
         reps: parseIntLoose(row.reps),
         durationSec: null,
         timedSetSec,
+        ...emptyCardioFields(),
         note,
       };
     case "duration":
@@ -89,6 +106,19 @@ export function uiSetRowToSetLog(row: UiSetRow, metric: ExerciseMetric): SetLog 
         reps: null,
         durationSec: parseIntLoose(row.seconds),
         timedSetSec,
+        ...emptyCardioFields(),
+        note,
+      };
+    case "cardio":
+      return {
+        weight: null,
+        reps: null,
+        durationSec: parseIntLoose(row.seconds),
+        timedSetSec: null,
+        paceMph: parseNumberLoose(row.paceMph),
+        inclinePercent: parseNumberLoose(row.inclinePercent),
+        resistanceLevel: parseNumberLoose(row.resistanceLevel),
+        distanceMiles: parseNumberLoose(row.distanceMiles),
         note,
       };
     default: {
@@ -116,6 +146,11 @@ export function setLogToUiSetRow(set: SetLog): UiSetRow {
     reps: set.reps != null ? String(set.reps) : "",
     seconds: set.durationSec != null ? String(set.durationSec) : "",
     timedSetSec: set.timedSetSec != null ? String(set.timedSetSec) : "",
+    paceMph: set.paceMph != null ? String(set.paceMph) : "",
+    inclinePercent: set.inclinePercent != null ? String(set.inclinePercent) : "",
+    resistanceLevel:
+      set.resistanceLevel != null ? String(set.resistanceLevel) : "",
+    distanceMiles: set.distanceMiles != null ? String(set.distanceMiles) : "",
     note: set.note ?? "",
   };
 }
@@ -215,6 +250,10 @@ export function sessionDocToFirestore(
         reps: s.reps,
         durationSec: s.durationSec,
         timedSetSec: s.timedSetSec,
+        paceMph: s.paceMph,
+        inclinePercent: s.inclinePercent,
+        resistanceLevel: s.resistanceLevel,
+        distanceMiles: s.distanceMiles,
         note: s.note,
       })),
     })),
@@ -244,7 +283,12 @@ function asTimestamp(v: unknown): Date | null {
 }
 
 function asMetric(v: unknown): ExerciseMetric | null {
-  if (v === "weight_reps" || v === "bodyweight_reps" || v === "duration") {
+  if (
+    v === "weight_reps" ||
+    v === "bodyweight_reps" ||
+    v === "duration" ||
+    v === "cardio"
+  ) {
     return v;
   }
   return null;
@@ -275,6 +319,10 @@ function parseSetLog(raw: unknown): SetLog | null {
     reps: asNullableNumber(o.reps),
     durationSec: asNullableNumber(o.durationSec),
     timedSetSec: asNullableNumber(o.timedSetSec),
+    paceMph: asNullableNumber(o.paceMph),
+    inclinePercent: asNullableNumber(o.inclinePercent),
+    resistanceLevel: asNullableNumber(o.resistanceLevel),
+    distanceMiles: asNullableNumber(o.distanceMiles),
     note: note && note.trim().length > 0 ? note : null,
   };
 }

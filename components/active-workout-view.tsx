@@ -38,21 +38,39 @@ type SetRow = {
   seconds: string;
   /** Filled by set stopwatch for weight / bodyweight (optional). Whole seconds. */
   timedSetSec: string;
+  paceMph: string;
+  inclinePercent: string;
+  resistanceLevel: string;
+  distanceMiles: string;
   /** Optional free text for this set (form cues, RPE, how it felt). */
   note: string;
 };
 
 function emptySetRow(): SetRow {
-  return { weight: "", reps: "", seconds: "", timedSetSec: "", note: "" };
+  return {
+    weight: "",
+    reps: "",
+    seconds: "",
+    timedSetSec: "",
+    paceMph: "",
+    inclinePercent: "",
+    resistanceLevel: "",
+    distanceMiles: "",
+    note: "",
+  };
 }
 
-/** Copy weight/reps/duration into a new set; leave timer + note blank. */
+/** Copy measurable fields into a new set; leave timer + note blank. */
 function duplicateSetRow(row: SetRow): SetRow {
   return {
     weight: row.weight,
     reps: row.reps,
     seconds: row.seconds,
     timedSetSec: "",
+    paceMph: row.paceMph,
+    inclinePercent: row.inclinePercent,
+    resistanceLevel: row.resistanceLevel,
+    distanceMiles: row.distanceMiles,
     note: "",
   };
 }
@@ -72,6 +90,10 @@ function setRowHasValues(row: SetRow): boolean {
       row.reps.trim() ||
       row.seconds.trim() ||
       row.timedSetSec.trim() ||
+      row.paceMph.trim() ||
+      row.inclinePercent.trim() ||
+      row.resistanceLevel.trim() ||
+      row.distanceMiles.trim() ||
       row.note.trim(),
   );
 }
@@ -95,6 +117,8 @@ function metricHint(metric: ExerciseMetric): string {
       return "Reps only";
     case "duration":
       return "Hold time";
+    case "cardio":
+      return "Time · pace · incline · resistance";
   }
 }
 
@@ -375,7 +399,7 @@ export function ActiveWorkoutView({
     const { exerciseIndex, setIndex, startedAt } = setTimerActive;
     const sec = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
     const metric = activeExercises[exerciseIndex]?.metric;
-    if (metric === "duration") {
+    if (metric === "duration" || metric === "cardio") {
       updateSet(exerciseIndex, setIndex, "seconds", String(sec));
     } else {
       updateSet(exerciseIndex, setIndex, "timedSetSec", String(sec));
@@ -1068,6 +1092,186 @@ function SetRowFields({
             </p>
           </div>
         )}
+        {setTimerStrip}
+        {setNoteField}
+      </div>
+    );
+  }
+
+  if (exercise.metric === "cardio") {
+    const parts = splitTotalSeconds(set.seconds);
+    const setDuration = (minutes: string, seconds: string) => {
+      updateSet(
+        exerciseIndex,
+        setIndex,
+        "seconds",
+        combineToTotalSeconds(minutes, seconds),
+      );
+    };
+
+    return (
+      <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
+        {setHeader}
+        <div className="grid grid-cols-2 items-end gap-2 text-sm">
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`min-${idBase}`}
+            >
+              Min
+            </label>
+            <input
+              id={`min-${idBase}`}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              autoComplete="off"
+              value={parts.minutes}
+              onChange={(e) => setDuration(e.target.value, parts.seconds)}
+              placeholder="0"
+              className={numberFieldClassName}
+            />
+          </div>
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`sec-${idBase}`}
+            >
+              Sec
+            </label>
+            <input
+              id={`sec-${idBase}`}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={59}
+              step={1}
+              autoComplete="off"
+              value={parts.seconds}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  setDuration(parts.minutes, "");
+                  return;
+                }
+                const n = parseInt(raw, 10);
+                if (!Number.isFinite(n)) return;
+                setDuration(
+                  parts.minutes,
+                  String(Math.min(59, Math.max(0, n))),
+                );
+              }}
+              placeholder="0"
+              className={numberFieldClassName}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`pace-${idBase}`}
+            >
+              Pace (mph)
+            </label>
+            <input
+              id={`pace-${idBase}`}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="any"
+              autoComplete="off"
+              value={set.paceMph}
+              onChange={(e) =>
+                updateSet(exerciseIndex, setIndex, "paceMph", e.target.value)
+              }
+              placeholder="Optional"
+              className={numberFieldClassName}
+            />
+          </div>
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`incline-${idBase}`}
+            >
+              Incline (%)
+            </label>
+            <input
+              id={`incline-${idBase}`}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="any"
+              autoComplete="off"
+              value={set.inclinePercent}
+              onChange={(e) =>
+                updateSet(
+                  exerciseIndex,
+                  setIndex,
+                  "inclinePercent",
+                  e.target.value,
+                )
+              }
+              placeholder="Optional"
+              className={numberFieldClassName}
+            />
+          </div>
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`resist-${idBase}`}
+            >
+              Resistance
+            </label>
+            <input
+              id={`resist-${idBase}`}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="any"
+              autoComplete="off"
+              value={set.resistanceLevel}
+              onChange={(e) =>
+                updateSet(
+                  exerciseIndex,
+                  setIndex,
+                  "resistanceLevel",
+                  e.target.value,
+                )
+              }
+              placeholder="Optional"
+              className={numberFieldClassName}
+            />
+          </div>
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`dist-${idBase}`}
+            >
+              Distance (mi)
+            </label>
+            <input
+              id={`dist-${idBase}`}
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step="any"
+              autoComplete="off"
+              value={set.distanceMiles}
+              onChange={(e) =>
+                updateSet(
+                  exerciseIndex,
+                  setIndex,
+                  "distanceMiles",
+                  e.target.value,
+                )
+              }
+              placeholder="Optional"
+              className={numberFieldClassName}
+            />
+          </div>
+        </div>
         {setTimerStrip}
         {setNoteField}
       </div>

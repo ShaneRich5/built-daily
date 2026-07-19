@@ -50,6 +50,8 @@ function metricBadgeLabel(metric: ExerciseMetric): string {
       return "R+T";
     case "duration":
       return "Time";
+    case "cardio":
+      return "Cardio";
     default: {
       const _e: never = metric;
       return _e;

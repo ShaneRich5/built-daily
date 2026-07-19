@@ -52,7 +52,17 @@ const numberFieldClassName =
   "h-11 font-mono tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
 function emptyUiSet(): UiSetRow {
-  return { weight: "", reps: "", seconds: "", timedSetSec: "", note: "" };
+  return {
+    weight: "",
+    reps: "",
+    seconds: "",
+    timedSetSec: "",
+    paceMph: "",
+    inclinePercent: "",
+    resistanceLevel: "",
+    distanceMiles: "",
+    note: "",
+  };
 }
 
 function setLogToUi(set: SetLog): UiSetRow {
@@ -61,6 +71,11 @@ function setLogToUi(set: SetLog): UiSetRow {
     reps: set.reps != null ? String(set.reps) : "",
     seconds: set.durationSec != null ? String(set.durationSec) : "",
     timedSetSec: set.timedSetSec != null ? String(set.timedSetSec) : "",
+    paceMph: set.paceMph != null ? String(set.paceMph) : "",
+    inclinePercent: set.inclinePercent != null ? String(set.inclinePercent) : "",
+    resistanceLevel:
+      set.resistanceLevel != null ? String(set.resistanceLevel) : "",
+    distanceMiles: set.distanceMiles != null ? String(set.distanceMiles) : "",
     note: set.note ?? "",
   };
 }
@@ -284,6 +299,10 @@ export function WorkoutSessionDetail({
           reps: source.reps,
           durationSec: source.durationSec,
           timedSetSec: null,
+          paceMph: source.paceMph,
+          inclinePercent: source.inclinePercent,
+          resistanceLevel: source.resistanceLevel,
+          distanceMiles: source.distanceMiles,
           note: null,
         };
         const sets = [...line.sets];
@@ -844,6 +863,151 @@ function SetEditors({
             placeholder="0"
             className={numberFieldClassName}
             aria-label={`Seconds, set ${setIndex + 1}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (metric === "cardio") {
+    const parts = splitTotalSeconds(ui.seconds);
+    const setDuration = (minutes: string, seconds: string) => {
+      onChange(
+        lineIndex,
+        setIndex,
+        metric,
+        "seconds",
+        combineToTotalSeconds(minutes, seconds),
+      );
+    };
+
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`min-${lineIndex}-${setIndex}`}
+            >
+              Min
+            </label>
+            <Input
+              id={`min-${lineIndex}-${setIndex}`}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              value={parts.minutes}
+              onChange={(e) => setDuration(e.target.value, parts.seconds)}
+              placeholder="0"
+              className={numberFieldClassName}
+              aria-label={`Minutes, set ${setIndex + 1}`}
+            />
+          </div>
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`sec-${lineIndex}-${setIndex}`}
+            >
+              Sec
+            </label>
+            <Input
+              id={`sec-${lineIndex}-${setIndex}`}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={59}
+              step={1}
+              value={parts.seconds}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  setDuration(parts.minutes, "");
+                  return;
+                }
+                const n = parseInt(raw, 10);
+                if (!Number.isFinite(n)) return;
+                setDuration(
+                  parts.minutes,
+                  String(Math.min(59, Math.max(0, n))),
+                );
+              }}
+              placeholder="0"
+              className={numberFieldClassName}
+              aria-label={`Seconds, set ${setIndex + 1}`}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            value={ui.paceMph}
+            onChange={(e) =>
+              onChange(lineIndex, setIndex, metric, "paceMph", e.target.value)
+            }
+            placeholder="Pace mph"
+            className={numberFieldClassName}
+            aria-label={`Pace mph, set ${setIndex + 1}`}
+          />
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            value={ui.inclinePercent}
+            onChange={(e) =>
+              onChange(
+                lineIndex,
+                setIndex,
+                metric,
+                "inclinePercent",
+                e.target.value,
+              )
+            }
+            placeholder="Incline %"
+            className={numberFieldClassName}
+            aria-label={`Incline percent, set ${setIndex + 1}`}
+          />
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            value={ui.resistanceLevel}
+            onChange={(e) =>
+              onChange(
+                lineIndex,
+                setIndex,
+                metric,
+                "resistanceLevel",
+                e.target.value,
+              )
+            }
+            placeholder="Resistance"
+            className={numberFieldClassName}
+            aria-label={`Resistance, set ${setIndex + 1}`}
+          />
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            value={ui.distanceMiles}
+            onChange={(e) =>
+              onChange(
+                lineIndex,
+                setIndex,
+                metric,
+                "distanceMiles",
+                e.target.value,
+              )
+            }
+            placeholder="Distance mi"
+            className={numberFieldClassName}
+            aria-label={`Distance miles, set ${setIndex + 1}`}
           />
         </div>
       </div>

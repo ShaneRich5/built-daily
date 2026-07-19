@@ -61,7 +61,12 @@ function asTimestamp(v: unknown): Date | null {
 }
 
 function asMetric(v: unknown): ExerciseMetric | null {
-  if (v === "weight_reps" || v === "bodyweight_reps" || v === "duration") {
+  if (
+    v === "weight_reps" ||
+    v === "bodyweight_reps" ||
+    v === "duration" ||
+    v === "cardio"
+  ) {
     return v;
   }
   return null;

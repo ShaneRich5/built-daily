@@ -1,4 +1,8 @@
-export type ExerciseMetric = "weight_reps" | "bodyweight_reps" | "duration";
+export type ExerciseMetric =
+  | "weight_reps"
+  | "bodyweight_reps"
+  | "duration"
+  | "cardio";
 
 export type CatalogExercise = {
   id: string;
@@ -145,13 +149,13 @@ export const EXERCISE_CATALOG: CatalogExercise[] = ([
   { id: "sled-push", name: "Sled push", metric: "weight_reps" },
   { id: "farmer-carry", name: "Farmer carry", metric: "weight_reps" },
 
-  // —— Cardio machines (time-based) ——
-  { id: "treadmill", name: "Treadmill", metric: "duration" },
-  { id: "elliptical", name: "Elliptical", metric: "duration" },
-  { id: "stair-climber", name: "Stair climber", metric: "duration" },
-  { id: "stationary-bike", name: "Stationary bike", metric: "duration" },
-  { id: "row-erg", name: "Rowing machine", metric: "duration" },
-  { id: "assault-bike", name: "Assault / air bike", metric: "duration" },
+  // —— Cardio machines (duration + optional pace / incline / resistance / distance) ——
+  { id: "treadmill", name: "Treadmill", metric: "cardio" },
+  { id: "elliptical", name: "Elliptical", metric: "cardio" },
+  { id: "stair-climber", name: "Stair climber", metric: "cardio" },
+  { id: "stationary-bike", name: "Stationary bike", metric: "cardio" },
+  { id: "row-erg", name: "Rowing machine", metric: "cardio" },
+  { id: "assault-bike", name: "Assault / air bike", metric: "cardio" },
 ] as CatalogExercise[]).sort((a, b) => a.name.localeCompare(b.name, "en"));
 
 const byId = new Map(EXERCISE_CATALOG.map((e) => [e.id, e]));

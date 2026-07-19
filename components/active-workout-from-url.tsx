@@ -53,7 +53,17 @@ type ResumeBundle = {
 };
 
 function emptyUiSet(): UiSetRow {
-  return { weight: "", reps: "", seconds: "", timedSetSec: "", note: "" };
+  return {
+    weight: "",
+    reps: "",
+    seconds: "",
+    timedSetSec: "",
+    paceMph: "",
+    inclinePercent: "",
+    resistanceLevel: "",
+    distanceMiles: "",
+    note: "",
+  };
 }
 
 function sessionToResumeBundle(
@@ -179,7 +189,7 @@ export function ActiveWorkoutFromUrl() {
     let cancelled = false;
     void getWorkoutSession(sessionIdParam).then(async (res) => {
       if (cancelled) return;
-      if (!res || res.session.lines.length === 0) {
+      if (!res) {
         setResumeLoad({ sessionId: sessionIdParam, resume: null });
         return;
       }

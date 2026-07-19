@@ -56,6 +56,7 @@ Defined in [`lib/exercise-catalog.ts`](lib/exercise-catalog.ts). Not stored in F
 | `weight_reps` | Weight + reps |
 | `bodyweight_reps` | Reps only |
 | `duration` | Hold time (seconds) |
+| `cardio` | Duration plus optional pace / incline / resistance / distance |
 
 ### `CatalogExercise` (conceptual)
 
@@ -88,8 +89,12 @@ One object per performed set. Fields are nullable when not used / empty.
 |-------|------|--------|
 | `weight` | `number \| null` | `weight_reps` |
 | `reps` | `number \| null` | `weight_reps`, `bodyweight_reps` |
-| `durationSec` | `number \| null` | Hold seconds; `duration` |
+| `durationSec` | `number \| null` | Hold / cardio seconds; `duration`, `cardio` |
 | `timedSetSec` | `number \| null` | Set stopwatch (non-duration metrics) |
+| `paceMph` | `number \| null` | Optional cardio pace / speed (mph) |
+| `inclinePercent` | `number \| null` | Optional treadmill incline (%) |
+| `resistanceLevel` | `number \| null` | Optional bike / elliptical resistance |
+| `distanceMiles` | `number \| null` | Optional cardio distance (miles) |
 | `note` | `string \| null` | Set-level note |
 
 ---
@@ -143,7 +148,7 @@ Built in the active workout UI and passed into [`saveCompletedWorkoutSession`](l
 | `sessionStartedAtMs` | When session screen mounted |
 | `planId` | Optional |
 
-UI row shape: `UiSetRow` (`weight`, `reps`, `seconds`, `timedSetSec`, `note` strings) → `SetLog` via `uiSetRowToSetLog`.
+UI row shape: `UiSetRow` (`weight`, `reps`, `seconds`, `timedSetSec`, `paceMph`, `inclinePercent`, `resistanceLevel`, `distanceMiles`, `note` strings) → `SetLog` via `uiSetRowToSetLog`.
 
 ---
 

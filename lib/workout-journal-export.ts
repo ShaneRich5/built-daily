@@ -44,11 +44,24 @@ export function formatSetSummary(set: SetLog): string {
     parts.push(formatHoldSec(set.durationSec));
   }
 
+  if (set.paceMph != null) {
+    parts.push(`${set.paceMph} mph`);
+  }
+  if (set.inclinePercent != null) {
+    parts.push(`${set.inclinePercent}%`);
+  }
+  if (set.resistanceLevel != null) {
+    parts.push(`R${set.resistanceLevel}`);
+  }
+  if (set.distanceMiles != null) {
+    parts.push(`${set.distanceMiles} mi`);
+  }
+
   if (set.timedSetSec != null && set.durationSec == null) {
     parts.push(`(${formatHoldSec(set.timedSetSec)})`);
   }
 
-  return parts.length > 0 ? parts.join(" ") : "—";
+  return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
 function formatSetLine(set: SetLog, index: number): string {
