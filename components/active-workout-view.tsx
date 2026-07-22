@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { CopyPlus, Pause, Play, RotateCcw, Timer, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  CopyPlus,
+  Pause,
+  Play,
+  RotateCcw,
+  Timer,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { ExerciseHistoryControls } from "@/components/exercise-history-controls";
@@ -15,12 +24,14 @@ import {
 import {
   createLineId,
   setLogToUiSetRow,
+  uiSetRowToSetLog,
   type ActiveWorkoutFinishSnapshot,
 } from "@/lib/workout-session-mapper";
 import {
   getExerciseHistories,
   type ExerciseHistoryById,
 } from "@/lib/workout-session-repository";
+import { formatSetSummary } from "@/lib/workout-journal-export";
 import type { SetLog } from "@/lib/workout-types";
 import {
   combineToTotalSeconds,
@@ -96,6 +107,28 @@ function setRowHasValues(row: SetRow): boolean {
       row.distanceMiles.trim() ||
       row.note.trim(),
   );
+}
+
+/** Compact one-line summary of logged sets for collapsed exercise cards. */
+function summarizeExerciseSets(
+  sets: SetRow[],
+  metric: ExerciseMetric,
+): string {
+  const filled = sets.filter(setRowHasValues);
+  if (filled.length === 0) {
+    return sets.length === 0
+      ? "No sets yet"
+      : `${sets.length} empty set${sets.length === 1 ? "" : "s"}`;
+  }
+
+  const summaries = filled.map((row) =>
+    formatSetSummary(uiSetRowToSetLog(row, metric)),
+  );
+  const allSame = summaries.every((s) => s === summaries[0]);
+  if (allSame) {
+    return `${filled.length} set${filled.length === 1 ? "" : "s"} · ${summaries[0]}`;
+  }
+  return summaries.map((s, i) => `${i + 1}. ${s}`).join(" · ");
 }
 
 function formatElapsed(ms: number) {
@@ -205,6 +238,9 @@ export function ActiveWorkoutView({
       ? initialSetsByExercise
       : exercises.map(() => [emptySetRow()]),
   );
+  const [expandedExerciseIndex, setExpandedExerciseIndex] = useState<
+    number | null
+  >(() => (exercises.length > 0 ? 0 : null));
   const exerciseHistoryKey = activeExercises
     .map((exercise) => `${exercise.id}:${exercise.metric}:${exercise.name}`)
     .join("|");
@@ -249,6 +285,7 @@ export function ActiveWorkoutView({
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
         return [[emptySetRow()], ...setsPrev];
       });
+      setExpandedExerciseIndex(0);
       // Newest first — keeps the new exercise near the add control.
       return [ex, ...prev];
     });
@@ -269,6 +306,7 @@ export function ActiveWorkoutView({
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
         return [[emptySetRow()], ...setsPrev];
       });
+      setExpandedExerciseIndex(0);
       return [ex, ...prev];
     });
     return didAdd;
@@ -465,6 +503,7 @@ export function ActiveWorkoutView({
         active?.exerciseIndex === exerciseIndex ? null : active,
       );
       setSetTimerLiveMs(0);
+      setExpandedExerciseIndex(exerciseIndex);
     },
     [],
   );
@@ -501,6 +540,16 @@ export function ActiveWorkoutView({
           return { ...active, exerciseIndex: active.exerciseIndex - 1 };
         }
         return active;
+      });
+      setExpandedExerciseIndex((prev) => {
+        if (prev === null) return null;
+        if (prev === exerciseIndex) {
+          const nextLen = activeExercises.length - 1;
+          if (nextLen <= 0) return null;
+          return Math.min(exerciseIndex, nextLen - 1);
+        }
+        if (prev > exerciseIndex) return prev - 1;
+        return prev;
       });
     },
     [activeExercises],
@@ -701,98 +750,144 @@ export function ActiveWorkoutView({
         onAddCustom={handleAddCustomExercise}
       />
 
-      <ul className={`flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto ${onDiscard ? "pb-40" : "pb-28"}`}>
-        {activeExercises.map((exercise, exerciseIndex) => (
-          <li
-            key={`${exerciseIndex}-${exercise.id}`}
-            className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                  {exercise.name}
-                </p>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  {metricHint(exercise.metric)}
-                </p>
-                {exercise.metric === "duration" && (
-                  <label className="mt-2 flex max-w-full cursor-pointer items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 size-4 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-600/40 dark:border-zinc-600 dark:bg-zinc-900"
-                      checked={Boolean(durationTimerOnlyById[exercise.id])}
-                      onChange={() => toggleDurationTimerOnly(exercise.id)}
-                    />
-                    <span>
-                      Use only the set timer for hold time (hide min / sec
-                      fields)
-                    </span>
-                  </label>
-                )}
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                <button
-                  type="button"
-                  onClick={() => addSet(exerciseIndex)}
-                  className="text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
-                >
-                  Add set
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeExercise(exerciseIndex)}
-                  disabled={activeExercises.length <= 1}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 disabled:opacity-30 dark:hover:text-red-300"
-                  aria-label={`Remove ${exercise.name}`}
-                >
-                  <Trash2 className="size-3" />
-                  Remove
-                </button>
-              </div>
-            </div>
-            <CollapsibleNote
-              id={`exercise-note-${exercise.id}`}
-              summary="Exercise note"
-              value={exerciseNotesById[exercise.id] ?? ""}
-              onChange={(v) => updateExerciseNote(exercise.id, v)}
-              maxLength={400}
-              placeholder="Equipment swaps, pain/limitations, cues for this lift…"
-              className="mt-2"
-            />
-            <ExerciseHistoryControls
-              exerciseName={exercise.name}
-              entries={exerciseHistory[exercise.id] ?? []}
-              loading={historyLoading}
-              hasCurrentValues={(setsByExercise[exerciseIndex] ?? []).some(
-                setRowHasValues,
-              )}
-              onUseSets={(sets, mode) =>
-                applyHistoricalSets(exerciseIndex, sets, mode)
-              }
-            />
-            <div className="mt-3 space-y-2">
-              {(setsByExercise[exerciseIndex] ?? []).map((set, setIndex) => (
-                <SetRowFields
-                  key={`${exerciseIndex}-${exercise.id}-${setIndex}`}
-                  exercise={exercise}
-                  exerciseIndex={exerciseIndex}
-                  setIndex={setIndex}
-                  set={set}
-                  updateSet={updateSet}
-                  onDuplicateSet={duplicateSet}
-                  hideManualSeconds={Boolean(
-                    durationTimerOnlyById[exercise.id],
+      <ul className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${onDiscard ? "pb-40" : "pb-28"}`}>
+        {activeExercises.map((exercise, exerciseIndex) => {
+          const sets = setsByExercise[exerciseIndex] ?? [];
+          const expanded = expandedExerciseIndex === exerciseIndex;
+          const summary = summarizeExerciseSets(sets, exercise.metric);
+
+          return (
+            <li
+              key={`${exerciseIndex}-${exercise.id}`}
+              className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setExpandedExerciseIndex(expanded ? null : exerciseIndex)
+                }
+                className="flex w-full items-start gap-3 p-3 text-left"
+                aria-expanded={expanded}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                    {exercise.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    {metricHint(exercise.metric)}
+                    {exerciseNotesById[exercise.id]?.trim()
+                      ? " · has note"
+                      : ""}
+                  </p>
+                  {!expanded ? (
+                    <p className="mt-1.5 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">
+                      {summary}
+                    </p>
+                  ) : null}
+                </div>
+                <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-zinc-500">
+                  {expanded ? (
+                    <ChevronUp className="size-4" aria-hidden />
+                  ) : (
+                    <ChevronDown className="size-4" aria-hidden />
                   )}
-                  setTimerActive={setTimerActive}
-                  setTimerLiveMs={setTimerLiveMs}
-                  onStartSetTimer={startSetTimer}
-                  onSaveSetTimer={saveSetTimer}
-                  onCancelSetTimer={cancelSetTimer}
-                />
-              ))}
-            </div>
-          </li>
-        ))}
+                  <span className="sr-only">
+                    {expanded ? "Collapse" : "Expand"} {exercise.name}
+                  </span>
+                </span>
+              </button>
+
+              {expanded ? (
+                <div className="space-y-3 border-t border-zinc-100 px-3 pb-3 pt-3 dark:border-zinc-800">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => addSet(exerciseIndex)}
+                        className="text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
+                      >
+                        Add set
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeExercise(exerciseIndex)}
+                        disabled={activeExercises.length <= 1}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 disabled:opacity-30 dark:hover:text-red-300"
+                        aria-label={`Remove ${exercise.name}`}
+                      >
+                        <Trash2 className="size-3" />
+                        Remove
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedExerciseIndex(null)}
+                      className="text-xs font-semibold text-emerald-700 dark:text-emerald-400"
+                    >
+                      Done
+                    </button>
+                  </div>
+
+                  {exercise.metric === "duration" && (
+                    <label className="flex max-w-full cursor-pointer items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 size-4 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-600/40 dark:border-zinc-600 dark:bg-zinc-900"
+                        checked={Boolean(durationTimerOnlyById[exercise.id])}
+                        onChange={() =>
+                          toggleDurationTimerOnly(exercise.id)
+                        }
+                      />
+                      <span>
+                        Use only the set timer for hold time (hide min / sec
+                        fields)
+                      </span>
+                    </label>
+                  )}
+
+                  <CollapsibleNote
+                    id={`exercise-note-${exercise.id}`}
+                    summary="Exercise note"
+                    value={exerciseNotesById[exercise.id] ?? ""}
+                    onChange={(v) => updateExerciseNote(exercise.id, v)}
+                    maxLength={400}
+                    placeholder="Equipment swaps, pain/limitations, cues for this lift…"
+                  />
+                  <ExerciseHistoryControls
+                    exerciseName={exercise.name}
+                    entries={exerciseHistory[exercise.id] ?? []}
+                    loading={historyLoading}
+                    hasCurrentValues={sets.some(setRowHasValues)}
+                    onUseSets={(historicalSets, mode) =>
+                      applyHistoricalSets(exerciseIndex, historicalSets, mode)
+                    }
+                  />
+                  <div className="space-y-2">
+                    {sets.map((set, setIndex) => (
+                      <SetRowFields
+                        key={`${exerciseIndex}-${exercise.id}-${setIndex}`}
+                        exercise={exercise}
+                        exerciseIndex={exerciseIndex}
+                        setIndex={setIndex}
+                        set={set}
+                        updateSet={updateSet}
+                        onDuplicateSet={duplicateSet}
+                        hideManualSeconds={Boolean(
+                          durationTimerOnlyById[exercise.id],
+                        )}
+                        setTimerActive={setTimerActive}
+                        setTimerLiveMs={setTimerLiveMs}
+                        onStartSetTimer={startSetTimer}
+                        onSaveSetTimer={saveSetTimer}
+                        onCancelSetTimer={cancelSetTimer}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
 
       <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
