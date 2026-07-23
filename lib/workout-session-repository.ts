@@ -14,6 +14,7 @@ import {
   where,
 } from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
+import { bumpGroupWorkoutSignals } from "@/lib/group-repository";
 import {
   buildWorkoutSessionDoc,
   firestoreToWorkoutSessionDoc,
@@ -26,7 +27,7 @@ import type {
   WorkoutSessionStatus,
 } from "@/lib/workout-types";
 import type { CatalogExercise } from "@/lib/exercise-catalog";
-import { resolveWorkoutTitle } from "@/lib/workout-date";
+import { localDateKeyFromMs, resolveWorkoutTitle } from "@/lib/workout-date";
 
 /** Slim row for home / history lists. */
 export type SessionSummary = {
@@ -373,19 +374,35 @@ export async function saveCompletedWorkoutSession(
   const normalized = normalizeSessionForWrite(docData);
   if (!normalized) return null;
 
+  let saved: { id: string; doc: WorkoutSessionDoc };
   if (sessionId) {
     await setDoc(
       doc(db, "users", user.uid, "sessions", sessionId),
       sessionDocToFirestore(normalized),
     );
-    return { id: sessionId, doc: normalized };
+    saved = { id: sessionId, doc: normalized };
+  } else {
+    const ref = await addDoc(
+      collection(db, "users", user.uid, "sessions"),
+      sessionDocToFirestore(normalized),
+    );
+    saved = { id: ref.id, doc: normalized };
   }
 
-  const ref = await addDoc(
-    collection(db, "users", user.uid, "sessions"),
-    sessionDocToFirestore(normalized),
-  );
-  return { id: ref.id, doc: normalized };
+  // Best-effort accountability signals — never block the finished workout.
+  try {
+    const workoutDateKey =
+      saved.doc.workoutDate ??
+      localDateKeyFromMs(saved.doc.endedAt?.getTime() ?? Date.now());
+    await bumpGroupWorkoutSignals({
+      workoutDateKey,
+      workoutAtMs: saved.doc.endedAt?.getTime() ?? Date.now(),
+    });
+  } catch {
+    /* ignore */
+  }
+
+  return saved;
 }
 
 export type SavedWorkoutSession = {

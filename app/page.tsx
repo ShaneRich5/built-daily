@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { GroupsHomeTeaser } from "@/components/groups-home-teaser";
 import { RecentWorkoutsList } from "@/components/recent-workouts-list";
 import { WorkoutPickAndStart } from "@/components/workout-pick-and-start";
 
@@ -13,12 +14,20 @@ export default function HomePage() {
               Built Daily
             </h1>
           </div>
-          <Link
-            href="/planner"
-            className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
-          >
-            Planner
-          </Link>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Link
+              href="/groups"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              Groups
+            </Link>
+            <Link
+              href="/planner"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              Planner
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -34,23 +43,7 @@ export default function HomePage() {
         <RecentWorkoutsList />
       </section>
 
-      <section
-        className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-        aria-labelledby="streak-heading"
-      >
-        <h2
-          id="streak-heading"
-          className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
-        >
-          Current streak
-        </h2>
-        <p className="mt-2 text-3xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-          —
-        </p>
-        <p className="mt-1 text-sm text-zinc-500">
-          Streak tracking will appear here.
-        </p>
-      </section>
+      <GroupsHomeTeaser />
     </div>
   );
 }

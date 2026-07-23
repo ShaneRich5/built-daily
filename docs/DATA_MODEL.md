@@ -6,7 +6,7 @@ This document describes the domain and Firestore shapes used in the app. **Sourc
 
 ## Firestore layout
 
-All mutable user data lives under:
+All mutable **personal** user data lives under:
 
 `users/{userId}/…`
 
@@ -15,8 +15,17 @@ All mutable user data lives under:
 | `users/{userId}/sessions/{sessionId}` | One workout session (currently **completed** writes on finish) |
 | `users/{userId}/plans/{planId}` | Reusable workout templates (CRUD via [`lib/workout-plan-repository.ts`](../lib/workout-plan-repository.ts)) |
 | `users/{userId}/scheduledWorkouts/{entryId}` | Planner entries: a **calendar day** (`dateKey`), optional **exercise list** + `planId` for starting `/workout`, or **reminder-only** (`exerciseIds` empty) — see [`lib/planner-repository.ts`](../lib/planner-repository.ts) |
+| `users/{userId}/groupMemberships/{groupId}` | Reverse index of accountability groups the user belongs to |
 
-Security rules: see [`firestore.rules`](firestore.rules) (owner-only; session **create** has structural validation).
+**Accountability groups** use top-level collections (membership-aware rules):
+
+| Path | Purpose |
+|------|---------|
+| `groups/{groupId}` | Group metadata + invite code |
+| `groups/{groupId}/members/{uid}` | Roster + shared “showed up” signals |
+| `inviteCodes/{code}` | Join lookup by shareable code |
+
+Security rules: see [`firestore.rules`](firestore.rules).
 
 ```mermaid
 flowchart LR
@@ -24,10 +33,58 @@ flowchart LR
     sessions[sessions]
     plans[plans]
     scheduled[scheduledWorkouts]
+    memberships[groupMemberships]
   end
+  subgraph groupsPath [groups]
+    groupDoc[group]
+    members[members]
+  end
+  inviteCodes[inviteCodes]
   sessions -->|addDoc on finish| completed[completed session doc]
   scheduled -->|addDoc planner row| plannerRow[dateKey + label + planId + exerciseIds]
+  memberships --> groupDoc
+  inviteCodes --> groupDoc
+  groupDoc --> members
 ```
+
+---
+
+## Accountability groups
+
+Types: [`lib/group-types.ts`](lib/group-types.ts). Persistence: [`lib/group-repository.ts`](lib/group-repository.ts).
+
+### `groups/{groupId}`
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `name` | `string` | Max 100 |
+| `createdBy` | `string` | Owner uid |
+| `createdAt` | `Timestamp` | |
+| `inviteCode` | `string` | Current active code |
+| `memberCount` | `number` | Max 12 |
+
+### `groups/{groupId}/members/{uid}`
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `uid` | `string` | Same as doc id |
+| `displayName` | `string` | Auth snapshot |
+| `role` | `"owner" \| "member"` | |
+| `joinedAt` | `Timestamp` | |
+| `lastWorkoutDateKey` | `string \| null` | Local `YYYY-MM-DD` |
+| `lastWorkoutAt` | `Timestamp \| null` | |
+| `currentStreak` | `number` | Consecutive local days |
+
+### `inviteCodes/{code}`
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `groupId` | `string` | |
+| `createdBy` | `string` | |
+| `createdAt` | `Timestamp` | |
+| `active` | `boolean` | Rotated codes set `active: false` |
+
+Partners only see show-up signals (today / last date / streak)—never workout details.
 
 ---
 
