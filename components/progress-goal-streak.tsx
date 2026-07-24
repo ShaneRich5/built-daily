@@ -27,7 +27,8 @@ export function ProgressGoalStreak({
         Goal streak
       </h2>
       <p className="mt-1 text-sm text-zinc-500">
-        Consecutive weeks meeting your {targetLabel} goal.
+        Consecutive weeks hitting your {targetLabel} goal. A recovery day
+        doesn’t end the streak—only missing the weekly target does.
       </p>
       <div className="mt-4 flex flex-wrap items-end gap-8">
         <div>

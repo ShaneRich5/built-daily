@@ -36,12 +36,12 @@ export function ProgressWeeklyGoal({
             Weekly goal
           </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Rest days count—just hit your target for the week.
+            Hit your weekly target—remaining days are recovery, not failure.
           </p>
         </div>
         {week.met ? (
           <p className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
-            Goal completed
+            Goal complete
           </p>
         ) : null}
       </div>
@@ -66,6 +66,18 @@ export function ProgressWeeklyGoal({
           style={{ width: `${pct}%` }}
         />
       </div>
+
+      {week.met ? (
+        <p className="text-sm text-sky-800 dark:text-sky-300">
+          Nice work. Any leftover days this week are recovery opportunities.
+        </p>
+      ) : (
+        <p className="text-sm text-zinc-500">
+          {Math.max(0, week.target - week.completed)} workout
+          {week.target - week.completed === 1 ? "" : "s"} left this week—recovery
+          days still count as part of a healthy plan.
+        </p>
+      )}
 
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">

@@ -101,7 +101,8 @@ export function HomeWorkoutActivity() {
         todayKey={todayKey}
         footer={
           <p className="text-xs text-zinc-500">
-            Rest days are fine—track your weekly goal on{" "}
+            Recovery days are part of training—not missed workouts. Set your
+            weekly goal on{" "}
             <Link
               href="/progress"
               className="font-semibold text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"

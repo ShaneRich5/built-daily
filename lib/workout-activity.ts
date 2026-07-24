@@ -108,6 +108,42 @@ export function activityLevel(count: number): 0 | 1 | 2 | 3 | 4 {
   return 4;
 }
 
+/**
+ * Heatmap day classification (recovery is intentional — never “missed”
+ * unless a scheduled plan exists later).
+ */
+export type HeatmapDayKind =
+  | "workout"
+  | "recovery"
+  | "today"
+  | "future"
+  | "empty";
+
+export function heatmapDayKind(options: {
+  dateKey: string;
+  count: number;
+  todayKey: string;
+  /** First day the user logged a workout; earlier days stay blank. */
+  firstActivityKey: string | null;
+}): HeatmapDayKind {
+  const { dateKey, count, todayKey, firstActivityKey } = options;
+  if (dateKey > todayKey) return "future";
+  if (count > 0) return "workout";
+  if (!firstActivityKey || dateKey < firstActivityKey) return "empty";
+  if (dateKey === todayKey) return "today";
+  return "recovery";
+}
+
+export function earliestActivityKey(
+  activity: WorkoutActivityByDay,
+): string | null {
+  let min: string | null = null;
+  for (const [key, count] of activity) {
+    if (count > 0 && (min === null || key < min)) min = key;
+  }
+  return min;
+}
+
 /** Month label positions for the top of a contribution grid. */
 export function contributionMonthLabels(
   weeks: ContributionWeek[],

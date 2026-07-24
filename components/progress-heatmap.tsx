@@ -7,6 +7,9 @@ import {
   activityLevel,
   buildContributionWeeks,
   contributionMonthLabels,
+  earliestActivityKey,
+  heatmapDayKind,
+  type HeatmapDayKind,
   type WorkoutActivityByDay,
 } from "@/lib/workout-activity";
 import {
@@ -16,12 +19,19 @@ import {
 import type { DayActivityDetail } from "@/lib/progress-types";
 import { formatLocalDateKey } from "@/lib/workout-date";
 
-const LEVEL_CLASS: Record<0 | 1 | 2 | 3 | 4, string> = {
-  0: "bg-zinc-100 dark:bg-zinc-800/80",
+const WORKOUT_LEVEL_CLASS: Record<1 | 2 | 3 | 4, string> = {
   1: "bg-emerald-200 dark:bg-emerald-900/70",
   2: "bg-emerald-300 dark:bg-emerald-700/80",
   3: "bg-emerald-500 dark:bg-emerald-600",
   4: "bg-emerald-700 dark:bg-emerald-400",
+};
+
+const KIND_CLASS: Record<HeatmapDayKind, string> = {
+  workout: "", // filled via WORKOUT_LEVEL_CLASS
+  recovery: "bg-sky-100 dark:bg-sky-950/70",
+  today: "bg-white ring-1 ring-inset ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-600",
+  future: "bg-transparent",
+  empty: "bg-transparent",
 };
 
 const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
@@ -33,6 +43,38 @@ type ProgressHeatmapProps = {
   footer?: ReactNode;
 };
 
+function kindLabel(
+  kind: HeatmapDayKind,
+  count: number,
+): string {
+  switch (kind) {
+    case "workout":
+      return count === 1 ? "Workout completed" : `${count} workouts`;
+    case "recovery":
+      return "Recovery day";
+    case "today":
+      return "Today · workout or recovery";
+    case "future":
+      return "Future";
+    case "empty":
+      return "—";
+    default: {
+      const _e: never = kind;
+      return _e;
+    }
+  }
+}
+
+function cellClass(kind: HeatmapDayKind, count: number): string {
+  if (kind === "workout") {
+    const level = activityLevel(count);
+    return level === 0
+      ? KIND_CLASS.recovery
+      : WORKOUT_LEVEL_CLASS[level as 1 | 2 | 3 | 4];
+  }
+  return KIND_CLASS[kind];
+}
+
 export function ProgressHeatmap({
   activity,
   dayDetails,
@@ -41,25 +83,46 @@ export function ProgressHeatmap({
 }: ProgressHeatmapProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const { weeks, monthLabels, activeDays } = useMemo(() => {
-    const built = buildContributionWeeks(activity, {
-      weekCount: 26,
-      endDateKey: todayKey,
-    });
-    let windowActive = 0;
-    for (const week of built) {
-      for (const day of week) {
-        if (day.inRange && day.count > 0) windowActive += 1;
+  const { weeks, monthLabels, workoutDays, recoveryDays, firstKey } =
+    useMemo(() => {
+      const built = buildContributionWeeks(activity, {
+        weekCount: 26,
+        endDateKey: todayKey,
+      });
+      const first = earliestActivityKey(activity);
+      let workouts = 0;
+      let recoveries = 0;
+      for (const week of built) {
+        for (const day of week) {
+          if (!day.inRange) continue;
+          const kind = heatmapDayKind({
+            dateKey: day.dateKey,
+            count: day.count,
+            todayKey,
+            firstActivityKey: first,
+          });
+          if (kind === "workout") workouts += 1;
+          if (kind === "recovery") recoveries += 1;
+        }
       }
-    }
-    return {
-      weeks: built,
-      monthLabels: contributionMonthLabels(built),
-      activeDays: windowActive,
-    };
-  }, [activity, todayKey]);
+      return {
+        weeks: built,
+        monthLabels: contributionMonthLabels(built),
+        workoutDays: workouts,
+        recoveryDays: recoveries,
+        firstKey: first,
+      };
+    }, [activity, todayKey]);
 
   const selected = selectedKey ? dayDetails.get(selectedKey) : null;
+  const selectedKind = selectedKey
+    ? heatmapDayKind({
+        dateKey: selectedKey,
+        count: activity.get(selectedKey) ?? 0,
+        todayKey,
+        firstActivityKey: firstKey,
+      })
+    : null;
 
   return (
     <section
@@ -74,9 +137,9 @@ export function ProgressHeatmap({
           Workout activity
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          {activeDays === 0
-            ? "Finish a workout to light up the chart."
-            : `${activeDays} active day${activeDays === 1 ? "" : "s"} in the last 6 months`}
+          {workoutDays === 0
+            ? "Finish a workout to light up the chart. Recovery days are part of training."
+            : `${workoutDays} workout day${workoutDays === 1 ? "" : "s"} · ${recoveryDays} recovery day${recoveryDays === 1 ? "" : "s"}`}
         </p>
       </div>
 
@@ -108,7 +171,7 @@ export function ProgressHeatmap({
               gridTemplateColumns: `1.75rem repeat(${weeks.length}, minmax(0, 1fr))`,
             }}
             role="grid"
-            aria-label="Workout activity for the last 26 weeks"
+            aria-label="Workout and recovery activity for the last 26 weeks"
           >
             {WEEKDAY_LABELS.map((label, row) => (
               <div key={`row-${row}`} className="contents">
@@ -117,15 +180,24 @@ export function ProgressHeatmap({
                 </span>
                 {weeks.map((week, weekIndex) => {
                   const day = week[row]!;
+                  const kind = day.inRange
+                    ? heatmapDayKind({
+                        dateKey: day.dateKey,
+                        count: day.count,
+                        todayKey,
+                        firstActivityKey: firstKey,
+                      })
+                    : "future";
                   const detail = dayDetails.get(day.dateKey);
-                  const level = day.inRange ? activityLevel(day.count) : 0;
                   const hasPr = Boolean(detail?.hasPr);
-                  const selected = selectedKey === day.dateKey;
+                  const isSelected = selectedKey === day.dateKey;
+                  const interactive =
+                    day.inRange && kind !== "empty" && kind !== "future";
                   return (
                     <button
                       key={`${weekIndex}-${day.dateKey}`}
                       type="button"
-                      disabled={!day.inRange}
+                      disabled={!interactive}
                       onClick={() =>
                         setSelectedKey((prev) =>
                           prev === day.dateKey ? null : day.dateKey,
@@ -133,20 +205,20 @@ export function ProgressHeatmap({
                       }
                       title={
                         day.inRange
-                          ? `${formatLocalDateKey(day.dateKey)} · ${day.count} workout${day.count === 1 ? "" : "s"}`
+                          ? `${formatLocalDateKey(day.dateKey)} · ${kindLabel(kind, day.count)}`
                           : undefined
                       }
-                      className={`relative aspect-square max-h-3.5 min-h-2.5 w-full max-w-3.5 rounded-[3px] transition ${
-                        day.inRange
-                          ? `${LEVEL_CLASS[level]} hover:ring-2 hover:ring-zinc-400/60`
-                          : "bg-transparent"
-                      } ${selected ? "ring-2 ring-zinc-700 dark:ring-zinc-200" : ""}`}
+                      className={`relative aspect-square max-h-3.5 min-h-2.5 w-full max-w-3.5 rounded-[3px] transition ${cellClass(kind, day.count)} ${
+                        interactive
+                          ? "hover:ring-2 hover:ring-zinc-400/60"
+                          : "pointer-events-none"
+                      } ${isSelected ? "ring-2 ring-zinc-700 dark:ring-zinc-200" : ""}`}
                       aria-label={
                         day.inRange
-                          ? `${formatLocalDateKey(day.dateKey)}, ${day.count} workouts`
+                          ? `${formatLocalDateKey(day.dateKey)}, ${kindLabel(kind, day.count)}`
                           : undefined
                       }
-                      aria-pressed={selected}
+                      aria-pressed={isSelected}
                     >
                       {hasPr ? (
                         <span
@@ -163,30 +235,55 @@ export function ProgressHeatmap({
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-1.5 text-[10px] text-zinc-400">
-        <span>Less</span>
-        {([0, 1, 2, 3, 4] as const).map((level) => (
+      <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5 text-[10px] text-zinc-500">
+        <span className="inline-flex items-center gap-1.5">
           <span
-            key={level}
-            className={`size-2.5 rounded-[2px] ${LEVEL_CLASS[level]}`}
+            className={`size-2.5 rounded-[2px] ${WORKOUT_LEVEL_CLASS[2]}`}
             aria-hidden
           />
-        ))}
-        <span>More</span>
-        <span className="ml-2 inline-flex items-center gap-1">
+          Workout
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className={`size-2.5 rounded-[2px] ${KIND_CLASS.recovery}`}
+            aria-hidden
+          />
+          Recovery
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            className={`size-2.5 rounded-[2px] ${KIND_CLASS.today}`}
+            aria-hidden
+          />
+          Today
+        </span>
+        <span className="inline-flex items-center gap-1.5">
           <span className="size-1.5 rounded-full bg-amber-400" aria-hidden />
           PR
         </span>
       </div>
 
-      {selectedKey ? (
+      {selectedKey && selectedKind ? (
         <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/50">
           <p className="font-semibold text-zinc-900 dark:text-zinc-50">
             {formatLocalDateKey(selectedKey)}
           </p>
-          {!selected || selected.workouts.length === 0 ? (
-            <p className="mt-2 text-zinc-500">No workout logged this day.</p>
-          ) : (
+          {selectedKind === "recovery" ||
+          (selectedKind === "today" &&
+            (!selected || selected.workouts.length === 0)) ? (
+            <div className="mt-2 space-y-1">
+              <p className="font-medium text-sky-800 dark:text-sky-300">
+                {selectedKind === "today"
+                  ? "Open day"
+                  : "Recovery day"}
+              </p>
+              <p className="text-xs text-zinc-500">
+                {selectedKind === "today"
+                  ? "Log a workout when you’re ready—or keep it as recovery. Either supports your weekly goal."
+                  : "Recovery is part of training. Rest days don’t break your weekly goal."}
+              </p>
+            </div>
+          ) : selected && selected.workouts.length > 0 ? (
             <ul className="mt-3 space-y-3">
               {selected.workouts.map((w) => (
                 <li key={w.sessionId} className="space-y-1">
@@ -225,7 +322,7 @@ export function ProgressHeatmap({
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
         </div>
       ) : (
         <p className="text-xs text-zinc-400">Tap a day for details.</p>
