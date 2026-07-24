@@ -196,6 +196,41 @@ service cloud.firestore {
         // Owner of the group may clear indexes when deleting the group.
         allow delete: if isOwner(userId) || isGroupOwner(groupId);
       }
+
+      match /settings/{settingsId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId)
+          && settingsId == 'progress'
+          && request.resource.data.keys().hasAll([
+            'weeklyGoal', 'goalWeightLbs', 'updatedAt'
+          ])
+          && (request.resource.data.weeklyGoal is int
+            || (request.resource.data.weeklyGoal is float
+              && request.resource.data.weeklyGoal == int(request.resource.data.weeklyGoal)))
+          && request.resource.data.weeklyGoal in [2, 3, 4, 5, 6, 7]
+          && (request.resource.data.goalWeightLbs == null
+            || (request.resource.data.goalWeightLbs is number
+              && request.resource.data.goalWeightLbs > 0
+              && request.resource.data.goalWeightLbs <= 1000))
+          && request.resource.data.updatedAt is timestamp;
+        allow delete: if isOwner(userId);
+      }
+
+      match /bodyWeight/{entryId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasAll([
+            'dateKey', 'weightLbs', 'createdAt'
+          ])
+          && request.resource.data.dateKey is string
+          && request.resource.data.dateKey.size() == 10
+          && request.resource.data.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && request.resource.data.weightLbs is number
+          && request.resource.data.weightLbs > 0
+          && request.resource.data.weightLbs <= 1000
+          && request.resource.data.createdAt is timestamp;
+        allow update, delete: if isOwner(userId);
+      }
     }
 
     function groupCoreUnchanged() {

@@ -202,6 +202,45 @@ export function subscribeRecentCompletedSessions(
 }
 
 /**
+ * Full completed session docs for progress insights (PRs, volume, day detail).
+ */
+export function subscribeCompletedSessionsDetailed(
+  onSessions: (rows: SavedWorkoutSession[]) => void,
+  options?: { maxDocs?: number },
+): () => void {
+  const col = sessionsCollectionRef();
+  const maxDocs = options?.maxDocs ?? 400;
+  if (!col) {
+    onSessions([]);
+    return () => {};
+  }
+
+  const q = query(
+    col,
+    where("status", "==", "completed"),
+    orderBy("endedAt", "desc"),
+    limit(maxDocs),
+  );
+
+  return onSnapshot(
+    q,
+    (snap) => {
+      const out: SavedWorkoutSession[] = [];
+      for (const d of snap.docs) {
+        const session = firestoreToWorkoutSessionDoc(
+          d.data() as Record<string, unknown>,
+        );
+        if (session && session.status === "completed") {
+          out.push({ id: d.id, session });
+        }
+      }
+      onSessions(out);
+    },
+    () => onSessions([]),
+  );
+}
+
+/**
  * Load recent completed sets for several exercises with one Firestore query.
  * We scan a bounded recent window so this also works for older session docs
  * that do not have a denormalized exercise-id array.

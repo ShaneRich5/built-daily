@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GroupsHomeTeaser } from "@/components/groups-home-teaser";
+import { HomeWorkoutActivity } from "@/components/home-workout-activity";
 import { RecentWorkoutsList } from "@/components/recent-workouts-list";
 import { WorkoutPickAndStart } from "@/components/workout-pick-and-start";
 
@@ -15,6 +16,12 @@ export default function HomePage() {
             </h1>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
+            <Link
+              href="/progress"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              Progress
+            </Link>
             <Link
               href="/groups"
               className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
@@ -32,6 +39,8 @@ export default function HomePage() {
       </header>
 
       <WorkoutPickAndStart />
+
+      <HomeWorkoutActivity />
 
       <section className="space-y-3" aria-labelledby="recent-heading">
         <h2

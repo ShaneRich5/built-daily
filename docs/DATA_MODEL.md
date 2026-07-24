@@ -16,6 +16,8 @@ All mutable **personal** user data lives under:
 | `users/{userId}/plans/{planId}` | Reusable workout templates (CRUD via [`lib/workout-plan-repository.ts`](../lib/workout-plan-repository.ts)) |
 | `users/{userId}/scheduledWorkouts/{entryId}` | Planner entries: a **calendar day** (`dateKey`), optional **exercise list** + `planId` for starting `/workout`, or **reminder-only** (`exerciseIds` empty) — see [`lib/planner-repository.ts`](../lib/planner-repository.ts) |
 | `users/{userId}/groupMemberships/{groupId}` | Reverse index of accountability groups the user belongs to |
+| `users/{userId}/settings/progress` | Weekly workout goal + optional goal body weight |
+| `users/{userId}/bodyWeight/{entryId}` | Scale check-ins (`dateKey`, `weightLbs`) |
 
 **Accountability groups** use top-level collections (membership-aware rules):
 
