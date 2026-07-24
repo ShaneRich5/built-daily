@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
-import { ArrowLeft, Clock, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -15,9 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { cn } from "@/lib/utils";
 import { getCatalogExerciseById, type ExerciseMetric } from "@/lib/exercise-catalog";
@@ -38,8 +36,6 @@ import {
 } from "@/lib/workout-plan-repository";
 
 const MAX_LINES = 40;
-
-const REST_SEC_OPTIONS = [30, 60, 90, 120] as const;
 
 /** Display labels for exercise picker badges (aligned with common tracking shorthand). */
 function metricBadgeLabel(metric: ExerciseMetric): string {
@@ -74,16 +70,13 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
   const [pending, setPending] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
 
-  const [autoRestTimer, setAutoRestTimer] = useState(
-    () => initialPlan?.restPreferences?.autoRestTimer ?? false,
-  );
-  const [defaultRestSec, setDefaultRestSec] = useState<
-    (typeof REST_SEC_OPTIONS)[number]
-  >(() => initialPlan?.restPreferences?.defaultRestSec ?? 60);
-
   const restPreferences: PlanRestPreferences = useMemo(
-    () => ({ autoRestTimer, defaultRestSec }),
-    [autoRestTimer, defaultRestSec],
+    () =>
+      initialPlan?.restPreferences ?? {
+        autoRestTimer: false,
+        defaultRestSec: 60,
+      },
+    [initialPlan?.restPreferences],
   );
 
   const canSave = useMemo(
@@ -248,11 +241,6 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
     }
   }, [planId, router]);
 
-  const restToggleValue = useMemo(
-    () => [String(defaultRestSec)] as string[],
-    [defaultRestSec],
-  );
-
   const cardClass = "gap-6 py-6 shadow-none";
 
   return (
@@ -299,62 +287,6 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
               }
               placeholder="e.g., Upper Body Strength"
             />
-          </div>
-
-          <div className="space-y-4 rounded-lg border border-border bg-muted/30 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Timer settings
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <Label htmlFor="auto-rest" className="text-sm font-medium">
-                  Auto Rest Timer
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Automatically start rest timer after completing sets
-                </p>
-              </div>
-              <Switch
-                id="auto-rest"
-                checked={autoRestTimer}
-                onCheckedChange={setAutoRestTimer}
-                className="shrink-0 sm:mt-0"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Default Rest Time</Label>
-              <ToggleGroup
-                spacing={0}
-                variant="outline"
-                value={restToggleValue}
-                onValueChange={(values) => {
-                  const v = values[0];
-                  if (v === "30" || v === "60" || v === "90" || v === "120") {
-                    setDefaultRestSec(
-                      Number(v) as (typeof REST_SEC_OPTIONS)[number],
-                    );
-                  }
-                }}
-                className="flex w-full max-w-md flex-wrap gap-0 sm:flex-nowrap"
-              >
-                {REST_SEC_OPTIONS.map((sec) => (
-                  <ToggleGroupItem
-                    key={sec}
-                    value={String(sec)}
-                    className="min-w-0 flex-1 justify-center px-2 sm:px-3"
-                  >
-                    {sec}s
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
-
-            <Button type="button" variant="outline" className="gap-2" disabled>
-              <Clock className="size-4" />
-              Start Rest Timer
-              <span className="sr-only">(available during live workouts)</span>
-            </Button>
           </div>
         </CardContent>
       </Card>

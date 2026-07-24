@@ -35,7 +35,6 @@ import { formatSetSummary } from "@/lib/workout-journal-export";
 import type { SetLog } from "@/lib/workout-types";
 import {
   combineToTotalSeconds,
-  formatMinutesSecondsLabel,
   splitTotalSeconds,
 } from "@/lib/duration-input";
 import {
@@ -321,18 +320,6 @@ export function ActiveWorkoutView({
     setExerciseNotesById((prev) => ({ ...prev, [exerciseId]: value }));
   }, []);
 
-  /** Per-exercise (duration): hide manual seconds, rely on set timer + display. */
-  const [durationTimerOnlyById, setDurationTimerOnlyById] = useState<
-    Record<string, boolean>
-  >({});
-
-  const toggleDurationTimerOnly = useCallback((exerciseId: string) => {
-    setDurationTimerOnlyById((prev) => ({
-      ...prev,
-      [exerciseId]: !prev[exerciseId],
-    }));
-  }, []);
-
   /** `idle` = timer not started; `running` = counting; `paused` = stopped mid-session */
   const [timerPhase, setTimerPhase] = useState<"idle" | "running" | "paused">(
     () => (initialActiveDurationMs > 0 ? "paused" : "idle"),
@@ -528,11 +515,6 @@ export function ActiveWorkoutView({
         delete next[removed.id];
         return next;
       });
-      setDurationTimerOnlyById((flags) => {
-        const next = { ...flags };
-        delete next[removed.id];
-        return next;
-      });
       setSetTimerActive((active) => {
         if (!active) return null;
         if (active.exerciseIndex === exerciseIndex) return null;
@@ -641,79 +623,87 @@ export function ActiveWorkoutView({
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex shrink-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-              In progress
-            </p>
-            <div
-              className="inline-flex items-center gap-4 rounded-full bg-zinc-100 px-3 py-1.5 text-zinc-900 dark:bg-zinc-800/90 dark:text-zinc-50"
-              role="group"
-              aria-label="Workout session timer"
-            >
-              <div className="flex items-center gap-2">
-                <Timer
-                  className="h-4 w-4 shrink-0 text-zinc-700 dark:text-zinc-300"
-                  aria-hidden
-                />
-                <p
-                  className="text-sm font-semibold tabular-nums tracking-tight"
-                  aria-live="polite"
-                  aria-atomic="true"
-                >
-                  {formatElapsed(displayedMs)}
-                </p>
-                {timerPhase === "paused" && (
-                  <span className="sr-only">Timer paused</span>
-                )}
-              </div>
-              <div className="flex items-center gap-0.5">
-                {timerPhase === "idle" && (
-                  <button
-                    type="button"
-                    onClick={startOrResumeTimer}
-                    aria-label="Start workout timer"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 dark:text-zinc-50 dark:hover:bg-zinc-700"
-                  >
-                    <Play className="h-4 w-4" />
-                  </button>
-                )}
-                {timerPhase === "running" && (
-                  <button
-                    type="button"
-                    onClick={pauseTimer}
-                    aria-label="Pause workout timer"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 dark:text-zinc-50 dark:hover:bg-zinc-700"
-                  >
-                    <Pause className="h-4 w-4" />
-                  </button>
-                )}
-                {timerPhase === "paused" && (
-                  <button
-                    type="button"
-                    onClick={startOrResumeTimer}
-                    aria-label="Resume workout timer"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 dark:text-zinc-50 dark:hover:bg-zinc-700"
-                  >
-                    <Play className="h-4 w-4" />
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={resetTimer}
-                  disabled={timerPhase === "idle" && displayedMs === 0}
-                  aria-label="Reset workout timer"
-                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-900 transition-colors hover:bg-zinc-200/90 disabled:pointer-events-none disabled:opacity-30 dark:text-zinc-50 dark:hover:bg-zinc-700"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            In progress
+          </p>
           <p className="mt-1 text-xs text-zinc-500">
             {activeExercises.length} exercise
             {activeExercises.length === 1 ? "" : "s"} · {setCountLabel} set
             {setCountLabel === "1" ? "" : "s"}
           </p>
+          <details className="mt-2 group">
+            <summary className="cursor-pointer list-none text-xs text-zinc-400 marker:content-none hover:text-zinc-600 dark:hover:text-zinc-300 [&::-webkit-details-marker]:hidden">
+              <span className="inline-flex items-center gap-1.5">
+                <Timer className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                {displayedMs > 0 || timerPhase === "running" ? (
+                  <>
+                    Session time{" "}
+                    <span
+                      className="font-mono tabular-nums text-zinc-500"
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
+                      {formatElapsed(displayedMs)}
+                    </span>
+                    {timerPhase === "paused" ? (
+                      <span className="sr-only">paused</span>
+                    ) : null}
+                  </>
+                ) : (
+                  "Optional session timer"
+                )}
+              </span>
+            </summary>
+            <div
+              className="mt-2 inline-flex items-center gap-1"
+              role="group"
+              aria-label="Workout session timer"
+            >
+              {timerPhase === "idle" && (
+                <button
+                  type="button"
+                  onClick={startOrResumeTimer}
+                  aria-label="Start workout timer"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <Play className="size-3.5" />
+                  Start
+                </button>
+              )}
+              {timerPhase === "running" && (
+                <button
+                  type="button"
+                  onClick={pauseTimer}
+                  aria-label="Pause workout timer"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <Pause className="size-3.5" />
+                  Pause
+                </button>
+              )}
+              {timerPhase === "paused" && (
+                <button
+                  type="button"
+                  onClick={startOrResumeTimer}
+                  aria-label="Resume workout timer"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                >
+                  <Play className="size-3.5" />
+                  Resume
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={resetTimer}
+                disabled={timerPhase === "idle" && displayedMs === 0}
+                aria-label="Reset workout timer"
+                className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-zinc-500 transition-colors hover:bg-zinc-100 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-800"
+              >
+                <RotateCcw className="size-3.5" />
+                Reset
+              </button>
+            </div>
+          </details>
         </div>
         <Link
           href="/"
@@ -828,23 +818,6 @@ export function ActiveWorkoutView({
                     </button>
                   </div>
 
-                  {exercise.metric === "duration" && (
-                    <label className="flex max-w-full cursor-pointer items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 size-4 shrink-0 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-600/40 dark:border-zinc-600 dark:bg-zinc-900"
-                        checked={Boolean(durationTimerOnlyById[exercise.id])}
-                        onChange={() =>
-                          toggleDurationTimerOnly(exercise.id)
-                        }
-                      />
-                      <span>
-                        Use only the set timer for hold time (hide min / sec
-                        fields)
-                      </span>
-                    </label>
-                  )}
-
                   <CollapsibleNote
                     id={`exercise-note-${exercise.id}`}
                     summary="Exercise note"
@@ -872,9 +845,6 @@ export function ActiveWorkoutView({
                         set={set}
                         updateSet={updateSet}
                         onDuplicateSet={duplicateSet}
-                        hideManualSeconds={Boolean(
-                          durationTimerOnlyById[exercise.id],
-                        )}
                         setTimerActive={setTimerActive}
                         setTimerLiveMs={setTimerLiveMs}
                         onStartSetTimer={startSetTimer}
@@ -985,7 +955,6 @@ type SetRowFieldsProps = {
   exerciseIndex: number;
   setIndex: number;
   set: SetRow;
-  hideManualSeconds: boolean;
   setTimerActive: SetTimerActive | null;
   setTimerLiveMs: number;
   onStartSetTimer: (exerciseIndex: number, setIndex: number) => void;
@@ -1005,7 +974,6 @@ function SetRowFields({
   exerciseIndex,
   setIndex,
   set,
-  hideManualSeconds,
   setTimerActive,
   setTimerLiveMs,
   onStartSetTimer,
@@ -1040,50 +1008,73 @@ function SetRowFields({
     setTimerActive.exerciseIndex === exerciseIndex &&
     setTimerActive.setIndex === setIndex;
 
-  const setTimerStrip = (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50/90 px-2 py-2 dark:border-zinc-800 dark:bg-zinc-900/60">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-        Set timer
-      </span>
-      {setTimerThis ? (
-        <>
+  const timedHint =
+    set.timedSetSec && Number(set.timedSetSec) > 0
+      ? `${set.timedSetSec}s`
+      : null;
+
+  const setTimerField = (
+    <details
+      className="mt-1.5 rounded-lg border border-zinc-100 bg-zinc-50/60 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-900/40"
+      open={setTimerThis ? true : undefined}
+    >
+      <summary className="cursor-pointer list-none text-xs font-medium text-zinc-600 marker:content-none dark:text-zinc-400 [&::-webkit-details-marker]:hidden">
+        <span className="underline-offset-2 hover:underline">Set timer</span>
+        <span className="ml-1.5 font-normal text-zinc-400">(optional)</span>
+        {setTimerThis ? (
           <span
-            className="font-mono text-xs font-semibold tabular-nums text-emerald-800 dark:text-emerald-200"
+            className="ml-1.5 font-mono text-[10px] font-normal tabular-nums text-zinc-500"
             aria-live="polite"
           >
-            {formatElapsed(setTimerLiveMs)}
+            · {formatElapsed(setTimerLiveMs)}
           </span>
+        ) : timedHint ? (
+          <span className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-zinc-500">
+            · {timedHint}
+          </span>
+        ) : null}
+      </summary>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {setTimerThis ? (
+          <>
+            <span
+              className="font-mono text-xs tabular-nums text-zinc-700 dark:text-zinc-200"
+              aria-live="polite"
+            >
+              {formatElapsed(setTimerLiveMs)}
+            </span>
+            <button
+              type="button"
+              onClick={onSaveSetTimer}
+              className="rounded-md bg-zinc-800 px-2 py-1 text-[11px] font-semibold text-white dark:bg-zinc-200 dark:text-zinc-900"
+            >
+              Stop &amp; save
+            </button>
+            <button
+              type="button"
+              onClick={onCancelSetTimer}
+              className="rounded-md px-2 py-1 text-[11px] font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
           <button
             type="button"
-            onClick={onSaveSetTimer}
-            className="rounded-md bg-emerald-600 px-2 py-1 text-[11px] font-semibold text-white dark:bg-emerald-500"
+            onClick={() => onStartSetTimer(exerciseIndex, setIndex)}
+            disabled={setTimerActive !== null && !setTimerThis}
+            className="rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-[11px] font-medium text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-200"
+            title={
+              setTimerActive !== null && !setTimerThis
+                ? "Stop the other set timer first, or save/cancel it"
+                : undefined
+            }
           >
-            Stop &amp; save
+            Start timer
           </button>
-          <button
-            type="button"
-            onClick={onCancelSetTimer}
-            className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
-          >
-            Cancel
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          onClick={() => onStartSetTimer(exerciseIndex, setIndex)}
-          disabled={setTimerActive !== null && !setTimerThis}
-          className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-[11px] font-semibold text-zinc-800 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
-          title={
-            setTimerActive !== null && !setTimerThis
-              ? "Stop the other set timer first, or save/cancel it"
-              : undefined
-          }
-        >
-          Start
-        </button>
-      )}
-    </div>
+        )}
+      </div>
+    </details>
   );
 
   const setNoteField = (
@@ -1115,79 +1106,59 @@ function SetRowFields({
     return (
       <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
         {setHeader}
-        {!hideManualSeconds && (
-          <div className="grid grid-cols-2 items-end gap-2 text-sm">
-            <div>
-              <label
-                className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
-                htmlFor={`min-${idBase}`}
-              >
-                Min
-              </label>
-              <input
-                id={`min-${idBase}`}
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1}
-                autoComplete="off"
-                value={parts.minutes}
-                onChange={(e) => setDuration(e.target.value, parts.seconds)}
-                placeholder="0"
-                className={numberFieldClassName}
-              />
-            </div>
-            <div>
-              <label
-                className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
-                htmlFor={`sec-${idBase}`}
-              >
-                Sec
-              </label>
-              <input
-                id={`sec-${idBase}`}
-                type="number"
-                inputMode="numeric"
-                min={0}
-                max={59}
-                step={1}
-                autoComplete="off"
-                value={parts.seconds}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "") {
-                    setDuration(parts.minutes, "");
-                    return;
-                  }
-                  const n = parseInt(raw, 10);
-                  if (!Number.isFinite(n)) return;
-                  setDuration(parts.minutes, String(Math.min(59, Math.max(0, n))));
-                }}
-                placeholder="0"
-                className={numberFieldClassName}
-              />
-            </div>
+        <div className="grid grid-cols-2 items-end gap-2 text-sm">
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`min-${idBase}`}
+            >
+              Min
+            </label>
+            <input
+              id={`min-${idBase}`}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              autoComplete="off"
+              value={parts.minutes}
+              onChange={(e) => setDuration(e.target.value, parts.seconds)}
+              placeholder="0"
+              className={numberFieldClassName}
+            />
           </div>
-        )}
-        {hideManualSeconds && (
-          <div className="flex items-center gap-2 text-sm">
-            <p className="text-zinc-700 dark:text-zinc-200">
-              {set.seconds ? (
-                <>
-                  <span className="font-medium">Hold:</span>{" "}
-                  <span className="font-mono tabular-nums">
-                    {formatMinutesSecondsLabel(Number(set.seconds))}
-                  </span>
-                </>
-              ) : (
-                <span className="text-zinc-500">
-                  Use set timer below to record this hold.
-                </span>
-              )}
-            </p>
+          <div>
+            <label
+              className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              htmlFor={`sec-${idBase}`}
+            >
+              Sec
+            </label>
+            <input
+              id={`sec-${idBase}`}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={59}
+              step={1}
+              autoComplete="off"
+              value={parts.seconds}
+              onChange={(e) => {
+                const raw = e.target.value;
+                if (raw === "") {
+                  setDuration(parts.minutes, "");
+                  return;
+                }
+                const n = parseInt(raw, 10);
+                if (!Number.isFinite(n)) return;
+                setDuration(parts.minutes, String(Math.min(59, Math.max(0, n))));
+              }}
+              placeholder="0"
+              className={numberFieldClassName}
+            />
           </div>
-        )}
-        {setTimerStrip}
+        </div>
+        {setTimerField}
         {setNoteField}
       </div>
     );
@@ -1367,7 +1338,7 @@ function SetRowFields({
             />
           </div>
         </div>
-        {setTimerStrip}
+        {setTimerField}
         {setNoteField}
       </div>
     );
@@ -1396,15 +1367,7 @@ function SetRowFields({
             className={numberFieldClassName}
           />
         </div>
-        {set.timedSetSec ? (
-          <p className="text-[11px] text-zinc-500">
-            Set time (auto):{" "}
-            <span className="font-mono font-medium text-zinc-700 dark:text-zinc-300">
-              {set.timedSetSec}s
-            </span>
-          </p>
-        ) : null}
-        {setTimerStrip}
+        {setTimerField}
         {setNoteField}
       </div>
     );
@@ -1453,15 +1416,7 @@ function SetRowFields({
           />
         </div>
       </div>
-      {set.timedSetSec ? (
-        <p className="text-[11px] text-zinc-500">
-          Set time (auto):{" "}
-          <span className="font-mono font-medium text-zinc-700 dark:text-zinc-300">
-            {set.timedSetSec}s
-          </span>
-        </p>
-      ) : null}
-      {setTimerStrip}
+      {setTimerField}
       {setNoteField}
     </div>
   );
