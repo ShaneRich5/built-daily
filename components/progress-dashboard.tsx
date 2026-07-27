@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { ProgressGoalStreak } from "@/components/progress-goal-streak";
+import { ProgressHeatmap } from "@/components/progress-heatmap";
 import { ProgressMilestones } from "@/components/progress-milestones";
 import { ProgressStats } from "@/components/progress-stats";
 import { ProgressStrength } from "@/components/progress-strength";
@@ -11,6 +12,7 @@ import { ProgressWeeklyGoal } from "@/components/progress-weekly-goal";
 import { ProgressWeight } from "@/components/progress-weight";
 import {
   activityFromProgressSessions,
+  buildDayActivityDetails,
   computeMilestones,
   computePersonalRecords,
   computeProgressStats,
@@ -70,7 +72,13 @@ export function ProgressDashboard() {
     const activity = activityFromProgressSessions(rows);
     const week = weekGoalStatus(activity, settings.weeklyGoal, todayKey);
     const goalStreak = goalWeekStreak(activity, settings.weeklyGoal, todayKey);
-    const { recentPrs, bestByExercise } = computePersonalRecords(rows);
+    const { recentPrs, bestByExercise, prDateKeys } =
+      computePersonalRecords(rows);
+    const dayDetails = buildDayActivityDetails(
+      rows,
+      prDateKeys,
+      bestByExercise,
+    );
     const stats = computeProgressStats(rows);
     const firstPr = [...recentPrs].sort((a, b) =>
       a.dateKey.localeCompare(b.dateKey),
@@ -83,6 +91,8 @@ export function ProgressDashboard() {
       firstPr?.dateKey ?? null,
     );
     return {
+      activity,
+      dayDetails,
       week,
       goalStreak,
       recentPrs,
@@ -132,6 +142,11 @@ export function ProgressDashboard() {
         <p className="text-sm text-zinc-500">Loading your history…</p>
       ) : (
         <>
+          <ProgressHeatmap
+            activity={insights.activity}
+            dayDetails={insights.dayDetails}
+            todayKey={todayKey}
+          />
           <ProgressWeeklyGoal
             week={insights.week}
             weeklyGoal={settings.weeklyGoal}
