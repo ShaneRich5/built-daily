@@ -409,6 +409,7 @@ export function buildDayActivityDetails(
     details.set(dateKey, {
       dateKey,
       workouts,
+      activities: [],
       totalVolumeLbs: workouts.reduce((a, w) => a + w.volumeLbs, 0),
       totalDurationSec: workouts.reduce(
         (a, w) => a + (w.durationSec ?? 0),

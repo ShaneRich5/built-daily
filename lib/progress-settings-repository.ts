@@ -19,6 +19,7 @@ import {
 import {
   DEFAULT_PROGRESS_SETTINGS,
   type BodyWeightEntryDoc,
+  type MovementGoalTarget,
   type ProgressSettingsDoc,
   type SavedBodyWeightEntry,
   type WeeklyGoalTarget,
@@ -62,7 +63,9 @@ export function subscribeProgressSettings(
 }
 
 export async function saveProgressSettings(
-  patch: Partial<Pick<ProgressSettingsDoc, "weeklyGoal" | "goalWeightLbs">>,
+  patch: Partial<
+    Pick<ProgressSettingsDoc, "weeklyGoal" | "movementGoalDays" | "goalWeightLbs">
+  >,
 ): Promise<boolean> {
   const ref = settingsDocRef();
   if (!ref) return false;
@@ -72,6 +75,7 @@ export async function saveProgressSettings(
   );
   const next: ProgressSettingsDoc = {
     weeklyGoal: patch.weeklyGoal ?? prev.weeklyGoal,
+    movementGoalDays: patch.movementGoalDays ?? prev.movementGoalDays,
     goalWeightLbs:
       patch.goalWeightLbs !== undefined ? patch.goalWeightLbs : prev.goalWeightLbs,
     updatedAt: new Date(),
@@ -82,6 +86,12 @@ export async function saveProgressSettings(
 
 export async function setWeeklyGoal(weeklyGoal: WeeklyGoalTarget): Promise<boolean> {
   return saveProgressSettings({ weeklyGoal });
+}
+
+export async function setMovementGoalDays(
+  movementGoalDays: MovementGoalTarget,
+): Promise<boolean> {
+  return saveProgressSettings({ movementGoalDays });
 }
 
 export function subscribeBodyWeightEntries(

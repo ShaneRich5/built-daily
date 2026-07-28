@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { GroupsHomeTeaser } from "@/components/groups-home-teaser";
+import { HomeTimeline } from "@/components/home-timeline";
 import { HomeWorkoutActivity } from "@/components/home-workout-activity";
-import { RecentWorkoutsList } from "@/components/recent-workouts-list";
 import { WorkoutPickAndStart } from "@/components/workout-pick-and-start";
 
 export default function HomePage() {
@@ -42,15 +42,7 @@ export default function HomePage() {
 
       <HomeWorkoutActivity />
 
-      <section className="space-y-3" aria-labelledby="recent-heading">
-        <h2
-          id="recent-heading"
-          className="text-sm font-semibold uppercase tracking-wide text-zinc-500"
-        >
-          Recent workouts
-        </h2>
-        <RecentWorkoutsList />
-      </section>
+      <HomeTimeline />
 
       <GroupsHomeTeaser />
     </div>

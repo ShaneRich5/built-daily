@@ -7,10 +7,20 @@ import { ProgressGoalStreak } from "@/components/progress-goal-streak";
 import { ProgressHeatmap } from "@/components/progress-heatmap";
 import { ProgressMilestones } from "@/components/progress-milestones";
 import { ProgressMomentum } from "@/components/progress-momentum";
+import { ProgressMovementGoal } from "@/components/progress-movement-goal";
 import { ProgressStats } from "@/components/progress-stats";
 import { ProgressStrength } from "@/components/progress-strength";
 import { ProgressWeeklyGoal } from "@/components/progress-weekly-goal";
 import { ProgressWeight } from "@/components/progress-weight";
+import { subscribeRecentActivities } from "@/lib/activity-repository";
+import type { SavedActivity } from "@/lib/activity-types";
+import {
+  activityByDayFromSaved,
+  currentMovementStreak,
+  mergeDayDetailsWithActivities,
+  movementDaysFromMaps,
+  movementGoalStatus,
+} from "@/lib/movement-insights";
 import {
   activityFromProgressSessions,
   buildDayActivityDetails,
@@ -40,6 +50,7 @@ import {
 export function ProgressDashboard() {
   const { user, loading, firebaseReady } = useAuth();
   const [sessions, setSessions] = useState<SavedWorkoutSession[] | null>(null);
+  const [activities, setActivities] = useState<SavedActivity[] | null>(null);
   const [settings, setSettings] = useState<ProgressSettingsDoc>(
     DEFAULT_PROGRESS_SETTINGS,
   );
@@ -50,9 +61,19 @@ export function ProgressDashboard() {
     if (!user || !firebaseReady) {
       return () => {
         setSessions(null);
+        setActivities(null);
       };
     }
-    return subscribeCompletedSessionsDetailed(setSessions, { maxDocs: 400 });
+    const unsubSessions = subscribeCompletedSessionsDetailed(setSessions, {
+      maxDocs: 400,
+    });
+    const unsubActivities = subscribeRecentActivities(setActivities, {
+      maxDocs: 200,
+    });
+    return () => {
+      unsubSessions();
+      unsubActivities();
+    };
   }, [user, firebaseReady]);
 
   useEffect(() => {
@@ -71,8 +92,17 @@ export function ProgressDashboard() {
 
   const insights = useMemo(() => {
     const rows = sessions ?? [];
+    const acts = activities ?? [];
     const activity = activityFromProgressSessions(rows);
+    const activityByDay = activityByDayFromSaved(acts);
+    const movementDays = movementDaysFromMaps(activity, activityByDay);
     const week = weekGoalStatus(activity, settings.weeklyGoal, todayKey);
+    const movementWeek = movementGoalStatus(
+      movementDays,
+      settings.movementGoalDays,
+      todayKey,
+    );
+    const movementStreak = currentMovementStreak(movementDays, todayKey);
     const goalStreak = goalWeekStreak(activity, settings.weeklyGoal, todayKey);
     const momentum = computeWeekMomentum(
       activity,
@@ -81,10 +111,9 @@ export function ProgressDashboard() {
     );
     const { recentPrs, bestByExercise, prDateKeys } =
       computePersonalRecords(rows);
-    const dayDetails = buildDayActivityDetails(
-      rows,
-      prDateKeys,
-      bestByExercise,
+    const dayDetails = mergeDayDetailsWithActivities(
+      buildDayActivityDetails(rows, prDateKeys, bestByExercise),
+      acts,
     );
     const stats = computeProgressStats(rows);
     const firstPr = [...recentPrs].sort((a, b) =>
@@ -99,8 +128,11 @@ export function ProgressDashboard() {
     );
     return {
       activity,
+      activityByDay,
       dayDetails,
       week,
+      movementWeek,
+      movementStreak,
       goalStreak,
       momentum,
       recentPrs,
@@ -108,7 +140,13 @@ export function ProgressDashboard() {
       stats,
       milestones,
     };
-  }, [sessions, settings.weeklyGoal, todayKey]);
+  }, [
+    sessions,
+    activities,
+    settings.weeklyGoal,
+    settings.movementGoalDays,
+    todayKey,
+  ]);
 
   return (
     <div className="flex flex-1 flex-col gap-8 pb-10">
@@ -146,12 +184,13 @@ export function ProgressDashboard() {
             Sign in
           </Link>
         </div>
-      ) : sessions === null ? (
+      ) : sessions === null || activities === null ? (
         <p className="text-sm text-zinc-500">Loading your history…</p>
       ) : (
         <>
           <ProgressHeatmap
             activity={insights.activity}
+            activityByDay={insights.activityByDay}
             dayDetails={insights.dayDetails}
             todayKey={todayKey}
           />
@@ -160,6 +199,11 @@ export function ProgressDashboard() {
             week={insights.week}
             weeklyGoal={settings.weeklyGoal}
             momentum={insights.momentum}
+          />
+          <ProgressMovementGoal
+            week={insights.movementWeek}
+            movementGoalDays={settings.movementGoalDays}
+            movementStreak={insights.movementStreak}
           />
           <ProgressGoalStreak
             current={insights.goalStreak.current}

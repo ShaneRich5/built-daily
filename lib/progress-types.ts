@@ -3,9 +3,15 @@
 export const WEEKLY_GOAL_OPTIONS = [2, 3, 4, 5, 6, 7] as const;
 export type WeeklyGoalTarget = (typeof WEEKLY_GOAL_OPTIONS)[number];
 
+/** Active days / week (workout or activity). */
+export const MOVEMENT_GOAL_OPTIONS = [3, 4, 5, 6, 7] as const;
+export type MovementGoalTarget = (typeof MOVEMENT_GOAL_OPTIONS)[number];
+
 /** 7 = daily (every calendar day that week). */
 export type ProgressSettingsDoc = {
   weeklyGoal: WeeklyGoalTarget;
+  /** Active days goal (workout or activity counts). */
+  movementGoalDays: MovementGoalTarget;
   goalWeightLbs: number | null;
   updatedAt: Date;
 };
@@ -23,6 +29,7 @@ export type SavedBodyWeightEntry = {
 
 export const DEFAULT_PROGRESS_SETTINGS: ProgressSettingsDoc = {
   weeklyGoal: 3,
+  movementGoalDays: 5,
   goalWeightLbs: null,
   updatedAt: new Date(0),
 };
@@ -57,9 +64,19 @@ export type DayWorkoutSummary = {
   prs: Array<{ exerciseName: string; weight: number; reps: number }>;
 };
 
+export type DayLoggedActivitySummary = {
+  activityId: string;
+  activityTypeId: string;
+  name: string;
+  durationMin: number | null;
+  distanceMiles: number | null;
+};
+
 export type DayActivityDetail = {
   dateKey: string;
   workouts: DayWorkoutSummary[];
+  /** Recreational activities logged that day (not workouts). */
+  activities: DayLoggedActivitySummary[];
   totalVolumeLbs: number;
   totalDurationSec: number;
   hasPr: boolean;

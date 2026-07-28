@@ -1,7 +1,9 @@
 import { Timestamp } from "firebase/firestore";
 import {
   DEFAULT_PROGRESS_SETTINGS,
+  MOVEMENT_GOAL_OPTIONS,
   type BodyWeightEntryDoc,
+  type MovementGoalTarget,
   type ProgressSettingsDoc,
   type WeeklyGoalTarget,
   WEEKLY_GOAL_OPTIONS,
@@ -33,11 +35,22 @@ function asWeeklyGoal(v: unknown): WeeklyGoalTarget {
   return DEFAULT_PROGRESS_SETTINGS.weeklyGoal;
 }
 
+function asMovementGoal(v: unknown): MovementGoalTarget {
+  if (
+    typeof v === "number" &&
+    MOVEMENT_GOAL_OPTIONS.includes(v as MovementGoalTarget)
+  ) {
+    return v as MovementGoalTarget;
+  }
+  return DEFAULT_PROGRESS_SETTINGS.movementGoalDays;
+}
+
 export function progressSettingsToFirestore(
   doc: ProgressSettingsDoc,
 ): Record<string, unknown> {
   return {
     weeklyGoal: doc.weeklyGoal,
+    movementGoalDays: doc.movementGoalDays,
     goalWeightLbs: doc.goalWeightLbs,
     updatedAt: Timestamp.fromDate(doc.updatedAt),
   };
@@ -56,6 +69,7 @@ export function firestoreToProgressSettings(
         : null;
   return {
     weeklyGoal: asWeeklyGoal(data.weeklyGoal),
+    movementGoalDays: asMovementGoal(data.movementGoalDays),
     goalWeightLbs,
     updatedAt: asTimestamp(data.updatedAt) ?? new Date(0),
   };

@@ -4,6 +4,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { ProgressHeatmap } from "@/components/progress-heatmap";
+import { subscribeRecentActivities } from "@/lib/activity-repository";
+import type { SavedActivity } from "@/lib/activity-types";
+import {
+  activityByDayFromSaved,
+  mergeDayDetailsWithActivities,
+} from "@/lib/movement-insights";
 import {
   activityFromProgressSessions,
   buildDayActivityDetails,
@@ -15,35 +21,53 @@ import {
   type SavedWorkoutSession,
 } from "@/lib/workout-session-repository";
 
-/** Home workout-activity heatmap (weekly goals live on Progress). */
+/** Home consistency heatmap (weekly goals live on Progress). */
 export function HomeWorkoutActivity() {
   const { user, loading, firebaseReady } = useAuth();
   const [sessions, setSessions] = useState<SavedWorkoutSession[] | null>(null);
+  const [activities, setActivities] = useState<SavedActivity[] | null>(null);
   const [todayKey] = useState(() => localDateKeyFromMs(Date.now()));
 
   useEffect(() => {
     if (!user || !firebaseReady) {
       return () => {
         setSessions(null);
+        setActivities(null);
       };
     }
-    return subscribeCompletedSessionsDetailed(setSessions, { maxDocs: 400 });
+    const unsubSessions = subscribeCompletedSessionsDetailed(setSessions, {
+      maxDocs: 400,
+    });
+    const unsubActivities = subscribeRecentActivities(setActivities, {
+      maxDocs: 200,
+    });
+    return () => {
+      unsubSessions();
+      unsubActivities();
+    };
   }, [user, firebaseReady]);
 
-  const { activity, dayDetails } = useMemo(() => {
+  const { activity, activityByDay, dayDetails } = useMemo(() => {
     const rows = sessions ?? [];
+    const acts = activities ?? [];
     const { bestByExercise, prDateKeys } = computePersonalRecords(rows);
+    const baseDetails = buildDayActivityDetails(
+      rows,
+      prDateKeys,
+      bestByExercise,
+    );
     return {
       activity: activityFromProgressSessions(rows),
-      dayDetails: buildDayActivityDetails(rows, prDateKeys, bestByExercise),
+      activityByDay: activityByDayFromSaved(acts),
+      dayDetails: mergeDayDetailsWithActivities(baseDetails, acts),
     };
-  }, [sessions]);
+  }, [sessions, activities]);
 
   if (!firebaseReady) {
     return (
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Workout activity
+          Consistency
         </h2>
         <p className="mt-2 text-sm text-zinc-500">
           Add Firebase configuration to see your activity chart.
@@ -56,7 +80,7 @@ export function HomeWorkoutActivity() {
     return (
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Workout activity
+          Consistency
         </h2>
         <p className="mt-2 text-sm text-zinc-500">Loading…</p>
       </section>
@@ -67,10 +91,10 @@ export function HomeWorkoutActivity() {
     return (
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Workout activity
+          Consistency
         </h2>
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Sign in to see your workout activity chart.
+          Sign in to see your consistency chart.
         </p>
         <Link
           href="/login"
@@ -82,11 +106,11 @@ export function HomeWorkoutActivity() {
     );
   }
 
-  if (sessions === null) {
+  if (sessions === null || activities === null) {
     return (
       <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Workout activity
+          Consistency
         </h2>
         <p className="mt-2 text-sm text-zinc-500">Loading…</p>
       </section>
@@ -97,12 +121,12 @@ export function HomeWorkoutActivity() {
     <div className="space-y-2">
       <ProgressHeatmap
         activity={activity}
+        activityByDay={activityByDay}
         dayDetails={dayDetails}
         todayKey={todayKey}
         footer={
           <p className="text-xs text-zinc-500">
-            Recovery days are part of training—not missed workouts. Set your
-            weekly goal on{" "}
+            Workouts and activities both light up the chart. Set goals on{" "}
             <Link
               href="/progress"
               className="font-semibold text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300"

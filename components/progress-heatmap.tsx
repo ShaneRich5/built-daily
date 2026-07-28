@@ -7,17 +7,20 @@ import {
   activityLevel,
   buildContributionWeeks,
   contributionMonthLabels,
-  earliestActivityKey,
   heatmapDayKind,
   type HeatmapDayKind,
   type WorkoutActivityByDay,
 } from "@/lib/workout-activity";
+import type { ActivityByDay } from "@/lib/movement-insights";
+import { earliestMovementKey } from "@/lib/movement-insights";
 import {
   formatDurationMinutes,
   formatVolumeLbs,
 } from "@/lib/progress-insights";
 import type { DayActivityDetail } from "@/lib/progress-types";
 import { formatLocalDateKey } from "@/lib/workout-date";
+
+const EMPTY_ACTIVITY_BY_DAY: ActivityByDay = new Map();
 
 const WORKOUT_LEVEL_CLASS: Record<1 | 2 | 3 | 4, string> = {
   1: "bg-emerald-200 dark:bg-emerald-900/70",
@@ -26,9 +29,13 @@ const WORKOUT_LEVEL_CLASS: Record<1 | 2 | 3 | 4, string> = {
   4: "bg-emerald-700 dark:bg-emerald-400",
 };
 
+/** Distinct from workout emerald and recovery gray. */
+const ACTIVITY_CELL_CLASS = "bg-blue-300 dark:bg-blue-700/70";
+
 const KIND_CLASS: Record<HeatmapDayKind, string> = {
-  workout: "", // filled via WORKOUT_LEVEL_CLASS
-  recovery: "bg-sky-100 dark:bg-sky-950/70",
+  workout: "",
+  activity: ACTIVITY_CELL_CLASS,
+  recovery: "bg-zinc-200 dark:bg-zinc-800",
   today: "bg-white ring-1 ring-inset ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-600",
   future: "bg-transparent",
   empty: "bg-transparent",
@@ -38,22 +45,23 @@ const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 
 type ProgressHeatmapProps = {
   activity: WorkoutActivityByDay;
+  /** Recreational activity counts by day (optional). */
+  activityByDay?: ActivityByDay;
   dayDetails: Map<string, DayActivityDetail>;
   todayKey: string;
   footer?: ReactNode;
 };
 
-function kindLabel(
-  kind: HeatmapDayKind,
-  count: number,
-): string {
+function kindLabel(kind: HeatmapDayKind, count: number): string {
   switch (kind) {
     case "workout":
       return count === 1 ? "Workout completed" : `${count} workouts`;
+    case "activity":
+      return "Activity day";
     case "recovery":
       return "Recovery day";
     case "today":
-      return "Today · workout or recovery";
+      return "Today · open";
     case "future":
       return "Future";
     case "empty":
@@ -75,33 +83,54 @@ function cellClass(kind: HeatmapDayKind, count: number): string {
   return KIND_CLASS[kind];
 }
 
+function dayKindFor(
+  dateKey: string,
+  workoutCount: number,
+  activityCount: number,
+  todayKey: string,
+  firstKey: string | null,
+): HeatmapDayKind {
+  return heatmapDayKind({
+    dateKey,
+    count: workoutCount,
+    activityCount,
+    todayKey,
+    firstActivityKey: firstKey,
+  });
+}
+
 export function ProgressHeatmap({
   activity,
+  activityByDay,
   dayDetails,
   todayKey,
   footer,
 }: ProgressHeatmapProps) {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const activities = activityByDay ?? EMPTY_ACTIVITY_BY_DAY;
 
-  const { weeks, monthLabels, workoutDays, recoveryDays, firstKey } =
+  const { weeks, monthLabels, workoutDays, activityDays, recoveryDays, firstKey } =
     useMemo(() => {
       const built = buildContributionWeeks(activity, {
         weekCount: 26,
         endDateKey: todayKey,
       });
-      const first = earliestActivityKey(activity);
+      const first = earliestMovementKey(activity, activities);
       let workouts = 0;
+      let acts = 0;
       let recoveries = 0;
       for (const week of built) {
         for (const day of week) {
           if (!day.inRange) continue;
-          const kind = heatmapDayKind({
-            dateKey: day.dateKey,
-            count: day.count,
+          const kind = dayKindFor(
+            day.dateKey,
+            day.count,
+            activities.get(day.dateKey) ?? 0,
             todayKey,
-            firstActivityKey: first,
-          });
+            first,
+          );
           if (kind === "workout") workouts += 1;
+          if (kind === "activity") acts += 1;
           if (kind === "recovery") recoveries += 1;
         }
       }
@@ -109,20 +138,39 @@ export function ProgressHeatmap({
         weeks: built,
         monthLabels: contributionMonthLabels(built),
         workoutDays: workouts,
+        activityDays: acts,
         recoveryDays: recoveries,
         firstKey: first,
       };
-    }, [activity, todayKey]);
+    }, [activity, activities, todayKey]);
 
   const selected = selectedKey ? dayDetails.get(selectedKey) : null;
   const selectedKind = selectedKey
-    ? heatmapDayKind({
-        dateKey: selectedKey,
-        count: activity.get(selectedKey) ?? 0,
+    ? dayKindFor(
+        selectedKey,
+        activity.get(selectedKey) ?? 0,
+        activities.get(selectedKey) ?? 0,
         todayKey,
-        firstActivityKey: firstKey,
-      })
+        firstKey,
+      )
     : null;
+
+  const summaryParts: string[] = [];
+  if (workoutDays > 0) {
+    summaryParts.push(
+      `${workoutDays} workout day${workoutDays === 1 ? "" : "s"}`,
+    );
+  }
+  if (activityDays > 0) {
+    summaryParts.push(
+      `${activityDays} activity day${activityDays === 1 ? "" : "s"}`,
+    );
+  }
+  if (recoveryDays > 0) {
+    summaryParts.push(
+      `${recoveryDays} recovery day${recoveryDays === 1 ? "" : "s"}`,
+    );
+  }
 
   return (
     <section
@@ -134,12 +182,12 @@ export function ProgressHeatmap({
           id="heatmap-heading"
           className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
         >
-          Workout activity
+          Consistency
         </h2>
         <p className="mt-1 text-sm text-zinc-500">
-          {workoutDays === 0
-            ? "Finish a workout to light up the chart. Recovery days are part of training."
-            : `${workoutDays} workout day${workoutDays === 1 ? "" : "s"} · ${recoveryDays} recovery day${recoveryDays === 1 ? "" : "s"}`}
+          {summaryParts.length === 0
+            ? "Finish a workout or log an activity to light up the chart."
+            : summaryParts.join(" · ")}
         </p>
       </div>
 
@@ -171,7 +219,7 @@ export function ProgressHeatmap({
               gridTemplateColumns: `1.75rem repeat(${weeks.length}, minmax(0, 1fr))`,
             }}
             role="grid"
-            aria-label="Workout and recovery activity for the last 26 weeks"
+            aria-label="Workout and activity for the last 26 weeks"
           >
             {WEEKDAY_LABELS.map((label, row) => (
               <div key={`row-${row}`} className="contents">
@@ -181,12 +229,13 @@ export function ProgressHeatmap({
                 {weeks.map((week, weekIndex) => {
                   const day = week[row]!;
                   const kind = day.inRange
-                    ? heatmapDayKind({
-                        dateKey: day.dateKey,
-                        count: day.count,
+                    ? dayKindFor(
+                        day.dateKey,
+                        day.count,
+                        activities.get(day.dateKey) ?? 0,
                         todayKey,
-                        firstActivityKey: firstKey,
-                      })
+                        firstKey,
+                      )
                     : "future";
                   const detail = dayDetails.get(day.dateKey);
                   const hasPr = Boolean(detail?.hasPr);
@@ -245,6 +294,13 @@ export function ProgressHeatmap({
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span
+            className={`size-2.5 rounded-[2px] ${KIND_CLASS.activity}`}
+            aria-hidden
+          />
+          Activity
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span
             className={`size-2.5 rounded-[2px] ${KIND_CLASS.recovery}`}
             aria-hidden
           />
@@ -270,59 +326,86 @@ export function ProgressHeatmap({
           </p>
           {selectedKind === "recovery" ||
           (selectedKind === "today" &&
-            (!selected || selected.workouts.length === 0)) ? (
+            (!selected ||
+              (selected.workouts.length === 0 &&
+                selected.activities.length === 0))) ? (
             <div className="mt-2 space-y-1">
-              <p className="font-medium text-sky-800 dark:text-sky-300">
-                {selectedKind === "today"
-                  ? "Open day"
-                  : "Recovery day"}
+              <p className="font-medium text-zinc-700 dark:text-zinc-300">
+                {selectedKind === "today" ? "Open day" : "Recovery day"}
               </p>
               <p className="text-xs text-zinc-500">
                 {selectedKind === "today"
-                  ? "Log a workout when you’re ready—or keep it as recovery. Either supports your weekly goal."
-                  : "Recovery is part of training. Rest days don’t break your weekly goal."}
+                  ? "Log a workout or activity when you’re ready—or keep it as recovery."
+                  : "Recovery is part of training. Rest days don’t break your weekly workout goal."}
               </p>
             </div>
-          ) : selected && selected.workouts.length > 0 ? (
-            <ul className="mt-3 space-y-3">
-              {selected.workouts.map((w) => (
-                <li key={w.sessionId} className="space-y-1">
-                  <p className="font-medium text-zinc-800 dark:text-zinc-100">
-                    ✓ {w.title}
-                  </p>
-                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
-                    <div>
-                      <dt className="uppercase tracking-wide text-zinc-400">
-                        Duration
-                      </dt>
-                      <dd>{formatDurationMinutes(w.durationSec)}</dd>
-                    </div>
-                    <div>
-                      <dt className="uppercase tracking-wide text-zinc-400">
-                        Volume
-                      </dt>
-                      <dd>{formatVolumeLbs(w.volumeLbs)}</dd>
-                    </div>
-                  </dl>
-                  {w.prs.length > 0 ? (
-                    <div className="pt-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                        PR
+          ) : (
+            <div className="mt-3 space-y-4">
+              {selected && selected.workouts.length > 0 ? (
+                <ul className="space-y-3">
+                  {selected.workouts.map((w) => (
+                    <li key={w.sessionId} className="space-y-1">
+                      <p className="font-medium text-zinc-800 dark:text-zinc-100">
+                        Workout · {w.title}
                       </p>
-                      <ul className="mt-0.5 text-xs text-zinc-700 dark:text-zinc-300">
-                        {w.prs.map((pr) => (
-                          <li key={`${pr.exerciseName}-${pr.weight}-${pr.reps}`}>
-                            {pr.exerciseName} · {pr.weight} × {pr.reps}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null}
-                  <SessionLink sessionId={w.sessionId} />
-                </li>
-              ))}
-            </ul>
-          ) : null}
+                      <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+                        <div>
+                          <dt className="uppercase tracking-wide text-zinc-400">
+                            Duration
+                          </dt>
+                          <dd>{formatDurationMinutes(w.durationSec)}</dd>
+                        </div>
+                        <div>
+                          <dt className="uppercase tracking-wide text-zinc-400">
+                            Volume
+                          </dt>
+                          <dd>{formatVolumeLbs(w.volumeLbs)}</dd>
+                        </div>
+                      </dl>
+                      {w.prs.length > 0 ? (
+                        <div className="pt-1">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                            PR
+                          </p>
+                          <ul className="mt-0.5 text-xs text-zinc-700 dark:text-zinc-300">
+                            {w.prs.map((pr) => (
+                              <li
+                                key={`${pr.exerciseName}-${pr.weight}-${pr.reps}`}
+                              >
+                                {pr.exerciseName} · {pr.weight} × {pr.reps}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      <SessionLink sessionId={w.sessionId} />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {selected && selected.activities.length > 0 ? (
+                <ul className="space-y-2">
+                  {selected.activities.map((a) => (
+                    <li key={a.activityId}>
+                      <p className="font-medium text-teal-800 dark:text-teal-300">
+                        Activity · {a.name}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {[
+                          a.durationMin != null ? `${a.durationMin} min` : null,
+                          a.distanceMiles != null
+                            ? `${a.distanceMiles} mi`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Logged"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-xs text-zinc-400">Tap a day for details.</p>

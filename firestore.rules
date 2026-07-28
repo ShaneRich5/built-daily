@@ -208,6 +208,16 @@ service cloud.firestore {
             || (request.resource.data.weeklyGoal is float
               && request.resource.data.weeklyGoal == int(request.resource.data.weeklyGoal)))
           && request.resource.data.weeklyGoal in [2, 3, 4, 5, 6, 7]
+          && (
+            !('movementGoalDays' in request.resource.data)
+            || (
+              (request.resource.data.movementGoalDays is int
+                || (request.resource.data.movementGoalDays is float
+                  && request.resource.data.movementGoalDays
+                    == int(request.resource.data.movementGoalDays)))
+              && request.resource.data.movementGoalDays in [3, 4, 5, 6, 7]
+            )
+          )
           && (request.resource.data.goalWeightLbs == null
             || (request.resource.data.goalWeightLbs is number
               && request.resource.data.goalWeightLbs > 0
@@ -229,6 +239,45 @@ service cloud.firestore {
           && request.resource.data.weightLbs > 0
           && request.resource.data.weightLbs <= 1000
           && request.resource.data.createdAt is timestamp;
+        allow update, delete: if isOwner(userId);
+      }
+
+      match /activities/{activityId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasAll([
+            'activityTypeId', 'activityDate', 'activityTime',
+            'durationMin', 'distanceMiles', 'locationName', 'notes',
+            'visibility', 'source', 'startedAt', 'endedAt',
+            'createdAt', 'updatedAt'
+          ])
+          && request.resource.data.activityTypeId is string
+          && request.resource.data.activityTypeId.size() > 0
+          && request.resource.data.activityTypeId.size() <= 64
+          && request.resource.data.activityDate is string
+          && request.resource.data.activityDate.size() == 10
+          && request.resource.data.activityDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && (request.resource.data.activityTime == null
+            || (request.resource.data.activityTime is string
+              && request.resource.data.activityTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+          && (request.resource.data.durationMin == null
+            || (isIntLike(request.resource.data.durationMin)
+              && request.resource.data.durationMin > 0
+              && request.resource.data.durationMin <= 1440))
+          && (request.resource.data.distanceMiles == null
+            || (request.resource.data.distanceMiles is number
+              && request.resource.data.distanceMiles > 0
+              && request.resource.data.distanceMiles <= 500))
+          && optionalString(request.resource.data.locationName, 120)
+          && optionalString(request.resource.data.notes, 400)
+          && request.resource.data.visibility == 'private'
+          && request.resource.data.source == 'manual'
+          && (request.resource.data.startedAt == null
+            || request.resource.data.startedAt is timestamp)
+          && (request.resource.data.endedAt == null
+            || request.resource.data.endedAt is timestamp)
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.updatedAt is timestamp;
         allow update, delete: if isOwner(userId);
       }
     }
