@@ -38,6 +38,32 @@ export function formatLocalDateKey(
   return formatWorkoutHeaderDate(d.getTime(), locale);
 }
 
+/**
+ * Friendly preview for date pickers — adds Today/Yesterday when relevant.
+ * Returns null when the key is missing or invalid.
+ */
+export function formatActivityDatePreview(
+  dateKey: string,
+  locale: string = "en-US",
+): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+
+  const formatted = formatLocalDateKey(dateKey, locale);
+  const todayKey = localDateKeyFromMs(Date.now());
+  if (dateKey === todayKey) return `Today · ${formatted}`;
+
+  const today = dateFromLocalDateKey(todayKey);
+  if (today) {
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (dateKey === localDateKeyFromMs(yesterday.getTime())) {
+      return `Yesterday · ${formatted}`;
+    }
+  }
+
+  return formatted;
+}
+
 /** Validate optional `HH:mm` (24-hour). */
 export function isValidWorkoutTime(raw: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(raw);

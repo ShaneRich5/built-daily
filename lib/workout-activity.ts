@@ -111,11 +111,12 @@ export function activityLevel(count: number): 0 | 1 | 2 | 3 | 4 {
 /**
  * Heatmap day classification (recovery is intentional — never “missed”
  * unless a scheduled plan exists later).
- * Workout days win over activity-only days.
+ * Days with both a workout and an activity use a split cell in the UI.
  */
 export type HeatmapDayKind =
   | "workout"
   | "activity"
+  | "both"
   | "recovery"
   | "today"
   | "future"
@@ -127,7 +128,7 @@ export function heatmapDayKind(options: {
   todayKey: string;
   /** First day the user logged a workout or activity; earlier days stay blank. */
   firstActivityKey: string | null;
-  /** Recreational activities that day (ignored when count > 0). */
+  /** Recreational activities that day. */
   activityCount?: number;
 }): HeatmapDayKind {
   const {
@@ -138,6 +139,7 @@ export function heatmapDayKind(options: {
     activityCount = 0,
   } = options;
   if (dateKey > todayKey) return "future";
+  if (count > 0 && activityCount > 0) return "both";
   if (count > 0) return "workout";
   if (activityCount > 0) return "activity";
   if (!firstActivityKey || dateKey < firstActivityKey) return "empty";

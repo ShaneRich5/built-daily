@@ -41,6 +41,7 @@ type TimelineItem =
       time: string | null;
       title: string;
       meta: string;
+      href: string;
       icon: NonNullable<ReturnType<typeof getActivityTypeById>>["icon"];
     };
 
@@ -104,6 +105,7 @@ function buildTimeline(
       time: activity.activityTime,
       title: type?.name ?? "Activity",
       meta: parts.length > 0 ? parts.join(" · ") : "Activity",
+      href: `/activities/${id}`,
       icon: type?.icon ?? "activity",
     });
   }
@@ -240,7 +242,10 @@ export function HomeTimeline() {
                         href={item.href}
                       />
                     ) : (
-                      <div className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 dark:border-zinc-800 dark:bg-zinc-950">
+                      <Link
+                        href={item.href}
+                        className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-left transition hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
+                      >
                         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
                           <ActivityTypeIcon
                             icon={item.icon}
@@ -262,7 +267,7 @@ export function HomeTimeline() {
                             Activity · {item.meta}
                           </span>
                         </span>
-                      </div>
+                      </Link>
                     )}
                   </li>
                 ))}

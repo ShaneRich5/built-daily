@@ -3,10 +3,12 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   limit,
   onSnapshot,
   orderBy,
   query,
+  setDoc,
   where,
 } from "firebase/firestore";
 import {
@@ -14,7 +16,11 @@ import {
   buildActivityDoc,
   firestoreToActivityDoc,
 } from "@/lib/activity-mapper";
-import type { LogActivityInput, SavedActivity } from "@/lib/activity-types";
+import type {
+  ActivityDoc,
+  LogActivityInput,
+  SavedActivity,
+} from "@/lib/activity-types";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 
 function activitiesCollectionRef() {
@@ -96,6 +102,22 @@ export function subscribeActivitiesByType(
   );
 }
 
+export async function getActivity(
+  activityId: string,
+): Promise<SavedActivity | null> {
+  const db = getFirestoreDb();
+  const uid = getFirebaseAuth()?.currentUser?.uid;
+  if (!db || !uid || !activityId) return null;
+
+  const snap = await getDoc(doc(db, "users", uid, "activities", activityId));
+  if (!snap.exists()) return null;
+  const activity = firestoreToActivityDoc(
+    snap.data() as Record<string, unknown>,
+  );
+  if (!activity) return null;
+  return { id: snap.id, activity };
+}
+
 export async function logActivity(
   input: LogActivityInput,
 ): Promise<string | null> {
@@ -105,6 +127,39 @@ export async function logActivity(
   if (!docData) return null;
   const ref = await addDoc(col, activityDocToFirestore(docData));
   return ref.id;
+}
+
+export async function updateActivity(
+  activityId: string,
+  input: LogActivityInput,
+): Promise<ActivityDoc | null> {
+  const db = getFirestoreDb();
+  const uid = getFirebaseAuth()?.currentUser?.uid;
+  if (!db || !uid || !activityId) return null;
+
+  const ref = doc(db, "users", uid, "activities", activityId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+
+  const existing = firestoreToActivityDoc(
+    snap.data() as Record<string, unknown>,
+  );
+  if (!existing) return null;
+
+  const next = buildActivityDoc(input);
+  if (!next) return null;
+
+  const saved: ActivityDoc = {
+    ...next,
+    visibility: existing.visibility,
+    source: existing.source,
+    startedAt: existing.startedAt,
+    endedAt: existing.endedAt,
+    createdAt: existing.createdAt,
+    updatedAt: new Date(),
+  };
+  await setDoc(ref, activityDocToFirestore(saved));
+  return saved;
 }
 
 export async function deleteActivity(activityId: string): Promise<boolean> {

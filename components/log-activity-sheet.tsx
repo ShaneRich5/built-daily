@@ -20,7 +20,7 @@ import {
   type ActivityDetailSuggestions,
 } from "@/lib/activity-suggestions";
 import type { SavedActivity } from "@/lib/activity-types";
-import { localDateKeyFromMs } from "@/lib/workout-date";
+import { localDateKeyFromMs, normalizeWorkoutTime } from "@/lib/workout-date";
 
 type LogActivitySheetProps = {
   open: boolean;
@@ -28,14 +28,10 @@ type LogActivitySheetProps = {
   onLogged?: () => void;
 };
 
-function localTimeNow(): string {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
 function emptyForm() {
   return {
     typeId: null as string | null,
+    activityTime: "",
     durationMin: "",
     distanceMiles: "",
     locationName: "",
@@ -58,6 +54,7 @@ export function LogActivitySheet({
   onLogged,
 }: LogActivitySheetProps) {
   const [typeId, setTypeId] = useState<string | null>(null);
+  const [activityTime, setActivityTime] = useState("");
   const [durationMin, setDurationMin] = useState("");
   const [distanceMiles, setDistanceMiles] = useState("");
   const [locationName, setLocationName] = useState("");
@@ -81,6 +78,7 @@ export function LogActivitySheet({
   const resetAndClose = () => {
     const empty = emptyForm();
     setTypeId(empty.typeId);
+    setActivityTime(empty.activityTime);
     setDurationMin(empty.durationMin);
     setDistanceMiles(empty.distanceMiles);
     setLocationName(empty.locationName);
@@ -129,7 +127,7 @@ export function LogActivitySheet({
     const id = await logActivity({
       activityTypeId: typeId,
       activityDate: localDateKeyFromMs(Date.now()),
-      activityTime: localTimeNow(),
+      activityTime: normalizeWorkoutTime(activityTime),
       durationMin: durationMin ? Number(durationMin) : null,
       distanceMiles: distanceMiles ? Number(distanceMiles) : null,
       locationName: locationName || null,
@@ -237,6 +235,16 @@ export function LogActivitySheet({
                   </button>
                 </div>
               ) : null}
+
+              <div className="space-y-2">
+                <Label htmlFor="activity-time">Time (optional)</Label>
+                <Input
+                  id="activity-time"
+                  type="time"
+                  value={activityTime}
+                  onChange={(e) => setActivityTime(e.target.value)}
+                />
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="activity-duration">Duration (minutes)</Label>

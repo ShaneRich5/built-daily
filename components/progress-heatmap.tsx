@@ -35,11 +35,15 @@ const ACTIVITY_CELL_CLASS = "bg-blue-300 dark:bg-blue-700/70";
 const KIND_CLASS: Record<HeatmapDayKind, string> = {
   workout: "",
   activity: ACTIVITY_CELL_CLASS,
+  both: "",
   recovery: "bg-zinc-200 dark:bg-zinc-800",
   today: "bg-white ring-1 ring-inset ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-600",
   future: "bg-transparent",
   empty: "bg-transparent",
 };
+
+const SPLIT_WORKOUT_CLIP = "polygon(0 0, 100% 0, 0 100%)";
+const SPLIT_ACTIVITY_CLIP = "polygon(100% 0, 100% 100%, 0 100%)";
 
 const WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 
@@ -58,6 +62,10 @@ function kindLabel(kind: HeatmapDayKind, count: number): string {
       return count === 1 ? "Workout completed" : `${count} workouts`;
     case "activity":
       return "Activity day";
+    case "both":
+      return count === 1
+        ? "Workout and activity"
+        : `${count} workouts and activity`;
     case "recovery":
       return "Recovery day";
     case "today":
@@ -74,6 +82,7 @@ function kindLabel(kind: HeatmapDayKind, count: number): string {
 }
 
 function cellClass(kind: HeatmapDayKind, count: number): string {
+  if (kind === "both") return "";
   if (kind === "workout") {
     const level = activityLevel(count);
     return level === 0
@@ -131,6 +140,10 @@ export function ProgressHeatmap({
           );
           if (kind === "workout") workouts += 1;
           if (kind === "activity") acts += 1;
+          if (kind === "both") {
+            workouts += 1;
+            acts += 1;
+          }
           if (kind === "recovery") recoveries += 1;
         }
       }
@@ -242,6 +255,7 @@ export function ProgressHeatmap({
                   const isSelected = selectedKey === day.dateKey;
                   const interactive =
                     day.inRange && kind !== "empty" && kind !== "future";
+                  const workoutLevel = activityLevel(day.count);
                   return (
                     <button
                       key={`${weekIndex}-${day.dateKey}`}
@@ -257,7 +271,7 @@ export function ProgressHeatmap({
                           ? `${formatLocalDateKey(day.dateKey)} · ${kindLabel(kind, day.count)}`
                           : undefined
                       }
-                      className={`relative aspect-square max-h-3.5 min-h-2.5 w-full max-w-3.5 rounded-[3px] transition ${cellClass(kind, day.count)} ${
+                      className={`relative aspect-square max-h-3.5 min-h-2.5 w-full max-w-3.5 overflow-hidden rounded-[3px] transition ${cellClass(kind, day.count)} ${
                         interactive
                           ? "hover:ring-2 hover:ring-zinc-400/60"
                           : "pointer-events-none"
@@ -269,6 +283,20 @@ export function ProgressHeatmap({
                       }
                       aria-pressed={isSelected}
                     >
+                      {kind === "both" ? (
+                        <>
+                          <span
+                            className={`absolute inset-0 ${WORKOUT_LEVEL_CLASS[workoutLevel as 1 | 2 | 3 | 4]}`}
+                            style={{ clipPath: SPLIT_WORKOUT_CLIP }}
+                            aria-hidden
+                          />
+                          <span
+                            className={`absolute inset-0 ${ACTIVITY_CELL_CLASS}`}
+                            style={{ clipPath: SPLIT_ACTIVITY_CLIP }}
+                            aria-hidden
+                          />
+                        </>
+                      ) : null}
                       {hasPr ? (
                         <span
                           className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-amber-400 ring-1 ring-white dark:ring-zinc-950"
@@ -298,6 +326,19 @@ export function ProgressHeatmap({
             aria-hidden
           />
           Activity
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="relative size-2.5 overflow-hidden rounded-[2px]" aria-hidden>
+            <span
+              className={`absolute inset-0 ${WORKOUT_LEVEL_CLASS[2]}`}
+              style={{ clipPath: SPLIT_WORKOUT_CLIP }}
+            />
+            <span
+              className={`absolute inset-0 ${ACTIVITY_CELL_CLASS}`}
+              style={{ clipPath: SPLIT_ACTIVITY_CLIP }}
+            />
+          </span>
+          Both
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span
