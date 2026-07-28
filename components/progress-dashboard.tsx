@@ -6,6 +6,7 @@ import { useAuth } from "@/components/auth-provider";
 import { ProgressGoalStreak } from "@/components/progress-goal-streak";
 import { ProgressHeatmap } from "@/components/progress-heatmap";
 import { ProgressMilestones } from "@/components/progress-milestones";
+import { ProgressMomentum } from "@/components/progress-momentum";
 import { ProgressStats } from "@/components/progress-stats";
 import { ProgressStrength } from "@/components/progress-strength";
 import { ProgressWeeklyGoal } from "@/components/progress-weekly-goal";
@@ -16,6 +17,7 @@ import {
   computeMilestones,
   computePersonalRecords,
   computeProgressStats,
+  computeWeekMomentum,
   goalWeekStreak,
   strongestLifts,
   weekGoalStatus,
@@ -72,6 +74,11 @@ export function ProgressDashboard() {
     const activity = activityFromProgressSessions(rows);
     const week = weekGoalStatus(activity, settings.weeklyGoal, todayKey);
     const goalStreak = goalWeekStreak(activity, settings.weeklyGoal, todayKey);
+    const momentum = computeWeekMomentum(
+      activity,
+      settings.weeklyGoal,
+      todayKey,
+    );
     const { recentPrs, bestByExercise, prDateKeys } =
       computePersonalRecords(rows);
     const dayDetails = buildDayActivityDetails(
@@ -95,6 +102,7 @@ export function ProgressDashboard() {
       dayDetails,
       week,
       goalStreak,
+      momentum,
       recentPrs,
       lifts: strongestLifts(bestByExercise),
       stats,
@@ -147,14 +155,17 @@ export function ProgressDashboard() {
             dayDetails={insights.dayDetails}
             todayKey={todayKey}
           />
+          <ProgressMomentum momentum={insights.momentum} />
           <ProgressWeeklyGoal
             week={insights.week}
             weeklyGoal={settings.weeklyGoal}
+            momentum={insights.momentum}
           />
           <ProgressGoalStreak
             current={insights.goalStreak.current}
             longest={insights.goalStreak.longest}
             weeklyGoal={settings.weeklyGoal}
+            weekMet={insights.week.met}
           />
           <ProgressWeight
             entries={weights ?? []}

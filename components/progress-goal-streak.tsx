@@ -6,12 +6,15 @@ type ProgressGoalStreakProps = {
   current: number;
   longest: number;
   weeklyGoal: WeeklyGoalTarget;
+  /** True when this week’s goal is already met. */
+  weekMet: boolean;
 };
 
 export function ProgressGoalStreak({
   current,
   longest,
   weeklyGoal,
+  weekMet,
 }: ProgressGoalStreakProps) {
   const targetLabel = weeklyGoal === 7 ? "daily" : `${weeklyGoal}/week`;
 
@@ -36,8 +39,13 @@ export function ProgressGoalStreak({
             {current}
           </p>
           <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            consecutive weeks
+            {weekMet ? "consecutive weeks" : "weeks banked"}
           </p>
+          {!weekMet && current > 0 ? (
+            <p className="mt-1 text-xs text-sky-700 dark:text-sky-300">
+              In progress this week—finish the goal to extend it.
+            </p>
+          ) : null}
         </div>
         <div>
           <p className="text-xl font-semibold tabular-nums text-zinc-700 dark:text-zinc-200">

@@ -1,5 +1,6 @@
 "use client";
 
+import type { WeekMomentum } from "@/lib/progress-insights";
 import { setWeeklyGoal } from "@/lib/progress-settings-repository";
 import {
   WEEKLY_GOAL_OPTIONS,
@@ -10,6 +11,7 @@ import {
 type ProgressWeeklyGoalProps = {
   week: WeekGoalStatus;
   weeklyGoal: WeeklyGoalTarget;
+  momentum: WeekMomentum;
 };
 
 function goalLabel(n: WeeklyGoalTarget): string {
@@ -19,6 +21,7 @@ function goalLabel(n: WeeklyGoalTarget): string {
 export function ProgressWeeklyGoal({
   week,
   weeklyGoal,
+  momentum,
 }: ProgressWeeklyGoalProps) {
   const pct = Math.min(100, Math.round((week.completed / week.target) * 100));
 
@@ -71,11 +74,21 @@ export function ProgressWeeklyGoal({
         <p className="text-sm text-sky-800 dark:text-sky-300">
           Nice work. Any leftover days this week are recovery opportunities.
         </p>
+      ) : week.completed === 0 && momentum.bankedStreak > 0 ? (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Counter resets each week—but your{" "}
+          <span className="font-semibold tabular-nums">
+            {momentum.bankedStreak}-week
+          </span>{" "}
+          streak is still banked. {momentum.remainingWorkouts} workout
+          {momentum.remainingWorkouts === 1 ? "" : "s"} keeps it going.
+        </p>
       ) : (
         <p className="text-sm text-zinc-500">
-          {Math.max(0, week.target - week.completed)} workout
-          {week.target - week.completed === 1 ? "" : "s"} left this week—recovery
-          days still count as part of a healthy plan.
+          {momentum.remainingWorkouts} workout
+          {momentum.remainingWorkouts === 1 ? "" : "s"} left ·{" "}
+          {momentum.daysLeft} day{momentum.daysLeft === 1 ? "" : "s"} including
+          today. Recovery days are still part of a healthy plan.
         </p>
       )}
 

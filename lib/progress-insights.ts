@@ -91,6 +91,119 @@ export function weekGoalStatus(
   };
 }
 
+/** Days left in the Mon–Sun week, including today. */
+export function daysLeftInWeekIncludingToday(todayKey: string): number {
+  const d = dateFromLocalDateKey(todayKey);
+  if (!d) return 0;
+  const dow = d.getDay(); // 0 Sun … 6 Sat
+  return dow === 0 ? 1 : 8 - dow;
+}
+
+export type WeekMomentumStatus =
+  | "complete"
+  | "protecting"
+  | "on_track"
+  | "at_risk"
+  | "starting";
+
+export type WeekMomentum = {
+  status: WeekMomentumStatus;
+  title: string;
+  detail: string;
+  /** Goal weeks already banked (doesn’t drop to 0 mid-week). */
+  bankedStreak: number;
+  remainingWorkouts: number;
+  daysLeft: number;
+};
+
+/**
+ * Motivational mid-week state so Monday doesn’t feel like a reset.
+ * Banked streak stays visible while the current week is still open.
+ */
+export function computeWeekMomentum(
+  activity: WorkoutActivityByDay,
+  weeklyGoal: WeeklyGoalTarget,
+  todayKey: string,
+): WeekMomentum {
+  const week = weekGoalStatus(activity, weeklyGoal, todayKey);
+  const { current: bankedStreak } = goalWeekStreak(
+    activity,
+    weeklyGoal,
+    todayKey,
+  );
+  const remaining = Math.max(0, week.target - week.completed);
+  const daysLeft = daysLeftInWeekIncludingToday(todayKey);
+  const canMakeIt = remaining <= daysLeft;
+
+  if (week.met) {
+    return {
+      status: "complete",
+      title:
+        bankedStreak > 0
+          ? `${bankedStreak}-week goal streak locked`
+          : "This week’s goal is locked",
+      detail:
+        "Recovery the rest of the week is part of the plan—you already showed up enough.",
+      bankedStreak,
+      remainingWorkouts: 0,
+      daysLeft,
+    };
+  }
+
+  if (bankedStreak > 0) {
+    if (!canMakeIt) {
+      return {
+        status: "at_risk",
+        title: `Keep the ${bankedStreak}-week run going`,
+        detail: `You’d need ${remaining} workout${remaining === 1 ? "" : "s"} with ${daysLeft} day${daysLeft === 1 ? "" : "s"} left. Focus on what you can still do—next week is a fresh chance either way.`,
+        bankedStreak,
+        remainingWorkouts: remaining,
+        daysLeft,
+      };
+    }
+    if (week.completed === 0) {
+      return {
+        status: "protecting",
+        title: `Protecting a ${bankedStreak}-week run`,
+        detail: `Fresh week—not a reset. ${remaining} workout${remaining === 1 ? "" : "s"} keeps the streak alive. Recovery days still count as healthy training.`,
+        bankedStreak,
+        remainingWorkouts: remaining,
+        daysLeft,
+      };
+    }
+    return {
+      status: "on_track",
+      title: `On track · ${bankedStreak}-week run`,
+      detail: `${remaining} workout${remaining === 1 ? "" : "s"} left · ${daysLeft} day${daysLeft === 1 ? "" : "s"} including today.`,
+      bankedStreak,
+      remainingWorkouts: remaining,
+      daysLeft,
+    };
+  }
+
+  if (week.completed > 0) {
+    return {
+      status: "on_track",
+      title: "Building this week",
+      detail: canMakeIt
+        ? `${remaining} workout${remaining === 1 ? "" : "s"} left to hit your goal—you’re underway.`
+        : `You’ve logged ${week.completed}—finish strong and start a goal streak next week.`,
+      bankedStreak: 0,
+      remainingWorkouts: remaining,
+      daysLeft,
+    };
+  }
+
+  return {
+    status: "starting",
+    title: "Fresh week",
+    detail: `${remaining} workout${remaining === 1 ? "" : "s"} this week keeps you consistent. No pressure to go every day.`,
+    bankedStreak: 0,
+    remainingWorkouts: remaining,
+    daysLeft,
+  };
+}
+
 /**
  * Consecutive weeks (ending this week if met, else last completed week)
  * where workout count ≥ target. Current incomplete week doesn't break the
