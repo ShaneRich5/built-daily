@@ -44,13 +44,21 @@ export function AccountBar() {
         <span className="truncate text-zinc-700 dark:text-zinc-200">
           {user.email}
         </span>
-        <button
-          type="button"
-          onClick={() => void signOutUser()}
-          className="shrink-0 rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
-        >
-          Sign out
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/settings"
+            className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            Settings
+          </Link>
+          <button
+            type="button"
+            onClick={() => void signOutUser()}
+            className="rounded-md border border-zinc-200 px-2.5 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     );
   }

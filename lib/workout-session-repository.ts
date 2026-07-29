@@ -15,6 +15,7 @@ import {
 } from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 import { bumpGroupWorkoutSignals } from "@/lib/group-repository";
+import { syncPublicProfileConsistency } from "@/lib/public-profile-repository";
 import {
   buildWorkoutSessionDoc,
   firestoreToWorkoutSessionDoc,
@@ -431,14 +432,19 @@ export async function saveCompletedWorkoutSession(
     saved = { id: ref.id, doc: normalized };
   }
 
-  // Best-effort accountability signals — never block the finished workout.
+  // Best-effort accountability + public profile signals — never block finish.
   try {
     const workoutDateKey =
       saved.doc.workoutDate ??
       localDateKeyFromMs(saved.doc.endedAt?.getTime() ?? Date.now());
+    const workoutAtMs = saved.doc.endedAt?.getTime() ?? Date.now();
     await bumpGroupWorkoutSignals({
       workoutDateKey,
-      workoutAtMs: saved.doc.endedAt?.getTime() ?? Date.now(),
+      workoutAtMs,
+    });
+    await syncPublicProfileConsistency({
+      workoutDateKey,
+      workoutAtMs,
     });
   } catch {
     /* ignore */

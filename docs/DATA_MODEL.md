@@ -27,6 +27,12 @@ All mutable **personal** user data lives under:
 | `groups/{groupId}/members/{uid}` | Roster + shared “showed up” signals |
 | `inviteCodes/{code}` | Join lookup by shareable code |
 
+**Opt-in public profiles** (separate from private `users/{uid}/…`):
+
+| Path | Purpose |
+|------|---------|
+| `publicProfiles/{uid}` | Display name + light consistency when `profilePublic` is true |
+
 Security rules: see [`firestore.rules`](firestore.rules).
 
 ```mermaid
@@ -42,11 +48,13 @@ flowchart LR
     members[members]
   end
   inviteCodes[inviteCodes]
+  publicProfiles[publicProfiles]
   sessions -->|addDoc on finish| completed[completed session doc]
   scheduled -->|addDoc planner row| plannerRow[dateKey + label + planId + exerciseIds]
   memberships --> groupDoc
   inviteCodes --> groupDoc
   groupDoc --> members
+  sessions -.->|opt-in sync| publicProfiles
 ```
 
 ---
@@ -87,6 +95,28 @@ Types: [`lib/group-types.ts`](lib/group-types.ts). Persistence: [`lib/group-repo
 | `active` | `boolean` | Rotated codes set `active: false` |
 
 Partners only see show-up signals (today / last date / streak)—never workout details.
+
+---
+
+## Public profiles
+
+Types: [`lib/public-profile-types.ts`](../lib/public-profile-types.ts). Persistence: [`lib/public-profile-repository.ts`](../lib/public-profile-repository.ts).
+
+### `publicProfiles/{uid}`
+
+Opt-in shareable slice. Default is private (`profilePublic: false` or missing doc). Does **not** expose sessions, body weight, plans, or email.
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `displayName` | `string` | Auth snapshot, max 80 |
+| `profilePublic` | `boolean` | Public read only when `true` |
+| `currentStreak` | `number` | Consecutive local days with a workout |
+| `workoutsThisWeek` | `number` | Completed sessions in the Mon–Sun week of last workout |
+| `lastWorkoutDateKey` | `string \| null` | Local `YYYY-MM-DD` |
+| `activityByDay` | `map` | Sparse `YYYY-MM-DD` → workout count for the consistency chart (max 200 keys, ~26 weeks) |
+| `updatedAt` | `Timestamp` | |
+
+Public page: `/u/[userId]`. Owner toggles in Settings. Chart shows workout days only—no session titles, PRs, or body weight.
 
 ---
 

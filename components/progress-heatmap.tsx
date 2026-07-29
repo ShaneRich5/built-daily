@@ -32,14 +32,17 @@ const WORKOUT_LEVEL_CLASS: Record<1 | 2 | 3 | 4, string> = {
 /** Distinct from workout emerald and recovery gray. */
 const ACTIVITY_CELL_CLASS = "bg-blue-300 dark:bg-blue-700/70";
 
+const CELL_OUTLINE =
+  "ring-1 ring-inset ring-zinc-200/90 dark:ring-zinc-700/90";
+
 const KIND_CLASS: Record<HeatmapDayKind, string> = {
   workout: "",
   activity: ACTIVITY_CELL_CLASS,
   both: "",
   recovery: "bg-zinc-200 dark:bg-zinc-800",
-  today: "bg-white ring-1 ring-inset ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-600",
-  future: "bg-transparent",
-  empty: "bg-transparent",
+  today: "bg-white ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-600",
+  future: "bg-zinc-50/80 dark:bg-zinc-900/40",
+  empty: "bg-zinc-50/80 dark:bg-zinc-900/40",
 };
 
 const SPLIT_WORKOUT_CLIP = "polygon(0 0, 100% 0, 0 100%)";
@@ -271,7 +274,7 @@ export function ProgressHeatmap({
                           ? `${formatLocalDateKey(day.dateKey)} · ${kindLabel(kind, day.count)}`
                           : undefined
                       }
-                      className={`relative aspect-square max-h-3.5 min-h-2.5 w-full max-w-3.5 overflow-hidden rounded-[3px] transition ${cellClass(kind, day.count)} ${
+                      className={`relative aspect-square max-h-3.5 min-h-2.5 w-full max-w-3.5 overflow-hidden rounded-[3px] transition ${CELL_OUTLINE} ${cellClass(kind, day.count)} ${
                         interactive
                           ? "hover:ring-2 hover:ring-zinc-400/60"
                           : "pointer-events-none"

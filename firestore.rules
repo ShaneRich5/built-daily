@@ -348,5 +348,33 @@ service cloud.firestore {
       allow delete: if isSignedIn()
         && resource.data.createdBy == request.auth.uid;
     }
+
+    function validPublicProfileWrite() {
+      let d = request.resource.data;
+      return d.keys().hasAll([
+            'displayName', 'profilePublic', 'currentStreak',
+            'workoutsThisWeek', 'lastWorkoutDateKey', 'activityByDay',
+            'updatedAt'
+          ])
+        && nonEmptyString(d.displayName, 80)
+        && d.profilePublic is bool
+        && isIntLike(d.currentStreak)
+        && d.currentStreak >= 0
+        && d.currentStreak <= 10000
+        && isIntLike(d.workoutsThisWeek)
+        && d.workoutsThisWeek >= 0
+        && d.workoutsThisWeek <= 1000
+        && validDateKey(d.lastWorkoutDateKey)
+        && d.activityByDay is map
+        && d.activityByDay.size() <= 200
+        && d.updatedAt is timestamp;
+    }
+
+    /** Opt-in public slice only — never opens users/{uid}/… private data. */
+    match /publicProfiles/{userId} {
+      allow read: if resource.data.profilePublic == true || isOwner(userId);
+      allow create, update: if isOwner(userId) && validPublicProfileWrite();
+      allow delete: if isOwner(userId);
+    }
   }
 }
