@@ -1,5 +1,6 @@
 import {
   formatSessionJournalMeta,
+  formatSessionVolumeMeta,
   formatWorkoutHeaderDate,
 } from "@/lib/workout-date";
 import type {
@@ -104,9 +105,8 @@ export function formatWorkoutJournalEntry(doc: WorkoutSessionDoc): string {
   }
 
   meta.push(
-    `${doc.exerciseCount} exercise${doc.exerciseCount === 1 ? "" : "s"}`,
+    formatSessionVolumeMeta(doc.exerciseCount, doc.setCount, doc.status),
   );
-  meta.push(`${doc.setCount} set${doc.setCount === 1 ? "" : "s"}`);
 
   const sections: string[] = [doc.title, meta.join(" · ")];
 
@@ -117,10 +117,14 @@ export function formatWorkoutJournalEntry(doc: WorkoutSessionDoc): string {
   sections.push("", "Exercises", "");
 
   const notes = doc.exerciseNotesByLineId;
-  const exerciseBlocks = doc.lines.map((line) =>
-    formatExerciseBlock(line, notes?.[line.lineId] ?? null),
-  );
-  sections.push(exerciseBlocks.join("\n\n"));
+  if (doc.lines.length === 0) {
+    sections.push("Logged without details");
+  } else {
+    const exerciseBlocks = doc.lines.map((line) =>
+      formatExerciseBlock(line, notes?.[line.lineId] ?? null),
+    );
+    sections.push(exerciseBlocks.join("\n\n"));
+  }
 
   return sections.join("\n").trimEnd() + "\n";
 }

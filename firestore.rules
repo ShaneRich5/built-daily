@@ -75,8 +75,7 @@ service cloud.firestore {
         && (
           (d.status == 'completed'
             && d.endedAt is timestamp
-            && d.lines.size() > 0
-            && d.setCount > 0)
+            && d.setCount >= 0)
           || (d.status == 'in_progress'
             && d.endedAt == null
             && d.setCount >= 0)

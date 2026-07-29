@@ -308,12 +308,15 @@ export async function getExerciseHistories(
 
 function normalizeSessionForWrite(draft: WorkoutSessionDoc): WorkoutSessionDoc | null {
   const normalizedLines = draft.lines;
-  if (normalizedLines.length === 0 && draft.status !== "in_progress") {
+  // Empty completed sessions are allowed ("logged without details").
+  if (
+    draft.status === "completed" &&
+    normalizedLines.some((l) => l.sets.length === 0)
+  ) {
     return null;
   }
 
   const setCount = normalizedLines.reduce((acc, l) => acc + l.sets.length, 0);
-  if (draft.status === "completed" && setCount <= 0) return null;
 
   const notes = draft.exerciseNotesByLineId;
   const exerciseNotesByLineId =

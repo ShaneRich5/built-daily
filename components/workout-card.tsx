@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatSessionVolumeMeta } from "@/lib/workout-date";
 
 export type WorkoutCardProps = {
   name: string;
@@ -19,21 +20,13 @@ export function WorkoutCard({
   href,
   status = "completed",
 }: WorkoutCardProps) {
-  const meta = [
-    `${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`,
-    setCount != null
-      ? `${setCount} set${setCount === 1 ? "" : "s"}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const isInProgress = status === "in_progress";
+  const meta = formatSessionVolumeMeta(exerciseCount, setCount, status);
 
   const preview =
     previewNames && previewNames.length > 0
       ? previewNames.slice(0, 3).join(", ")
       : null;
-
-  const isInProgress = status === "in_progress";
 
   const body = (
     <>

@@ -27,6 +27,7 @@ import {
   subscribeUserWorkoutPlans,
   type SavedWorkoutPlan,
 } from "@/lib/workout-plan-repository";
+import { formatSessionVolumeMeta } from "@/lib/workout-date";
 
 function buildWorkoutHref(
   title: string,
@@ -437,10 +438,11 @@ export function WorkoutPlanner() {
                             </time>
                           </div>
                           <p className="mt-0.5 text-xs text-zinc-500">
-                            {s.exerciseCount} exercise
-                            {s.exerciseCount === 1 ? "" : "s"} · {s.setCount}{" "}
-                            set
-                            {s.setCount === 1 ? "" : "s"}
+                            {formatSessionVolumeMeta(
+                              s.exerciseCount,
+                              s.setCount,
+                              s.status,
+                            )}
                             {s.previewExerciseNames.length > 0
                               ? ` · ${s.previewExerciseNames.slice(0, 3).join(", ")}`
                               : ""}

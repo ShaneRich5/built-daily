@@ -39,6 +39,7 @@ import {
 } from "@/lib/duration-input";
 import {
   localDateKeyFromMs,
+  formatSessionVolumeMeta,
 } from "@/lib/workout-date";
 
 /** One row of logged fields; only fields relevant to `metric` are shown. */
@@ -497,7 +498,6 @@ export function ActiveWorkoutView({
 
   const removeExercise = useCallback(
     (exerciseIndex: number) => {
-      if (activeExercises.length <= 1) return;
       const removed = activeExercises[exerciseIndex];
       if (!removed) return;
       if (
@@ -627,9 +627,11 @@ export function ActiveWorkoutView({
             In progress
           </p>
           <p className="mt-1 text-xs text-zinc-500">
-            {activeExercises.length} exercise
-            {activeExercises.length === 1 ? "" : "s"} · {setCountLabel} set
-            {setCountLabel === "1" ? "" : "s"}
+            {formatSessionVolumeMeta(
+              activeExercises.length,
+              Number(setCountLabel),
+              "in_progress",
+            )}
           </p>
           <details className="mt-2 group">
             <summary className="cursor-pointer list-none text-xs text-zinc-400 marker:content-none hover:text-zinc-600 dark:hover:text-zinc-300 [&::-webkit-details-marker]:hidden">
@@ -801,8 +803,7 @@ export function ActiveWorkoutView({
                       <button
                         type="button"
                         onClick={() => removeExercise(exerciseIndex)}
-                        disabled={activeExercises.length <= 1}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 disabled:opacity-30 dark:hover:text-red-300"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 dark:hover:text-red-300"
                         aria-label={`Remove ${exercise.name}`}
                       >
                         <Trash2 className="size-3" />
@@ -864,17 +865,16 @@ export function ActiveWorkoutView({
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-5">
           <p className="mb-2 text-center text-xs text-zinc-500">
             {activeExercises.length === 0
-              ? "Add an exercise above to start logging sets."
+              ? "No exercises yet — you can still finish to log that you showed up."
               : "Progress saves automatically when you’re signed in. You can leave and continue later from Recent workouts."}
           </p>
           <button
             type="button"
             onClick={handleFinish}
-            disabled={activeExercises.length === 0}
-            className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 dark:bg-emerald-500"
+            className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white dark:bg-emerald-500"
           >
             {activeExercises.length === 0
-              ? "Add an exercise to finish"
+              ? "Finish without details"
               : "Finish workout"}
           </button>
           {onDiscard ? (

@@ -151,3 +151,26 @@ export function isDefaultWorkoutTitle(
 ): boolean {
   return title.trim() === defaultWorkoutTitle(workoutDate, fallbackMs);
 }
+
+/**
+ * Volume line for session lists / export.
+ * Empty completed sessions read as intentional thin logs, not "0 exercises".
+ */
+export function formatSessionVolumeMeta(
+  exerciseCount: number,
+  setCount?: number | null,
+  status: "completed" | "in_progress" | "discarded" = "completed",
+): string {
+  if (exerciseCount <= 0) {
+    return status === "in_progress"
+      ? "No exercises yet"
+      : "Logged without details";
+  }
+  const parts = [
+    `${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`,
+  ];
+  if (setCount != null) {
+    parts.push(`${setCount} set${setCount === 1 ? "" : "s"}`);
+  }
+  return parts.join(" · ");
+}

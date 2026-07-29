@@ -239,9 +239,9 @@ export function WorkoutSessionDetail({
 
   const journalText = formatWorkoutJournalEntry(previewDoc);
   const canSave =
-    lines.length > 0 &&
-    lines.every((l) => l.sets.length > 0) &&
-    lines.reduce((acc, l) => acc + l.sets.length, 0) > 0;
+    lines.length === 0 ||
+    (lines.every((l) => l.sets.length > 0) &&
+      lines.reduce((acc, l) => acc + l.sets.length, 0) > 0);
 
   const metaParts = [
     formatSessionJournalMeta(
@@ -336,7 +336,7 @@ export function WorkoutSessionDetail({
 
   const removeExercise = (lineIndex: number) => {
     const removed = lines[lineIndex];
-    if (!removed || lines.length <= 1) return;
+    if (!removed) return;
     if (
       !window.confirm(
         `Remove “${removed.nameSnapshot}” and all of its sets from this workout?`,
@@ -345,7 +345,6 @@ export function WorkoutSessionDetail({
       return;
     }
     setLines((prev) => {
-      if (prev.length <= 1) return prev;
       const target = prev[lineIndex];
       if (!target) return prev;
       setExerciseNotes((notes) => {
@@ -550,6 +549,12 @@ export function WorkoutSessionDetail({
         >
           Exercises
         </h2>
+        {lines.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
+            Logged without details — you still showed up. Add a note above if
+            you want context for later.
+          </p>
+        ) : (
         <ul className="space-y-3">
           {lines.map((line, lineIndex) => (
             <li
@@ -567,8 +572,7 @@ export function WorkoutSessionDetail({
                   <button
                     type="button"
                     onClick={() => removeExercise(lineIndex)}
-                    disabled={lines.length <= 1}
-                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-400 hover:bg-red-50 hover:text-red-700 disabled:opacity-30 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-400 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 dark:hover:text-red-300"
                     aria-label={`Remove ${line.nameSnapshot}`}
                   >
                     <Trash2 className="size-3.5" />
@@ -688,6 +692,7 @@ export function WorkoutSessionDetail({
             </li>
           ))}
         </ul>
+        )}
       </section>
 
       {saveError ? (

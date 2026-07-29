@@ -402,7 +402,8 @@ export function firestoreToWorkoutSessionDoc(
     const line = parseSessionLine(item);
     if (line) lines.push(line);
   }
-  if (lines.length === 0 && status !== "in_progress") return null;
+  // Empty completed sessions are valid ("logged without details").
+  // Reject only when lines existed but none could be parsed.
   if (data.lines.length > 0 && lines.length === 0) return null;
 
   const exerciseCount =
