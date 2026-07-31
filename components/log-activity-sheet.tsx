@@ -20,12 +20,14 @@ import {
   type ActivityDetailSuggestions,
 } from "@/lib/activity-suggestions";
 import type { SavedActivity } from "@/lib/activity-types";
-import { localDateKeyFromMs, normalizeWorkoutTime } from "@/lib/workout-date";
+import { localDateKeyFromMs, normalizeWorkoutTime, formatActivityDatePreview } from "@/lib/workout-date";
 
 type LogActivitySheetProps = {
   open: boolean;
   onClose: () => void;
   onLogged?: () => void;
+  /** Journal day for the new activity (`YYYY-MM-DD`). Defaults to today. */
+  defaultDateKey?: string;
 };
 
 function emptyForm() {
@@ -52,6 +54,7 @@ export function LogActivitySheet({
   open,
   onClose,
   onLogged,
+  defaultDateKey,
 }: LogActivitySheetProps) {
   const [typeId, setTypeId] = useState<string | null>(null);
   const [activityTime, setActivityTime] = useState("");
@@ -126,7 +129,10 @@ export function LogActivitySheet({
     setError(null);
     const id = await logActivity({
       activityTypeId: typeId,
-      activityDate: localDateKeyFromMs(Date.now()),
+      activityDate:
+        defaultDateKey && /^\d{4}-\d{2}-\d{2}$/.test(defaultDateKey)
+          ? defaultDateKey
+          : localDateKeyFromMs(Date.now()),
       activityTime: normalizeWorkoutTime(activityTime),
       durationMin: durationMin ? Number(durationMin) : null,
       distanceMiles: distanceMiles ? Number(distanceMiles) : null,
@@ -144,6 +150,12 @@ export function LogActivitySheet({
 
   if (!open) return null;
 
+  const journalDateKey =
+    defaultDateKey && /^\d{4}-\d{2}-\d{2}$/.test(defaultDateKey)
+      ? defaultDateKey
+      : localDateKeyFromMs(Date.now());
+  const journalPreview = formatActivityDatePreview(journalDateKey);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
@@ -156,12 +168,17 @@ export function LogActivitySheet({
     >
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl dark:bg-zinc-950 sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-          <h2
-            id="log-activity-title"
-            className="text-base font-semibold text-zinc-900 dark:text-zinc-50"
-          >
-            {selected ? selected.name : "Log activity"}
-          </h2>
+          <div>
+            <h2
+              id="log-activity-title"
+              className="text-base font-semibold text-zinc-900 dark:text-zinc-50"
+            >
+              {selected ? selected.name : "Log activity"}
+            </h2>
+            {journalPreview ? (
+              <p className="text-xs text-zinc-500">{journalPreview}</p>
+            ) : null}
+          </div>
           <button
             type="button"
             onClick={resetAndClose}

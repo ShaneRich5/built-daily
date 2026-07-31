@@ -1,21 +1,47 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { LogActivitySheet } from "@/components/log-activity-sheet";
+import { PlannerCalendar } from "@/components/planner/planner-calendar";
+import { PlannerFilters } from "@/components/planner/planner-filters";
+import {
+  PlannerScheduleForm,
+  type PlanPickerValue,
+} from "@/components/planner/planner-schedule-form";
+import { PlannerWorkoutList } from "@/components/planner/planner-workout-list";
+import { subscribeRecentActivities } from "@/lib/activity-repository";
+import type { SavedActivity } from "@/lib/activity-types";
 import {
   buildMonthCalendarGrid,
   formatMonthHeading,
   todayDateKeyLocal,
-  WEEKDAY_LABELS_SHORT,
 } from "@/lib/calendar-month";
+import {
+  addDaysToDateKey,
+  buildThreeMonthBlocks,
+  buildWeekCalendarCells,
+  endOfWeekDateKey,
+  shiftMonth,
+  startOfWeekDateKey,
+  subscriptionRangeAroundMonth,
+  threeMonthDateRange,
+  type PlannerCalendarView,
+} from "@/lib/calendar-views";
+import {
+  buildPlannerListItems,
+  filterPlannerListItems,
+  markersByDate,
+  nextEmptyPlanDay,
+  resolveDateRange,
+  type PlannerDatePreset,
+  type PlannerKindFilter,
+} from "@/lib/planner-list-items";
 import {
   addScheduledWorkout,
   deleteScheduledWorkout,
-  subscribeScheduledWorkoutsForYear,
+  subscribeScheduledWorkoutsInRange,
 } from "@/lib/planner-repository";
 import type { ScheduledWorkoutEntry } from "@/lib/planner-types";
 import { STARTER_TEMPLATE_DEFINITIONS } from "@/lib/starter-templates";
@@ -27,163 +53,306 @@ import {
   subscribeUserWorkoutPlans,
   type SavedWorkoutPlan,
 } from "@/lib/workout-plan-repository";
-import { formatSessionVolumeMeta } from "@/lib/workout-date";
 
-function buildWorkoutHref(
-  title: string,
-  planId: string | null,
-  exerciseIds: string[],
-): string | null {
-  if (exerciseIds.length === 0) return null;
-  const params = new URLSearchParams();
-  params.set("e", exerciseIds.join(","));
-  const t = title.trim().slice(0, 200);
-  if (t) params.set("t", t);
-  if (planId) params.set("p", planId);
-  return `/workout?${params.toString()}`;
+const LS_VISIBLE = "built-daily-planner-calendar-visible";
+const LS_VIEW = "built-daily-planner-calendar-view";
+
+function readStoredVisible(): boolean {
+  if (typeof window === "undefined") return true;
+  const v = window.localStorage.getItem(LS_VISIBLE);
+  if (v === null) return true;
+  return v !== "0";
 }
 
-function parseDateKeyToLocalDate(dateKey: string): Date {
-  const [y, m, d] = dateKey.split("-").map((x) => Number(x));
-  return new Date(y, (m ?? 1) - 1, d ?? 1);
+function readStoredView(): PlannerCalendarView {
+  if (typeof window === "undefined") return "month";
+  const v = window.localStorage.getItem(LS_VIEW);
+  if (v === "week" || v === "month" || v === "three_months") return v;
+  return "month";
 }
-
-function formatDayHeading(dateKey: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(parseDateKeyToLocalDate(dateKey));
-}
-
-function formatSessionTime(d: Date): string {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(d);
-}
-
-type PlanPickerValue = "" | `tpl:${string}` | `starter:${string}`;
 
 export function WorkoutPlanner() {
   const { user, loading, firebaseReady } = useAuth();
   const now = useMemo(() => new Date(), []);
+  const todayKey = todayDateKeyLocal();
+
   const [viewYear, setViewYear] = useState(now.getFullYear());
   const [viewMonthIndex, setViewMonthIndex] = useState(now.getMonth());
+  const [weekAnchorKey, setWeekAnchorKey] = useState(todayKey);
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(
-    todayDateKeyLocal(),
+    todayKey,
   );
+  const [scheduleDateKey, setScheduleDateKey] = useState(todayKey);
+
+  const [calendarVisible, setCalendarVisible] = useState(true);
+  const [calendarView, setCalendarView] =
+    useState<PlannerCalendarView>("month");
+  const [prefsReady, setPrefsReady] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [kind, setKind] = useState<PlannerKindFilter>("all");
+  const [datePreset, setDatePreset] =
+    useState<PlannerDatePreset>("this_month");
+  const [customFrom, setCustomFrom] = useState(todayKey);
+  const [customTo, setCustomTo] = useState(todayKey);
+  const [prevPreset, setPrevPreset] =
+    useState<PlannerDatePreset>("this_month");
 
   const [sessions, setSessions] = useState<CompletedSessionSummary[]>([]);
   const [scheduled, setScheduled] = useState<ScheduledWorkoutEntry[]>([]);
+  const [activities, setActivities] = useState<SavedActivity[]>([]);
   const [plans, setPlans] = useState<SavedWorkoutPlan[]>([]);
 
   const [planPick, setPlanPick] = useState<PlanPickerValue>("");
   const [reminderLabel, setReminderLabel] = useState("");
   const [adding, setAdding] = useState(false);
+  const [logActivityOpen, setLogActivityOpen] = useState(false);
 
-  const todayKey = todayDateKeyLocal();
+  useEffect(() => {
+    setCalendarVisible(readStoredVisible());
+    setCalendarView(readStoredView());
+    setPrefsReady(true);
+  }, []);
 
-  const cells = useMemo(
+  useEffect(() => {
+    if (!prefsReady) return;
+    window.localStorage.setItem(LS_VISIBLE, calendarVisible ? "1" : "0");
+  }, [calendarVisible, prefsReady]);
+
+  useEffect(() => {
+    if (!prefsReady) return;
+    window.localStorage.setItem(LS_VIEW, calendarView);
+  }, [calendarView, prefsReady]);
+
+  useEffect(() => {
+    if (!user || !firebaseReady) {
+      setPlans([]);
+      return;
+    }
+    return subscribeUserWorkoutPlans(setPlans);
+  }, [user, firebaseReady]);
+
+  useEffect(() => {
+    if (!user || !firebaseReady) {
+      setSessions([]);
+      return;
+    }
+    return subscribeRecentCompletedSessions(setSessions, { maxDocs: 500 });
+  }, [user, firebaseReady]);
+
+  useEffect(() => {
+    if (!user || !firebaseReady) {
+      setActivities([]);
+      return;
+    }
+    return subscribeRecentActivities(setActivities, { maxDocs: 400 });
+  }, [user, firebaseReady]);
+
+  const scheduledSubRange = useMemo(() => {
+    if (datePreset === "upcoming") {
+      return {
+        startKey: todayKey,
+        endKey: addDaysToDateKey(todayKey, 400),
+      };
+    }
+    if (datePreset === "history") {
+      return {
+        startKey: addDaysToDateKey(todayKey, -400),
+        endKey: todayKey,
+      };
+    }
+    if (calendarView === "three_months") {
+      const span = threeMonthDateRange(viewYear, viewMonthIndex);
+      return {
+        startKey: addDaysToDateKey(span.startKey, -40),
+        endKey: addDaysToDateKey(span.endKey, 40),
+      };
+    }
+    if (calendarView === "week") {
+      return {
+        startKey: addDaysToDateKey(startOfWeekDateKey(weekAnchorKey), -60),
+        endKey: addDaysToDateKey(endOfWeekDateKey(weekAnchorKey), 120),
+      };
+    }
+    return subscriptionRangeAroundMonth(viewYear, viewMonthIndex, 2, 6);
+  }, [
+    calendarView,
+    datePreset,
+    todayKey,
+    viewMonthIndex,
+    viewYear,
+    weekAnchorKey,
+  ]);
+
+  useEffect(() => {
+    if (!user || !firebaseReady) {
+      setScheduled([]);
+      return;
+    }
+    return subscribeScheduledWorkoutsInRange(
+      scheduledSubRange.startKey,
+      scheduledSubRange.endKey,
+      setScheduled,
+    );
+  }, [user, firebaseReady, scheduledSubRange.startKey, scheduledSubRange.endKey]);
+
+  const allItems = useMemo(
+    () => buildPlannerListItems(sessions, scheduled, activities),
+    [sessions, scheduled, activities],
+  );
+
+  const dayMarkers = useMemo(() => markersByDate(allItems), [allItems]);
+
+  const filterRange = useMemo(
+    () =>
+      resolveDateRange({
+        preset: datePreset,
+        todayKey,
+        viewYear,
+        viewMonthIndex,
+        selectedDateKey,
+        customFrom,
+        customTo,
+      }),
+    [
+      datePreset,
+      todayKey,
+      viewYear,
+      viewMonthIndex,
+      selectedDateKey,
+      customFrom,
+      customTo,
+    ],
+  );
+
+  const filteredItems = useMemo(
+    () =>
+      filterPlannerListItems(allItems, {
+        kind,
+        search,
+        startKey: filterRange.startKey,
+        endKey: filterRange.endKey,
+        todayKey,
+      }),
+    [allItems, kind, search, filterRange, todayKey],
+  );
+
+  const weekCells = useMemo(
+    () => buildWeekCalendarCells(weekAnchorKey, todayKey),
+    [weekAnchorKey, todayKey],
+  );
+
+  const monthCells = useMemo(
     () => buildMonthCalendarGrid(viewYear, viewMonthIndex, todayKey),
     [viewYear, viewMonthIndex, todayKey],
   );
 
-  useEffect(() => {
-    if (!user || !firebaseReady) {
-      return () => {
-        setPlans([]);
-      };
+  const threeMonthBlocks = useMemo(
+    () => buildThreeMonthBlocks(viewYear, viewMonthIndex, todayKey),
+    [viewYear, viewMonthIndex, todayKey],
+  );
+
+  const calendarHeading = useMemo(() => {
+    if (calendarView === "week") {
+      const start = startOfWeekDateKey(weekAnchorKey);
+      const end = endOfWeekDateKey(weekAnchorKey);
+      const fmt = new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      const [ys, ms, ds] = start.split("-").map(Number);
+      const [ye, me, de] = end.split("-").map(Number);
+      return `${fmt.format(new Date(ys, ms - 1, ds))} – ${fmt.format(new Date(ye, me - 1, de))}`;
     }
-    const unsub = subscribeUserWorkoutPlans(setPlans);
-    return () => {
-      unsub();
-      setPlans([]);
-    };
-  }, [user, firebaseReady]);
-
-  useEffect(() => {
-    if (!user || !firebaseReady) {
-      return () => {
-        setSessions([]);
-      };
+    if (calendarView === "three_months") {
+      const third = shiftMonth(viewYear, viewMonthIndex, 2);
+      return `${formatMonthHeading(viewYear, viewMonthIndex)} – ${formatMonthHeading(third.year, third.monthIndex)}`;
     }
-    const unsub = subscribeRecentCompletedSessions(setSessions, {
-      maxDocs: 400,
-    });
-    return () => {
-      unsub();
-      setSessions([]);
-    };
-  }, [user, firebaseReady]);
+    return formatMonthHeading(viewYear, viewMonthIndex);
+  }, [calendarView, viewMonthIndex, viewYear, weekAnchorKey]);
 
-  useEffect(() => {
-    if (!user || !firebaseReady) {
-      return () => {
-        setScheduled([]);
-      };
+  const goPrev = useCallback(() => {
+    if (calendarView === "week") {
+      setWeekAnchorKey((k) => addDaysToDateKey(k, -7));
+      return;
     }
-    const unsub = subscribeScheduledWorkoutsForYear(viewYear, setScheduled);
-    return () => {
-      unsub();
-      setScheduled([]);
-    };
-  }, [user, firebaseReady, viewYear]);
+    const delta = calendarView === "three_months" ? -3 : -1;
+    const next = shiftMonth(viewYear, viewMonthIndex, delta);
+    setViewYear(next.year);
+    setViewMonthIndex(next.monthIndex);
+  }, [calendarView, viewMonthIndex, viewYear]);
 
-  const sessionsByDate = useMemo(() => {
-    const map = new Map<string, CompletedSessionSummary[]>();
-    for (const s of sessions) {
-      if (!s.workoutDate) continue;
-      const list = map.get(s.workoutDate);
-      if (list) list.push(s);
-      else map.set(s.workoutDate, [s]);
+  const goNext = useCallback(() => {
+    if (calendarView === "week") {
+      setWeekAnchorKey((k) => addDaysToDateKey(k, 7));
+      return;
     }
-    for (const list of map.values()) {
-      list.sort(
-        (a, b) =>
-          (b.endedAt ?? b.startedAt).getTime() -
-          (a.endedAt ?? a.startedAt).getTime(),
-      );
-    }
-    return map;
-  }, [sessions]);
+    const delta = calendarView === "three_months" ? 3 : 1;
+    const next = shiftMonth(viewYear, viewMonthIndex, delta);
+    setViewYear(next.year);
+    setViewMonthIndex(next.monthIndex);
+  }, [calendarView, viewMonthIndex, viewYear]);
 
-  const scheduledByDate = useMemo(() => {
-    const map = new Map<string, ScheduledWorkoutEntry[]>();
-    for (const e of scheduled) {
-      const list = map.get(e.dateKey);
-      if (list) list.push(e);
-      else map.set(e.dateKey, [e]);
-    }
-    return map;
-  }, [scheduled]);
-
-  const goPrevMonth = useCallback(() => {
-    setViewMonthIndex((m) => {
-      if (m > 0) return m - 1;
-      setViewYear((y) => y - 1);
-      return 11;
-    });
-  }, []);
-
-  const goNextMonth = useCallback(() => {
-    setViewMonthIndex((m) => {
-      if (m < 11) return m + 1;
-      setViewYear((y) => y + 1);
-      return 0;
-    });
-  }, []);
-
-  const goThisMonth = useCallback(() => {
+  const goToday = useCallback(() => {
     const t = new Date();
     setViewYear(t.getFullYear());
     setViewMonthIndex(t.getMonth());
+    setWeekAnchorKey(todayDateKeyLocal());
     setSelectedDateKey(todayDateKeyLocal());
+    setScheduleDateKey(todayDateKeyLocal());
   }, []);
 
+  const handleDatePresetChange = useCallback(
+    (preset: PlannerDatePreset) => {
+      setDatePreset(preset);
+      if (preset !== "selected_day") setPrevPreset(preset);
+
+      if (preset === "this_month") {
+        const t = new Date();
+        setViewYear(t.getFullYear());
+        setViewMonthIndex(t.getMonth());
+      } else if (preset === "this_week") {
+        setWeekAnchorKey(todayKey);
+        setCalendarView("week");
+        setCalendarVisible(true);
+      } else if (preset === "upcoming") {
+        const t = new Date();
+        setViewYear(t.getFullYear());
+        setViewMonthIndex(t.getMonth());
+      } else if (preset === "history") {
+        const t = new Date();
+        setViewYear(t.getFullYear());
+        setViewMonthIndex(t.getMonth());
+      } else if (preset === "custom") {
+        setCustomFrom(todayKey);
+        setCustomTo(addDaysToDateKey(todayKey, 30));
+      }
+    },
+    [todayKey],
+  );
+
+  const handleSelectDate = useCallback(
+    (dateKey: string) => {
+      setSelectedDateKey(dateKey);
+      setScheduleDateKey(dateKey);
+      setPrevPreset(datePreset === "selected_day" ? prevPreset : datePreset);
+      setDatePreset("selected_day");
+      const [y, m] = dateKey.split("-").map(Number);
+      setViewYear(y);
+      setViewMonthIndex(m - 1);
+      setWeekAnchorKey(dateKey);
+    },
+    [datePreset, prevPreset],
+  );
+
+  const handleClearSelectedDay = useCallback(() => {
+    setDatePreset(prevPreset === "selected_day" ? "this_month" : prevPreset);
+    setSelectedDateKey(todayKey);
+  }, [prevPreset, todayKey]);
+
   const handleAddToCalendar = useCallback(async () => {
-    if (!selectedDateKey || !user || !firebaseReady) return;
+    if (!user || !firebaseReady) return;
+    const dateKey = scheduleDateKey;
 
     const trimmedReminder = reminderLabel.trim();
     if (planPick === "") {
@@ -191,7 +360,7 @@ export function WorkoutPlanner() {
       setAdding(true);
       try {
         await addScheduledWorkout({
-          dateKey: selectedDateKey,
+          dateKey,
           label: trimmedReminder,
           planId: null,
           exerciseIds: [],
@@ -210,7 +379,7 @@ export function WorkoutPlanner() {
       setAdding(true);
       try {
         await addScheduledWorkout({
-          dateKey: selectedDateKey,
+          dateKey,
           label: p.plan.name,
           planId: id,
           exerciseIds: p.plan.lines.map((l) => l.exerciseId),
@@ -229,7 +398,7 @@ export function WorkoutPlanner() {
       setAdding(true);
       try {
         await addScheduledWorkout({
-          dateKey: selectedDateKey,
+          dateKey,
           label: def.name,
           planId: def.id,
           exerciseIds: [...def.exerciseIds],
@@ -239,7 +408,14 @@ export function WorkoutPlanner() {
         setAdding(false);
       }
     }
-  }, [selectedDateKey, user, firebaseReady, planPick, plans, reminderLabel]);
+  }, [
+    user,
+    firebaseReady,
+    scheduleDateKey,
+    planPick,
+    plans,
+    reminderLabel,
+  ]);
 
   const handleRemoveScheduled = useCallback(async (entryId: string) => {
     if (!window.confirm("Remove this scheduled workout from the calendar?")) {
@@ -248,12 +424,27 @@ export function WorkoutPlanner() {
     await deleteScheduledWorkout(entryId);
   }, []);
 
-  const selectedSessions =
-    selectedDateKey != null ? (sessionsByDate.get(selectedDateKey) ?? []) : [];
-  const selectedScheduled =
-    selectedDateKey != null ? (scheduledByDate.get(selectedDateKey) ?? []) : [];
-
   const signedInReady = Boolean(user && firebaseReady);
+  const isFutureOrToday = scheduleDateKey >= todayKey;
+
+  const emptyCopy = useMemo(() => {
+    if (datePreset === "upcoming") {
+      return {
+        title: "Nothing upcoming",
+        hint: "Schedule a template for today or this week to project your progress.",
+      };
+    }
+    if (datePreset === "history") {
+      return {
+        title: "No history in this range",
+        hint: "Completed workouts and activities will show up here.",
+      };
+    }
+    return {
+      title: "Nothing in this range",
+      hint: "Try another filter, or plan a workout for a future day.",
+    };
+  }, [datePreset]);
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -271,9 +462,8 @@ export function WorkoutPlanner() {
           Planner
         </h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          See completed workouts by day and drop planned sessions on your
-          calendar. Scheduled rows with exercises include a quick link to start
-          a live session.
+          Browse workouts and activities, filter what you need, and plan
+          sessions for today and ahead.
         </p>
       </header>
 
@@ -285,7 +475,10 @@ export function WorkoutPlanner() {
         <p className="text-sm text-zinc-500">Loading account…</p>
       ) : !user ? (
         <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-6 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
-          <p>Sign in to load your workout history and scheduled sessions.</p>
+          <p>
+            Sign in to load your workout history, activities, and scheduled
+            sessions.
+          </p>
           <Link
             href="/login"
             className="mt-3 inline-block text-sm font-semibold text-zinc-900 underline dark:text-zinc-100"
@@ -295,285 +488,101 @@ export function WorkoutPlanner() {
         </div>
       ) : null}
 
-      <section
-        className="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950 sm:p-4"
-        aria-labelledby="planner-cal-heading"
-      >
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 id="planner-cal-heading" className="sr-only">
-            Month calendar
-          </h2>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={goPrevMonth}
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              onClick={goNextMonth}
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <p className="min-w-0 flex-1 text-center text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            {formatMonthHeading(viewYear, viewMonthIndex)}
-          </p>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="shrink-0 text-xs"
-            onClick={goThisMonth}
-          >
-            Today
-          </Button>
-        </div>
+      {signedInReady ? (
+        <>
+          <PlannerFilters
+            search={search}
+            onSearchChange={setSearch}
+            datePreset={datePreset}
+            onDatePresetChange={handleDatePresetChange}
+            kind={kind}
+            onKindChange={setKind}
+            customFrom={customFrom}
+            customTo={customTo}
+            onCustomFromChange={setCustomFrom}
+            onCustomToChange={setCustomTo}
+            selectedDateKey={
+              datePreset === "selected_day" ? selectedDateKey : null
+            }
+            onClearSelectedDay={handleClearSelectedDay}
+          />
 
-        <div className="grid grid-cols-7 gap-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:text-xs">
-          {WEEKDAY_LABELS_SHORT.map((d) => (
-            <div key={d} className="py-1">
-              {d}
+          <PlannerCalendar
+            visible={calendarVisible}
+            onVisibleChange={setCalendarVisible}
+            view={calendarView}
+            onViewChange={setCalendarView}
+            heading={calendarHeading}
+            onPrev={goPrev}
+            onNext={goNext}
+            onToday={goToday}
+            selectedDateKey={selectedDateKey}
+            onSelectDate={handleSelectDate}
+            rangeStartKey={filterRange.startKey}
+            rangeEndKey={filterRange.endKey}
+            markersByDate={dayMarkers}
+            cells={
+              calendarView === "week"
+                ? weekCells
+                : calendarView === "month"
+                  ? monthCells
+                  : undefined
+            }
+            monthBlocks={
+              calendarView === "three_months" ? threeMonthBlocks : undefined
+            }
+            compact={calendarView === "three_months"}
+          />
+
+          <PlannerScheduleForm
+            dateKey={scheduleDateKey}
+            isFutureOrToday={isFutureOrToday}
+            plans={plans}
+            adding={adding}
+            disabled={!signedInReady}
+            planPick={planPick}
+            reminderLabel={reminderLabel}
+            onPlanPickChange={setPlanPick}
+            onReminderChange={setReminderLabel}
+            onAdd={() => void handleAddToCalendar()}
+            onPickTomorrow={() => {
+              const key = addDaysToDateKey(todayKey, 1);
+              setScheduleDateKey(key);
+              handleSelectDate(key);
+            }}
+            onPickNextEmpty={() => {
+              const key = nextEmptyPlanDay(todayKey, dayMarkers);
+              setScheduleDateKey(key);
+              handleSelectDate(key);
+            }}
+            onLogActivity={() => setLogActivityOpen(true)}
+          />
+
+          <div className="space-y-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                Browse
+              </h2>
+              <p className="text-xs text-zinc-500">
+                {filteredItems.length} item
+                {filteredItems.length === 1 ? "" : "s"}
+              </p>
             </div>
-          ))}
-        </div>
+            <PlannerWorkoutList
+              items={filteredItems}
+              todayKey={todayKey}
+              emptyTitle={emptyCopy.title}
+              emptyHint={emptyCopy.hint}
+              onRemoveScheduled={(id) => void handleRemoveScheduled(id)}
+            />
+          </div>
 
-        <div className="mt-1 grid grid-cols-7 gap-1">
-          {cells.map((cell) => {
-            const daySessions = sessionsByDate.get(cell.dateKey) ?? [];
-            const dayScheduled = scheduledByDate.get(cell.dateKey) ?? [];
-            const hasLog = daySessions.length > 0;
-            const hasPlan = dayScheduled.some((e) => e.exerciseIds.length > 0);
-            const hasNote = dayScheduled.some((e) => e.exerciseIds.length === 0);
-            const selected = selectedDateKey === cell.dateKey;
-
-            return (
-              <button
-                key={cell.dateKey}
-                type="button"
-                onClick={() => setSelectedDateKey(cell.dateKey)}
-                className={`flex min-h-[44px] flex-col items-center justify-start rounded-lg border px-0.5 py-1 text-xs transition sm:min-h-[52px] ${
-                  selected
-                    ? "border-zinc-900 bg-zinc-100 ring-2 ring-zinc-900/20 dark:border-zinc-100 dark:bg-zinc-800 dark:ring-zinc-100/20"
-                    : "border-transparent bg-zinc-50/80 hover:border-zinc-200 dark:bg-zinc-900/40 dark:hover:border-zinc-700"
-                } ${cell.isCurrentMonth ? "text-zinc-900 dark:text-zinc-50" : "text-zinc-400 dark:text-zinc-500"}`}
-              >
-                <span
-                  className={`text-[11px] font-semibold tabular-nums sm:text-sm ${
-                    cell.isToday ? "text-emerald-700 dark:text-emerald-400" : ""
-                  }`}
-                >
-                  {cell.dayOfMonth}
-                </span>
-                <span className="mt-0.5 flex h-3 items-center justify-center gap-0.5">
-                  {hasLog ? (
-                    <span
-                      className="h-1.5 w-1.5 rounded-full bg-emerald-500"
-                      title="Logged workout"
-                    />
-                  ) : null}
-                  {hasPlan ? (
-                    <span
-                      className="h-1.5 w-1.5 rounded-full border border-sky-500 bg-sky-100 dark:bg-sky-950"
-                      title="Scheduled session"
-                    />
-                  ) : null}
-                  {hasNote && !hasPlan ? (
-                    <span
-                      className="h-1.5 w-1.5 rounded-full bg-zinc-300 dark:bg-zinc-600"
-                      title="Reminder"
-                    />
-                  ) : null}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {user && firebaseReady ? (
-        <section
-          className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
-          aria-labelledby="day-detail-heading"
-        >
-          <h2
-            id="day-detail-heading"
-            className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
-          >
-            {selectedDateKey ? formatDayHeading(selectedDateKey) : "Pick a day"}
-          </h2>
-
-          {selectedDateKey ? (
-            <>
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Logged
-                </p>
-                {selectedSessions.length === 0 ? (
-                  <p className="text-sm text-zinc-500">No completed workout.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {selectedSessions.map((s) => (
-                      <li key={s.id}>
-                        <Link
-                          href={`/sessions/${s.id}`}
-                          className="block rounded-lg border border-zinc-100 bg-zinc-50/80 px-3 py-2 text-sm transition hover:border-zinc-200 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                              {s.title}
-                            </p>
-                            <time
-                              className="shrink-0 text-xs tabular-nums text-zinc-500"
-                              dateTime={(s.endedAt ?? s.startedAt).toISOString()}
-                            >
-                              {formatSessionTime(s.endedAt ?? s.startedAt)}
-                            </time>
-                          </div>
-                          <p className="mt-0.5 text-xs text-zinc-500">
-                            {formatSessionVolumeMeta(
-                              s.exerciseCount,
-                              s.setCount,
-                              s.status,
-                            )}
-                            {s.previewExerciseNames.length > 0
-                              ? ` · ${s.previewExerciseNames.slice(0, 3).join(", ")}`
-                              : ""}
-                          </p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Scheduled
-                </p>
-                {selectedScheduled.length === 0 ? (
-                  <p className="text-sm text-zinc-500">Nothing planned.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {selectedScheduled.map((e) => {
-                      const href = buildWorkoutHref(
-                        e.label,
-                        e.planId,
-                        e.exerciseIds,
-                      );
-                      return (
-                        <li
-                          key={e.id}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 px-3 py-2 text-sm dark:border-zinc-800"
-                        >
-                          <div className="min-w-0">
-                            <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                              {e.label}
-                            </p>
-                            {e.exerciseIds.length === 0 ? (
-                              <p className="text-xs text-zinc-500">Reminder</p>
-                            ) : (
-                              <p className="text-xs text-zinc-500">
-                                {e.exerciseIds.length} exercise
-                                {e.exerciseIds.length === 1 ? "" : "s"}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {href ? (
-                              <Link
-                                href={href}
-                                className="rounded-md bg-zinc-900 px-2.5 py-1.5 text-xs font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-                              >
-                                Start
-                              </Link>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={() => void handleRemoveScheduled(e.id)}
-                              className="rounded-md border border-zinc-200 px-2.5 py-1.5 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-
-              <div className="space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                  Add to this day
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                    Template or starter
-                    <select
-                      className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
-                      value={planPick}
-                      onChange={(ev) =>
-                        setPlanPick(ev.target.value as PlanPickerValue)
-                      }
-                    >
-                      <option value="">Choose one (optional)</option>
-                      <optgroup label="Your templates">
-                        {plans.map((p) => (
-                          <option key={p.id} value={`tpl:${p.id}`}>
-                            {p.plan.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Starters">
-                        {STARTER_TEMPLATE_DEFINITIONS.map((s) => (
-                          <option key={s.id} value={`starter:${s.id}`}>
-                            {s.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    </select>
-                  </label>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                    Or reminder only
-                    <Input
-                      placeholder="e.g. Rest, walk, mobility"
-                      value={reminderLabel}
-                      onChange={(ev) => setReminderLabel(ev.target.value)}
-                      maxLength={200}
-                      className="h-11"
-                    />
-                  </label>
-                  <Button
-                    type="button"
-                    className="h-11 w-full shrink-0 sm:w-auto"
-                    disabled={
-                      adding ||
-                      !signedInReady ||
-                      (planPick === "" && !reminderLabel.trim())
-                    }
-                    onClick={() => void handleAddToCalendar()}
-                  >
-                    {adding ? "Adding…" : "Add"}
-                  </Button>
-                </div>
-                <p className="text-xs text-zinc-500">
-                  Pick a template or starter for a session you can start from here,
-                  or enter a reminder without a Start link.
-                </p>
-              </div>
-            </>
-          ) : null}
-        </section>
+          <LogActivitySheet
+            open={logActivityOpen}
+            onClose={() => setLogActivityOpen(false)}
+            defaultDateKey={scheduleDateKey}
+          />
+        </>
       ) : null}
     </div>
   );

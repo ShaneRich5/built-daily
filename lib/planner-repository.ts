@@ -57,24 +57,23 @@ function parseScheduledEntry(
 }
 
 /**
- * Live scheduled entries for the given calendar year (local `YYYY-MM-DD` range).
+ * Live scheduled entries for an inclusive local `YYYY-MM-DD` range.
  */
-export function subscribeScheduledWorkoutsForYear(
-  year: number,
+export function subscribeScheduledWorkoutsInRange(
+  startKey: string,
+  endKey: string,
   onEntries: (entries: ScheduledWorkoutEntry[]) => void,
 ): () => void {
   const col = scheduledCollectionRef();
-  if (!col) {
+  if (!col || !/^\d{4}-\d{2}-\d{2}$/.test(startKey) || !/^\d{4}-\d{2}-\d{2}$/.test(endKey)) {
     onEntries([]);
     return () => {};
   }
 
-  const start = `${year}-01-01`;
-  const end = `${year}-12-31`;
   const q = query(
     col,
-    where("dateKey", ">=", start),
-    where("dateKey", "<=", end),
+    where("dateKey", ">=", startKey),
+    where("dateKey", "<=", endKey),
   );
 
   return onSnapshot(
@@ -98,6 +97,20 @@ export function subscribeScheduledWorkoutsForYear(
     () => {
       onEntries([]);
     },
+  );
+}
+
+/**
+ * Live scheduled entries for the given calendar year (local `YYYY-MM-DD` range).
+ */
+export function subscribeScheduledWorkoutsForYear(
+  year: number,
+  onEntries: (entries: ScheduledWorkoutEntry[]) => void,
+): () => void {
+  return subscribeScheduledWorkoutsInRange(
+    `${year}-01-01`,
+    `${year}-12-31`,
+    onEntries,
   );
 }
 
