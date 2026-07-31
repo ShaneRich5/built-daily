@@ -66,11 +66,12 @@ export function PublicConsistencyHeatmap({
 
   const { weeks, monthLabels, workoutDays, recoveryDays, firstKey } =
     useMemo(() => {
-      const built = buildContributionWeeks(activity, {
-        weekCount: 26,
-        endDateKey: todayKey,
-      });
       const first = earliestActivityKey(activity);
+      const built = buildContributionWeeks(activity, {
+        weekCount: 52,
+        endDateKey: todayKey,
+        startDateKey: first,
+      });
       let workouts = 0;
       let recoveries = 0;
       for (const week of built) {
@@ -137,11 +138,11 @@ export function PublicConsistencyHeatmap({
       </div>
 
       <div className="overflow-x-auto pb-1">
-        <div className="inline-block min-w-full">
+        <div className="inline-block">
           <div
             className="mb-1 grid gap-1"
             style={{
-              gridTemplateColumns: `1.75rem repeat(${weeks.length}, minmax(0, 1fr))`,
+              gridTemplateColumns: `1.75rem repeat(${weeks.length}, 0.875rem)`,
             }}
           >
             <span aria-hidden className="block" />
@@ -161,10 +162,10 @@ export function PublicConsistencyHeatmap({
           <div
             className="grid gap-1"
             style={{
-              gridTemplateColumns: `1.75rem repeat(${weeks.length}, minmax(0, 1fr))`,
+              gridTemplateColumns: `1.75rem repeat(${weeks.length}, 0.875rem)`,
             }}
             role="grid"
-            aria-label="Workout consistency for the last 26 weeks"
+            aria-label="Workout consistency calendar"
           >
             {WEEKDAY_LABELS.map((label, row) => (
               <div key={`row-${row}`} className="contents">
@@ -199,7 +200,7 @@ export function PublicConsistencyHeatmap({
                           ? `${formatLocalDateKey(day.dateKey)} · ${kindLabel(kind, day.count)}`
                           : undefined
                       }
-                      className={`relative aspect-square max-h-3.5 min-h-2.5 w-full max-w-3.5 overflow-hidden rounded-[3px] transition ${CELL_OUTLINE} ${cellClass(kind, day.count)} ${
+                      className={`relative size-3.5 shrink-0 overflow-hidden rounded-[3px] transition ${CELL_OUTLINE} ${cellClass(kind, day.count)} ${
                         interactive
                           ? "hover:ring-2 hover:ring-zinc-400/60"
                           : "pointer-events-none"

@@ -63,13 +63,21 @@ export type ContributionDay = {
 export type ContributionWeek = ContributionDay[];
 
 /**
- * GitHub-style week columns (Sun→Sat), ending with the week that contains `endDateKey`.
+ * GitHub-style week columns (Sun→Sat).
+ * Defaults to the last `weekCount` weeks ending on the Saturday of `endDateKey`'s week.
+ * When `startDateKey` is set and falls inside that window, the grid starts on that
+ * week instead and still spans `weekCount` columns — projecting into future months
+ * so the chart stays full and horizontally scrollable.
  */
 export function buildContributionWeeks(
   activity: WorkoutActivityByDay,
-  options?: { weekCount?: number; endDateKey?: string },
+  options?: {
+    weekCount?: number;
+    endDateKey?: string;
+    startDateKey?: string | null;
+  },
 ): ContributionWeek[] {
-  const weekCount = options?.weekCount ?? 26;
+  const weekCount = options?.weekCount ?? 52;
   const endKey = options?.endDateKey ?? localDateKeyFromMs(Date.now());
   const end = dateFromLocalDateKey(endKey);
   if (!end) return [];
@@ -78,10 +86,25 @@ export function buildContributionWeeks(
   const endDow = end.getDay();
   const saturday = new Date(end);
   saturday.setDate(end.getDate() + (6 - endDow));
-  const rangeEndKey = localDateKeyFromMs(saturday.getTime());
+  const todaySaturdayKey = localDateKeyFromMs(saturday.getTime());
+  const lookbackStartKey = shiftLocalDateKey(
+    todaySaturdayKey,
+    -(weekCount * 7 - 1),
+  );
 
-  const totalDays = weekCount * 7;
-  const rangeStartKey = shiftLocalDateKey(rangeEndKey, -(totalDays - 1));
+  let rangeStartKey = lookbackStartKey;
+  const startKey = options?.startDateKey;
+  if (startKey) {
+    const start = dateFromLocalDateKey(startKey);
+    if (start) {
+      const sunday = new Date(start);
+      sunday.setDate(start.getDate() - start.getDay());
+      const activityWeekStart = localDateKeyFromMs(sunday.getTime());
+      if (activityWeekStart > lookbackStartKey) {
+        rangeStartKey = activityWeekStart;
+      }
+    }
+  }
 
   const weeks: ContributionWeek[] = [];
   for (let w = 0; w < weekCount; w++) {
@@ -171,11 +194,6 @@ export function contributionMonthLabels(
     const month = d.getMonth();
     if (month !== lastMonth) {
       lastMonth = month;
-      // Skip label on first column if it would crowd; still show when month changes.
-      if (i === 0 && d.getDate() > 7) {
-        // Mid-month start — wait for next month boundary.
-        continue;
-      }
       out.push({
         weekIndex: i,
         label: d.toLocaleString("en-US", { month: "short" }),
