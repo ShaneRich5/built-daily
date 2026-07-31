@@ -254,9 +254,9 @@ export function WorkoutPickAndStart() {
           className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
           aria-label="Search exercises"
         />
-        <ul className="max-h-[min(28rem,55vh)] space-y-2 overflow-y-auto">
+        <ul className="grid max-h-[min(28rem,55vh)] grid-cols-1 gap-2 overflow-y-auto md:grid-cols-2">
           {filteredExercises.length === 0 ? (
-            <li className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
+            <li className="col-span-full rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
               No exercises match “{exerciseQuery.trim()}”.
             </li>
           ) : (
@@ -268,13 +268,13 @@ export function WorkoutPickAndStart() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => toggleExercise(ex.id)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
+                  className={`flex h-full min-h-[3rem] w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
                     on
                       ? "border-emerald-600 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40"
                       : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
                   }`}
                 >
-                  <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                  <span className="min-w-0 truncate font-medium text-zinc-900 dark:text-zinc-50">
                     {ex.name}
                   </span>
                   <span
