@@ -57,6 +57,7 @@ export default function RootLayout({
     >
       <body
         className={`${geistSans.className} min-h-full bg-background text-foreground text-base leading-normal subpixel-antialiased`}
+        suppressHydrationWarning
       >
         <AuthProvider>
           <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col px-4 py-6 sm:px-5 sm:py-8">

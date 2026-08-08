@@ -8,8 +8,10 @@ import {
   Copy,
   CopyPlus,
   Download,
+  List,
   Pause,
   Play,
+  Rows3,
   RotateCcw,
   Timer,
   Trash2,
@@ -228,6 +230,16 @@ type ActiveWorkoutViewProps = {
 };
 
 const MAX_SESSION_EXERCISES = 40;
+const LS_EXERCISE_DENSITY = "built-daily-active-workout-exercise-density";
+
+type ExerciseListDensity = "comfortable" | "compact";
+
+function readStoredExerciseDensity(): ExerciseListDensity {
+  if (typeof window === "undefined") return "comfortable";
+  const v = window.localStorage.getItem(LS_EXERCISE_DENSITY);
+  if (v === "compact" || v === "comfortable") return v;
+  return "comfortable";
+}
 
 type SetTimerActive = {
   exerciseIndex: number;
@@ -287,6 +299,9 @@ export function ActiveWorkoutView({
   const [expandedExerciseIndex, setExpandedExerciseIndex] = useState<
     number | null
   >(() => (exercises.length > 0 ? 0 : null));
+  const [exerciseDensity, setExerciseDensity] =
+    useState<ExerciseListDensity>("comfortable");
+  const [densityPrefsReady, setDensityPrefsReady] = useState(false);
   const exerciseHistoryKey = activeExercises
     .map((exercise) => `${exercise.id}:${exercise.metric}:${exercise.name}`)
     .join("|");
@@ -297,6 +312,17 @@ export function ActiveWorkoutView({
   const exerciseHistory =
     historyResult.key === exerciseHistoryKey ? historyResult.history : {};
   const historyLoading = historyResult.key !== exerciseHistoryKey;
+  const compact = exerciseDensity === "compact";
+
+  useEffect(() => {
+    setExerciseDensity(readStoredExerciseDensity());
+    setDensityPrefsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!densityPrefsReady) return;
+    window.localStorage.setItem(LS_EXERCISE_DENSITY, exerciseDensity);
+  }, [exerciseDensity, densityPrefsReady]);
 
   useEffect(() => {
     let cancelled = false;
@@ -814,7 +840,49 @@ export function ActiveWorkoutView({
         onAddCustom={handleAddCustomExercise}
       />
 
-      <ul className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${onDiscard ? "pb-56" : "pb-44"}`}>
+      <div className="flex shrink-0 items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+          Exercises
+        </p>
+        <div
+          className="inline-flex rounded-lg border border-zinc-200 bg-white p-0.5 dark:border-zinc-700 dark:bg-zinc-950"
+          role="group"
+          aria-label="Exercise list density"
+        >
+          <button
+            type="button"
+            onClick={() => setExerciseDensity("comfortable")}
+            aria-pressed={exerciseDensity === "comfortable"}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+              exerciseDensity === "comfortable"
+                ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            }`}
+          >
+            <List className="size-3.5" aria-hidden />
+            Comfortable
+          </button>
+          <button
+            type="button"
+            onClick={() => setExerciseDensity("compact")}
+            aria-pressed={exerciseDensity === "compact"}
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+              exerciseDensity === "compact"
+                ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+            }`}
+          >
+            <Rows3 className="size-3.5" aria-hidden />
+            Compact
+          </button>
+        </div>
+      </div>
+
+      <ul
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${
+          compact ? "gap-1.5" : "gap-3"
+        } ${onDiscard ? "pb-56" : "pb-44"}`}
+      >
         {activeExercises.map((exercise, exerciseIndex) => {
           const sets = setsByExercise[exerciseIndex] ?? [];
           const expanded = expandedExerciseIndex === exerciseIndex;
@@ -830,26 +898,47 @@ export function ActiveWorkoutView({
                 onClick={() =>
                   setExpandedExerciseIndex(expanded ? null : exerciseIndex)
                 }
-                className="flex w-full items-start gap-3 p-3 text-left"
+                className={`flex w-full items-start gap-2 text-left ${
+                  compact ? "gap-2 px-2.5 py-2" : "gap-3 p-3"
+                }`}
                 aria-expanded={expanded}
               >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                <span className="min-w-0 flex-1">
+                  <span
+                    className={`block font-medium text-zinc-900 dark:text-zinc-50 ${
+                      compact ? "text-sm leading-snug" : ""
+                    }`}
+                  >
                     {exercise.name}
-                  </p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {metricHint(exercise.metric)}
-                    {exerciseNotesById[exercise.id]?.trim()
-                      ? " · has note"
-                      : ""}
-                  </p>
-                  {!expanded ? (
-                    <p className="mt-1.5 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">
-                      {summary}
-                    </p>
+                  </span>
+                  {!compact ? (
+                    <span className="mt-0.5 block text-xs text-zinc-500">
+                      {metricHint(exercise.metric)}
+                      {exerciseNotesById[exercise.id]?.trim()
+                        ? " · has note"
+                        : ""}
+                    </span>
                   ) : null}
-                </div>
-                <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-zinc-500">
+                  {!expanded ? (
+                    <span
+                      className={`block text-zinc-600 dark:text-zinc-300 ${
+                        compact
+                          ? "mt-0.5 line-clamp-1 text-xs"
+                          : "mt-1.5 line-clamp-2 text-sm"
+                      }`}
+                    >
+                      {summary}
+                      {compact && exerciseNotesById[exercise.id]?.trim()
+                        ? " · note"
+                        : ""}
+                    </span>
+                  ) : null}
+                </span>
+                <span
+                  className={`inline-flex shrink-0 items-center justify-center rounded-full text-zinc-500 ${
+                    compact ? "mt-0 size-7" : "mt-0.5 size-8"
+                  }`}
+                >
                   {expanded ? (
                     <ChevronUp className="size-4" aria-hidden />
                   ) : (
@@ -862,7 +951,13 @@ export function ActiveWorkoutView({
               </button>
 
               {expanded ? (
-                <div className="space-y-3 border-t border-zinc-100 px-3 pb-3 pt-3 dark:border-zinc-800">
+                <div
+                  className={`border-t border-zinc-100 dark:border-zinc-800 ${
+                    compact
+                      ? "space-y-2 px-2.5 pb-2.5 pt-2"
+                      : "space-y-3 px-3 pb-3 pt-3"
+                  }`}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-2">
                       <button
@@ -891,24 +986,63 @@ export function ActiveWorkoutView({
                     </button>
                   </div>
 
-                  <CollapsibleNote
-                    id={`exercise-note-${exercise.id}`}
-                    summary="Exercise note"
-                    value={exerciseNotesById[exercise.id] ?? ""}
-                    onChange={(v) => updateExerciseNote(exercise.id, v)}
-                    maxLength={400}
-                    placeholder="Equipment swaps, pain/limitations, cues for this lift…"
-                  />
-                  <ExerciseHistoryControls
-                    exerciseName={exercise.name}
-                    entries={exerciseHistory[exercise.id] ?? []}
-                    loading={historyLoading}
-                    hasCurrentValues={sets.some(setRowHasValues)}
-                    onUseSets={(historicalSets, mode) =>
-                      applyHistoricalSets(exerciseIndex, historicalSets, mode)
-                    }
-                  />
-                  <div className="space-y-2">
+                  {!compact ? (
+                    <>
+                      <CollapsibleNote
+                        id={`exercise-note-${exercise.id}`}
+                        summary="Exercise note"
+                        value={exerciseNotesById[exercise.id] ?? ""}
+                        onChange={(v) => updateExerciseNote(exercise.id, v)}
+                        maxLength={400}
+                        placeholder="Equipment swaps, pain/limitations, cues for this lift…"
+                      />
+                      <ExerciseHistoryControls
+                        exerciseName={exercise.name}
+                        entries={exerciseHistory[exercise.id] ?? []}
+                        loading={historyLoading}
+                        hasCurrentValues={sets.some(setRowHasValues)}
+                        onUseSets={(historicalSets, mode) =>
+                          applyHistoricalSets(
+                            exerciseIndex,
+                            historicalSets,
+                            mode,
+                          )
+                        }
+                      />
+                    </>
+                  ) : (
+                    <details className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-2 py-1 dark:border-zinc-800 dark:bg-zinc-900/40">
+                      <summary className="cursor-pointer list-none text-xs font-medium text-zinc-500 marker:content-none [&::-webkit-details-marker]:hidden">
+                        <span className="underline-offset-2 hover:underline">
+                          Note & history
+                        </span>
+                      </summary>
+                      <div className="mt-2 space-y-2">
+                        <CollapsibleNote
+                          id={`exercise-note-${exercise.id}`}
+                          summary="Exercise note"
+                          value={exerciseNotesById[exercise.id] ?? ""}
+                          onChange={(v) => updateExerciseNote(exercise.id, v)}
+                          maxLength={400}
+                          placeholder="Equipment swaps, pain/limitations, cues for this lift…"
+                        />
+                        <ExerciseHistoryControls
+                          exerciseName={exercise.name}
+                          entries={exerciseHistory[exercise.id] ?? []}
+                          loading={historyLoading}
+                          hasCurrentValues={sets.some(setRowHasValues)}
+                          onUseSets={(historicalSets, mode) =>
+                            applyHistoricalSets(
+                              exerciseIndex,
+                              historicalSets,
+                              mode,
+                            )
+                          }
+                        />
+                      </div>
+                    </details>
+                  )}
+                  <div className={compact ? "space-y-1.5" : "space-y-2"}>
                     {sets.map((set, setIndex) => (
                       <SetRowFields
                         key={`${exerciseIndex}-${exercise.id}-${setIndex}`}
@@ -916,6 +1050,7 @@ export function ActiveWorkoutView({
                         exerciseIndex={exerciseIndex}
                         setIndex={setIndex}
                         set={set}
+                        compact={compact}
                         updateSet={updateSet}
                         onDuplicateSet={duplicateSet}
                         setTimerActive={setTimerActive}
@@ -1054,6 +1189,7 @@ type SetRowFieldsProps = {
   exerciseIndex: number;
   setIndex: number;
   set: SetRow;
+  compact?: boolean;
   setTimerActive: SetTimerActive | null;
   setTimerLiveMs: number;
   onStartSetTimer: (exerciseIndex: number, setIndex: number) => void;
@@ -1073,6 +1209,7 @@ function SetRowFields({
   exerciseIndex,
   setIndex,
   set,
+  compact = false,
   setTimerActive,
   setTimerLiveMs,
   onStartSetTimer,
@@ -1092,12 +1229,14 @@ function SetRowFields({
       <button
         type="button"
         onClick={() => onDuplicateSet(exerciseIndex, setIndex)}
-        className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+        className={`inline-flex items-center gap-1 rounded-md text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
+          compact ? "h-7 px-1.5" : "h-8 px-2"
+        }`}
         aria-label={`Duplicate set ${setNo}`}
         title="Duplicate this set’s weight and reps"
       >
         <CopyPlus className="size-3.5" aria-hidden />
-        Duplicate
+        {compact ? null : "Duplicate"}
       </button>
     </div>
   );
@@ -1114,7 +1253,9 @@ function SetRowFields({
 
   const setTimerField = (
     <details
-      className="mt-1.5 rounded-lg border border-zinc-100 bg-zinc-50/60 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-900/40"
+      className={`rounded-lg border border-zinc-100 bg-zinc-50/60 px-2 dark:border-zinc-800 dark:bg-zinc-900/40 ${
+        compact ? "mt-1 py-1" : "mt-1.5 py-1.5"
+      }`}
       open={setTimerThis ? true : undefined}
     >
       <summary className="cursor-pointer list-none text-xs font-medium text-zinc-600 marker:content-none dark:text-zinc-400 [&::-webkit-details-marker]:hidden">
@@ -1184,12 +1325,17 @@ function SetRowFields({
       onChange={(v) => updateSet(exerciseIndex, setIndex, "note", v)}
       maxLength={200}
       placeholder="One-off detail for this set only…"
-      className="mt-1.5"
+      className={compact ? "mt-1" : "mt-1.5"}
     />
   );
 
-  const numberFieldClassName =
-    "h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+  const numberFieldClassName = compact
+    ? "h-9 w-full rounded-md border border-zinc-200 bg-zinc-50 px-2.5 font-mono text-sm text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+    : "h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+
+  const setShellClassName = compact
+    ? "space-y-1.5 rounded-md border border-zinc-100 p-1.5 dark:border-zinc-800/80"
+    : "space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80";
 
   if (exercise.metric === "duration") {
     const parts = splitTotalSeconds(set.seconds);
@@ -1203,7 +1349,7 @@ function SetRowFields({
     };
 
     return (
-      <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
+      <div className={setShellClassName}>
         {setHeader}
         <div className="grid grid-cols-2 items-end gap-2 text-sm">
           <div>
@@ -1275,7 +1421,7 @@ function SetRowFields({
     };
 
     return (
-      <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
+      <div className={setShellClassName}>
         {setHeader}
         <div className="grid grid-cols-2 items-end gap-2 text-sm">
           <div>
@@ -1445,7 +1591,7 @@ function SetRowFields({
 
   if (exercise.metric === "bodyweight_reps") {
     return (
-      <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
+      <div className={setShellClassName}>
         {setHeader}
         <div className="text-sm">
           <label className="sr-only" htmlFor={`r-${idBase}`}>
@@ -1473,7 +1619,7 @@ function SetRowFields({
   }
 
   return (
-    <div className="space-y-2 rounded-lg border border-zinc-100 p-2 dark:border-zinc-800/80">
+    <div className={setShellClassName}>
       {setHeader}
       <div className="grid grid-cols-2 items-center gap-2 text-sm">
         <div>
