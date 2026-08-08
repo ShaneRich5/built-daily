@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import {
+  ArrowDown,
+  ArrowUp,
   Check,
   ChevronDown,
   ChevronUp,
@@ -299,6 +301,7 @@ export function ActiveWorkoutView({
   const [expandedExerciseIndex, setExpandedExerciseIndex] = useState<
     number | null
   >(() => (exercises.length > 0 ? 0 : null));
+  const [flashLineId, setFlashLineId] = useState<string | null>(null);
   const [exerciseDensity, setExerciseDensity] =
     useState<ExerciseListDensity>("comfortable");
   const [densityPrefsReady, setDensityPrefsReady] = useState(false);
@@ -325,6 +328,16 @@ export function ActiveWorkoutView({
   }, [exerciseDensity, densityPrefsReady]);
 
   useEffect(() => {
+    if (!flashLineId) return;
+    const el = document.getElementById(`exercise-card-${flashLineId}`);
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const timeoutId = window.setTimeout(() => {
+      setFlashLineId(null);
+    }, 1600);
+    return () => window.clearTimeout(timeoutId);
+  }, [flashLineId]);
+
+  useEffect(() => {
     let cancelled = false;
     void getExerciseHistories(activeExercises)
       .then((history) => {
@@ -347,11 +360,14 @@ export function ActiveWorkoutView({
   const handleAddCatalogExercise = useCallback((exerciseId: string) => {
     const ex = getCatalogExerciseById(exerciseId);
     if (!ex) return;
+    let addedLineId: string | null = null;
     setActiveExercises((prev) => {
       if (prev.length >= MAX_SESSION_EXERCISES) return prev;
+      const newLineId = createLineId();
+      addedLineId = newLineId;
       setLineIds((idsPrev) => {
         if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
-        return [createLineId(), ...idsPrev];
+        return [newLineId, ...idsPrev];
       });
       setSetsByExercise((setsPrev) => {
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
@@ -361,18 +377,22 @@ export function ActiveWorkoutView({
       // Newest first — keeps the new exercise near the add control.
       return [ex, ...prev];
     });
+    if (addedLineId) setFlashLineId(addedLineId);
   }, []);
 
   const handleAddCustomExercise = useCallback((trimmed: string): boolean => {
     const ex = catalogExerciseFromCustomName(trimmed);
     if (!ex) return false;
     let didAdd = false;
+    let addedLineId: string | null = null;
     setActiveExercises((prev) => {
       if (prev.length >= MAX_SESSION_EXERCISES) return prev;
       didAdd = true;
+      const newLineId = createLineId();
+      addedLineId = newLineId;
       setLineIds((idsPrev) => {
         if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
-        return [createLineId(), ...idsPrev];
+        return [newLineId, ...idsPrev];
       });
       setSetsByExercise((setsPrev) => {
         if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
@@ -381,6 +401,7 @@ export function ActiveWorkoutView({
       setExpandedExerciseIndex(0);
       return [ex, ...prev];
     });
+    if (addedLineId) setFlashLineId(addedLineId);
     return didAdd;
   }, []);
 
@@ -567,6 +588,43 @@ export function ActiveWorkoutView({
     },
     [],
   );
+
+  const moveExercise = useCallback((index: number, delta: -1 | 1) => {
+    setActiveExercises((prev) => {
+      const j = index + delta;
+      if (j < 0 || j >= prev.length) return prev;
+
+      const swap = <T,>(arr: T[]): T[] => {
+        const next = [...arr];
+        const tmp = next[index]!;
+        next[index] = next[j]!;
+        next[j] = tmp;
+        return next;
+      };
+
+      setLineIds((ids) => (ids.length === prev.length ? swap(ids) : ids));
+      setSetsByExercise((sets) =>
+        sets.length === prev.length ? swap(sets) : sets,
+      );
+      setExpandedExerciseIndex((expanded) => {
+        if (expanded === null) return null;
+        if (expanded === index) return j;
+        if (expanded === j) return index;
+        return expanded;
+      });
+      setSetTimerActive((active) => {
+        if (!active) return null;
+        if (active.exerciseIndex === index) {
+          return { ...active, exerciseIndex: j };
+        }
+        if (active.exerciseIndex === j) {
+          return { ...active, exerciseIndex: index };
+        }
+        return active;
+      });
+      return swap(prev);
+    });
+  }, []);
 
   const removeExercise = useCallback(
     (exerciseIndex: number) => {
@@ -885,70 +943,107 @@ export function ActiveWorkoutView({
       >
         {activeExercises.map((exercise, exerciseIndex) => {
           const sets = setsByExercise[exerciseIndex] ?? [];
+          const lineId = lineIds[exerciseIndex] ?? `${exerciseIndex}-${exercise.id}`;
           const expanded = expandedExerciseIndex === exerciseIndex;
           const summary = summarizeExerciseSets(sets, exercise.metric);
+          const flashing = flashLineId === lineId;
 
           return (
             <li
-              key={`${exerciseIndex}-${exercise.id}`}
-              className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+              key={lineId}
+              id={`exercise-card-${lineId}`}
+              className={`rounded-xl border transition-[box-shadow,background-color,border-color] duration-500 ${
+                flashing
+                  ? "border-emerald-400 bg-emerald-50 shadow-[0_0_0_3px_rgba(16,185,129,0.35)] dark:border-emerald-500 dark:bg-emerald-950/40"
+                  : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+              }`}
             >
-              <button
-                type="button"
-                onClick={() =>
-                  setExpandedExerciseIndex(expanded ? null : exerciseIndex)
-                }
-                className={`flex w-full items-start gap-2 text-left ${
-                  compact ? "gap-2 px-2.5 py-2" : "gap-3 p-3"
-                }`}
-                aria-expanded={expanded}
-              >
-                <span className="min-w-0 flex-1">
-                  <span
-                    className={`block font-medium text-zinc-900 dark:text-zinc-50 ${
-                      compact ? "text-sm leading-snug" : ""
-                    }`}
-                  >
-                    {exercise.name}
-                  </span>
-                  {!compact ? (
-                    <span className="mt-0.5 block text-xs text-zinc-500">
-                      {metricHint(exercise.metric)}
-                      {exerciseNotesById[exercise.id]?.trim()
-                        ? " · has note"
-                        : ""}
+              <div className="flex items-start">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setExpandedExerciseIndex(expanded ? null : exerciseIndex)
+                  }
+                  className={`min-w-0 flex-1 text-left ${
+                    compact ? "px-2.5 py-2" : "p-3"
+                  }`}
+                  aria-expanded={expanded}
+                >
+                  <span className="flex w-full items-start gap-2">
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block font-medium text-zinc-900 dark:text-zinc-50 ${
+                          compact ? "text-sm leading-snug" : ""
+                        }`}
+                      >
+                        {exercise.name}
+                      </span>
+                      {!compact ? (
+                        <span className="mt-0.5 block text-xs text-zinc-500">
+                          {metricHint(exercise.metric)}
+                          {exerciseNotesById[exercise.id]?.trim()
+                            ? " · has note"
+                            : ""}
+                        </span>
+                      ) : null}
+                      {!expanded ? (
+                        <span
+                          className={`block text-zinc-600 dark:text-zinc-300 ${
+                            compact
+                              ? "mt-0.5 line-clamp-1 text-xs"
+                              : "mt-1.5 line-clamp-2 text-sm"
+                          }`}
+                        >
+                          {summary}
+                          {compact && exerciseNotesById[exercise.id]?.trim()
+                            ? " · note"
+                            : ""}
+                        </span>
+                      ) : null}
                     </span>
-                  ) : null}
-                  {!expanded ? (
                     <span
-                      className={`block text-zinc-600 dark:text-zinc-300 ${
-                        compact
-                          ? "mt-0.5 line-clamp-1 text-xs"
-                          : "mt-1.5 line-clamp-2 text-sm"
+                      className={`inline-flex shrink-0 items-center justify-center rounded-full text-zinc-500 ${
+                        compact ? "mt-0 size-7" : "mt-0.5 size-8"
                       }`}
                     >
-                      {summary}
-                      {compact && exerciseNotesById[exercise.id]?.trim()
-                        ? " · note"
-                        : ""}
+                      {expanded ? (
+                        <ChevronUp className="size-4" aria-hidden />
+                      ) : (
+                        <ChevronDown className="size-4" aria-hidden />
+                      )}
+                      <span className="sr-only">
+                        {expanded ? "Collapse" : "Expand"} {exercise.name}
+                      </span>
                     </span>
-                  ) : null}
-                </span>
-                <span
-                  className={`inline-flex shrink-0 items-center justify-center rounded-full text-zinc-500 ${
-                    compact ? "mt-0 size-7" : "mt-0.5 size-8"
-                  }`}
-                >
-                  {expanded ? (
-                    <ChevronUp className="size-4" aria-hidden />
-                  ) : (
-                    <ChevronDown className="size-4" aria-hidden />
-                  )}
-                  <span className="sr-only">
-                    {expanded ? "Collapse" : "Expand"} {exercise.name}
                   </span>
-                </span>
-              </button>
+                </button>
+                <div
+                  className={`flex shrink-0 flex-col gap-0.5 pr-1.5 ${
+                    compact ? "pt-1.5" : "pt-2.5"
+                  }`}
+                  role="group"
+                  aria-label={`Reorder ${exercise.name}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => moveExercise(exerciseIndex, -1)}
+                    disabled={exerciseIndex === 0}
+                    className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                    aria-label={`Move ${exercise.name} up`}
+                  >
+                    <ArrowUp className="size-3.5" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveExercise(exerciseIndex, 1)}
+                    disabled={exerciseIndex >= activeExercises.length - 1}
+                    className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                    aria-label={`Move ${exercise.name} down`}
+                  >
+                    <ArrowDown className="size-3.5" aria-hidden />
+                  </button>
+                </div>
+              </div>
 
               {expanded ? (
                 <div
