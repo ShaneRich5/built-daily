@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import {
+  Check,
   ChevronDown,
   ChevronUp,
+  Copy,
   CopyPlus,
+  Download,
   Pause,
   Play,
   RotateCcw,
@@ -22,6 +25,7 @@ import {
   type ExerciseMetric,
 } from "@/lib/exercise-catalog";
 import {
+  buildWorkoutSessionDoc,
   createLineId,
   setLogToUiSetRow,
   uiSetRowToSetLog,
@@ -31,7 +35,11 @@ import {
   getExerciseHistories,
   type ExerciseHistoryById,
 } from "@/lib/workout-session-repository";
-import { formatSetSummary } from "@/lib/workout-journal-export";
+import {
+  formatSetSummary,
+  formatWorkoutJournalEntry,
+  workoutJournalFilename,
+} from "@/lib/workout-journal-export";
 import type { SetLog } from "@/lib/workout-types";
 import {
   combineToTotalSeconds,
@@ -140,6 +148,44 @@ function formatElapsed(ms: number) {
     return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through */
+  }
+  try {
+    const el = document.createElement("textarea");
+    el.value = text;
+    el.setAttribute("readonly", "");
+    el.style.position = "fixed";
+    el.style.left = "-9999px";
+    document.body.appendChild(el);
+    el.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(el);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+function downloadTextFile(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function metricHint(metric: ExerciseMetric): string {
@@ -619,6 +665,32 @@ export function ActiveWorkoutView({
     await onFinish(buildSnapshot());
   }, [onFinish, buildSnapshot]);
 
+  const journalPreviewDoc = useMemo(
+    () =>
+      buildWorkoutSessionDoc(buildSnapshot(), {
+        status: "in_progress",
+        endedAt: null,
+      }),
+    [buildSnapshot],
+  );
+  const journalText = useMemo(
+    () => formatWorkoutJournalEntry(journalPreviewDoc),
+    [journalPreviewDoc],
+  );
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyJournal = useCallback(async () => {
+    const ok = await copyText(journalText);
+    if (ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    }
+  }, [journalText]);
+
+  const handleDownloadJournal = useCallback(() => {
+    downloadTextFile(workoutJournalFilename(journalPreviewDoc), journalText);
+  }, [journalPreviewDoc, journalText]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex shrink-0 items-start justify-between gap-3">
@@ -742,7 +814,7 @@ export function ActiveWorkoutView({
         onAddCustom={handleAddCustomExercise}
       />
 
-      <ul className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${onDiscard ? "pb-40" : "pb-28"}`}>
+      <ul className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${onDiscard ? "pb-56" : "pb-44"}`}>
         {activeExercises.map((exercise, exerciseIndex) => {
           const sets = setsByExercise[exerciseIndex] ?? [];
           const expanded = expandedExerciseIndex === exerciseIndex;
@@ -868,6 +940,33 @@ export function ActiveWorkoutView({
               ? "No exercises yet — you can still finish to log that you showed up."
               : "Progress saves automatically when you’re signed in. You can leave and continue later from Recent workouts."}
           </p>
+          <div className="mb-2 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => void handleCopyJournal()}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              {copied ? (
+                <>
+                  <Check className="size-4" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="size-4" />
+                  Copy journal
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadJournal}
+              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              <Download className="size-4" />
+              Download .txt
+            </button>
+          </div>
           <button
             type="button"
             onClick={handleFinish}
