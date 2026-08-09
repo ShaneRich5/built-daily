@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Copy, CopyPlus, Download, Play, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Copy, CopyPlus, Download, Play, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ExerciseMetric } from "@/lib/exercise-catalog";
 import {
   formatDurationSec,
+  formatSetSummary,
   formatWorkoutJournalEntry,
   workoutJournalFilename,
 } from "@/lib/workout-journal-export";
@@ -62,6 +63,21 @@ function emptyUiSet(): UiSetRow {
     distanceMiles: "",
     note: "",
   };
+}
+
+/** Compact one-line summary for collapsed exercise cards. */
+function summarizeSessionSets(sets: SetLog[]): string {
+  if (sets.length === 0) return "No sets";
+  const summaries = sets.map(formatSetSummary);
+  const meaningful = summaries.filter((s) => s !== "—");
+  if (meaningful.length === 0) {
+    return `${sets.length} set${sets.length === 1 ? "" : "s"}`;
+  }
+  const allSame = meaningful.every((s) => s === meaningful[0]);
+  if (allSame) {
+    return `${meaningful.length} set${meaningful.length === 1 ? "" : "s"} · ${meaningful[0]}`;
+  }
+  return meaningful.map((s, i) => `${i + 1}. ${s}`).join(" · ");
 }
 
 function setLogToUi(set: SetLog): UiSetRow {
@@ -569,11 +585,37 @@ export function WorkoutSessionDetail({
           </p>
         ) : (
         <ul className="space-y-3">
-          {lines.map((line, lineIndex) => (
+          {lines.map((line, lineIndex) => {
+            const setSummary = summarizeSessionSets(line.sets);
+            const hasExerciseNote = Boolean(
+              exerciseNotes[line.lineId]?.trim(),
+            );
+            return (
             <li
               key={line.lineId}
-              className="space-y-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
+              className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
             >
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-start gap-2 p-3 marker:content-none [&::-webkit-details-marker]:hidden">
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block font-medium text-zinc-900 dark:text-zinc-50">
+                      {line.nameSnapshot || "Untitled exercise"}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-zinc-500">
+                      {setSummary}
+                      {hasExerciseNote ? " · has note" : ""}
+                    </span>
+                  </span>
+                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-zinc-500">
+                    <ChevronDown
+                      className="size-4 transition-transform group-open:rotate-180"
+                      aria-hidden
+                    />
+                    <span className="sr-only">Expand {line.nameSnapshot}</span>
+                  </span>
+                </summary>
+
+                <div className="space-y-3 border-t border-zinc-100 px-3 pb-3 pt-3 dark:border-zinc-800">
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <Label
@@ -702,8 +744,11 @@ export function WorkoutSessionDetail({
                 <Plus className="size-3.5" />
                 Add set
               </Button>
+                </div>
+              </details>
             </li>
-          ))}
+            );
+          })}
         </ul>
         )}
       </section>
