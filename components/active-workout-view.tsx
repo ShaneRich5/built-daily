@@ -15,6 +15,7 @@ import {
   Play,
   Rows3,
   RotateCcw,
+  Replace,
   Timer,
   Trash2,
 } from "lucide-react";
@@ -301,6 +302,10 @@ export function ActiveWorkoutView({
   const [expandedExerciseIndex, setExpandedExerciseIndex] = useState<
     number | null
   >(() => (exercises.length > 0 ? 0 : null));
+  /** When set, that exercise card shows a replacement picker. */
+  const [replacingExerciseIndex, setReplacingExerciseIndex] = useState<
+    number | null
+  >(null);
   const [flashLineId, setFlashLineId] = useState<string | null>(null);
   const [exerciseDensity, setExerciseDensity] =
     useState<ExerciseListDensity>("comfortable");
@@ -637,6 +642,7 @@ export function ActiveWorkoutView({
       ) {
         return;
       }
+      setReplacingExerciseIndex(null);
       setActiveExercises((prev) => prev.filter((_, i) => i !== exerciseIndex));
       setLineIds((ids) => ids.filter((_, i) => i !== exerciseIndex));
       setSetsByExercise((sets) => sets.filter((_, i) => i !== exerciseIndex));
@@ -665,6 +671,86 @@ export function ActiveWorkoutView({
       });
     },
     [activeExercises],
+  );
+
+  const changeExercise = useCallback(
+    (exerciseIndex: number, next: CatalogExercise) => {
+      const current = activeExercises[exerciseIndex];
+      if (!current) return;
+      if (current.id === next.id) {
+        setReplacingExerciseIndex(null);
+        return;
+      }
+
+      const metricChanged = current.metric !== next.metric;
+      const sets = setsByExercise[exerciseIndex] ?? [];
+      const hasSetValues = sets.some(setRowHasValues);
+      if (
+        metricChanged &&
+        hasSetValues &&
+        !window.confirm(
+          `“${next.name}” tracks differently than “${current.name}”. Clear the sets you already logged for this slot?`,
+        )
+      ) {
+        return;
+      }
+
+      setActiveExercises((prev) => {
+        if (!prev[exerciseIndex]) return prev;
+        const copy = [...prev];
+        copy[exerciseIndex] = next;
+        return copy;
+      });
+
+      if (metricChanged) {
+        setSetsByExercise((prev) => {
+          if (!prev[exerciseIndex]) return prev;
+          const copy = [...prev];
+          copy[exerciseIndex] = [emptySetRow()];
+          return copy;
+        });
+        setSetTimerActive((active) =>
+          active?.exerciseIndex === exerciseIndex ? null : active,
+        );
+      }
+
+      setExerciseNotesById((notes) => {
+        const existing = notes[current.id];
+        if (existing === undefined && notes[next.id] === undefined) {
+          return notes;
+        }
+        const copy = { ...notes };
+        if (existing !== undefined) {
+          copy[next.id] = existing;
+          delete copy[current.id];
+        }
+        return copy;
+      });
+
+      setReplacingExerciseIndex(null);
+      const lineId = lineIds[exerciseIndex];
+      if (lineId) setFlashLineId(lineId);
+    },
+    [activeExercises, lineIds, setsByExercise],
+  );
+
+  const handleChangeToCatalog = useCallback(
+    (exerciseIndex: number, exerciseId: string) => {
+      const ex = getCatalogExerciseById(exerciseId);
+      if (!ex) return;
+      changeExercise(exerciseIndex, ex);
+    },
+    [changeExercise],
+  );
+
+  const handleChangeToCustom = useCallback(
+    (exerciseIndex: number, trimmed: string): boolean => {
+      const ex = catalogExerciseFromCustomName(trimmed);
+      if (!ex) return false;
+      changeExercise(exerciseIndex, ex);
+      return true;
+    },
+    [changeExercise],
   );
 
   const handleDiscard = useCallback(async () => {
@@ -961,9 +1047,15 @@ export function ActiveWorkoutView({
               <div className="flex items-start">
                 <button
                   type="button"
-                  onClick={() =>
-                    setExpandedExerciseIndex(expanded ? null : exerciseIndex)
-                  }
+                  onClick={() => {
+                    if (expanded) {
+                      setReplacingExerciseIndex(null);
+                      setExpandedExerciseIndex(null);
+                    } else {
+                      setReplacingExerciseIndex(null);
+                      setExpandedExerciseIndex(exerciseIndex);
+                    }
+                  }}
                   className={`min-w-0 flex-1 text-left ${
                     compact ? "px-2.5 py-2" : "p-3"
                   }`}
@@ -1055,32 +1147,65 @@ export function ActiveWorkoutView({
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => addSet(exerciseIndex)}
-                        className="text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
-                      >
-                        Add set
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeExercise(exerciseIndex)}
-                        className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 dark:hover:text-red-300"
-                        aria-label={`Remove ${exercise.name}`}
-                      >
-                        <Trash2 className="size-3" />
-                        Remove
-                      </button>
+                      {replacingExerciseIndex !== exerciseIndex ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => addSet(exerciseIndex)}
+                            className="text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
+                          >
+                            Add set
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReplacingExerciseIndex(exerciseIndex)
+                            }
+                            className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
+                            aria-label={`Change ${exercise.name}`}
+                          >
+                            <Replace className="size-3" aria-hidden />
+                            Change
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeExercise(exerciseIndex)}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 dark:hover:text-red-300"
+                            aria-label={`Remove ${exercise.name}`}
+                          >
+                            <Trash2 className="size-3" />
+                            Remove
+                          </button>
+                        </>
+                      ) : null}
                     </div>
                     <button
                       type="button"
-                      onClick={() => setExpandedExerciseIndex(null)}
+                      onClick={() => {
+                        setReplacingExerciseIndex(null);
+                        setExpandedExerciseIndex(null);
+                      }}
                       className="text-xs font-semibold text-emerald-700 dark:text-emerald-400"
                     >
                       Done
                     </button>
                   </div>
 
+                  {replacingExerciseIndex === exerciseIndex ? (
+                    <WorkoutAddExerciseCard
+                      embedded
+                      currentCount={0}
+                      replacingName={exercise.name}
+                      onCancelReplace={() => setReplacingExerciseIndex(null)}
+                      onAddCatalog={(id) =>
+                        handleChangeToCatalog(exerciseIndex, id)
+                      }
+                      onAddCustom={(name) =>
+                        handleChangeToCustom(exerciseIndex, name)
+                      }
+                    />
+                  ) : (
+                    <>
                   {!compact ? (
                     <>
                       <CollapsibleNote
@@ -1156,6 +1281,8 @@ export function ActiveWorkoutView({
                       />
                     ))}
                   </div>
+                    </>
+                  )}
                 </div>
               ) : null}
             </li>

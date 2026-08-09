@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Replace } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +40,14 @@ export type WorkoutAddExerciseCardProps = {
   onAddCatalog: (exerciseId: string) => void;
   /** Return true if the name was accepted (clears the input). */
   onAddCustom: (name: string) => boolean;
+  /**
+   * When set, this picker replaces an existing exercise instead of adding.
+   * Pass the current exercise name for the description.
+   */
+  replacingName?: string;
+  onCancelReplace?: () => void;
+  /** Skip Card chrome when nested inside another panel. */
+  embedded?: boolean;
 };
 
 const DEFAULT_MAX = 40;
@@ -49,10 +57,14 @@ export function WorkoutAddExerciseCard({
   maxExercises = DEFAULT_MAX,
   onAddCatalog,
   onAddCustom,
+  replacingName,
+  onCancelReplace,
+  embedded = false,
 }: WorkoutAddExerciseCardProps) {
   const [customName, setCustomName] = useState("");
   const [query, setQuery] = useState("");
-  const atLimit = currentCount >= maxExercises;
+  const isReplace = replacingName !== undefined;
+  const atLimit = !isReplace && currentCount >= maxExercises;
 
   const filtered = useMemo(() => filterCatalogExercises(query), [query]);
 
@@ -64,77 +76,132 @@ export function WorkoutAddExerciseCard({
     }
   }, [customName, onAddCustom]);
 
+  const title = isReplace ? "Change exercise" : "Add Exercise";
+  const description = isReplace
+    ? `Pick a replacement for “${replacingName}”`
+    : "Search machines and free weights, or add your own";
+  const PickIcon = isReplace ? Replace : Plus;
+  const customButtonLabel = isReplace ? "Use Custom" : "Add Custom";
+
+  const body = (
+    <div className={embedded ? "space-y-3" : "space-y-4"}>
+      {embedded ? (
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground">{title}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+          </div>
+          {onCancelReplace ? (
+            <button
+              type="button"
+              onClick={onCancelReplace}
+              className="shrink-0 text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300"
+            >
+              Cancel
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      <Input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search (leg press, lat pulldown, cable…)"
+        aria-label={isReplace ? "Search replacement exercise" : "Search exercises"}
+        autoFocus={embedded && isReplace}
+      />
+      <div
+        className={`grid grid-cols-1 gap-2 overflow-y-auto md:grid-cols-2 ${
+          embedded
+            ? "max-h-[min(16rem,35vh)]"
+            : "max-h-[min(20rem,40vh)]"
+        }`}
+      >
+        {filtered.length === 0 ? (
+          <p className="col-span-full py-4 text-center text-sm text-muted-foreground">
+            No matches. Try another search or add a custom name below.
+          </p>
+        ) : (
+          filtered.map((ex) => (
+            <Button
+              key={ex.id}
+              type="button"
+              variant="outline"
+              className="h-auto min-h-[3rem] w-full justify-between gap-2 px-3 py-2.5 text-left font-normal"
+              disabled={atLimit}
+              onClick={() => onAddCatalog(ex.id)}
+            >
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <PickIcon
+                  className="size-4 shrink-0 text-muted-foreground"
+                  aria-hidden
+                />
+                <span className="truncate font-medium text-foreground">
+                  {ex.name}
+                </span>
+              </span>
+              <Badge variant="secondary" className="shrink-0 font-normal">
+                {metricBadgeLabel(ex.metric)}
+              </Badge>
+            </Button>
+          ))
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+        <Input
+          value={customName}
+          onChange={(e) => setCustomName(e.target.value.slice(0, 200))}
+          placeholder="Custom exercise name"
+          className="sm:flex-1"
+          disabled={atLimit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitCustom();
+          }}
+        />
+        <Button
+          type="button"
+          className="shrink-0 sm:w-36"
+          disabled={atLimit}
+          onClick={submitCustom}
+        >
+          {customButtonLabel}
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
+        {body}
+      </div>
+    );
+  }
+
   return (
     <Card className="gap-6 py-6 shadow-none">
       <CardHeader className="px-6 pb-0">
-        <CardTitle className="text-lg font-semibold tracking-tight">
-          Add Exercise
-        </CardTitle>
-        <CardDescription>
-          Search machines and free weights, or add your own
-        </CardDescription>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              {title}
+            </CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </div>
+          {onCancelReplace ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onCancelReplace}
+            >
+              Cancel
+            </Button>
+          ) : null}
+        </div>
       </CardHeader>
-      <CardContent className="space-y-4 px-6">
-        <Input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search (leg press, lat pulldown, cable…)"
-          aria-label="Search exercises"
-        />
-        <div className="grid max-h-[min(20rem,40vh)] grid-cols-1 gap-2 overflow-y-auto md:grid-cols-2">
-          {filtered.length === 0 ? (
-            <p className="col-span-full py-4 text-center text-sm text-muted-foreground">
-              No matches. Try another search or add a custom name below.
-            </p>
-          ) : (
-            filtered.map((ex) => (
-              <Button
-                key={ex.id}
-                type="button"
-                variant="outline"
-                className="h-auto min-h-[3rem] w-full justify-between gap-2 px-3 py-2.5 text-left font-normal"
-                disabled={atLimit}
-                onClick={() => onAddCatalog(ex.id)}
-              >
-                <span className="flex min-w-0 flex-1 items-center gap-2">
-                  <Plus
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="truncate font-medium text-foreground">
-                    {ex.name}
-                  </span>
-                </span>
-                <Badge variant="secondary" className="shrink-0 font-normal">
-                  {metricBadgeLabel(ex.metric)}
-                </Badge>
-              </Button>
-            ))
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-          <Input
-            value={customName}
-            onChange={(e) => setCustomName(e.target.value.slice(0, 200))}
-            placeholder="Custom exercise name"
-            className="sm:flex-1"
-            disabled={atLimit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submitCustom();
-            }}
-          />
-          <Button
-            type="button"
-            className="shrink-0 sm:w-36"
-            disabled={atLimit}
-            onClick={submitCustom}
-          >
-            Add Custom
-          </Button>
-        </div>
-      </CardContent>
+      <CardContent className="px-6">{body}</CardContent>
     </Card>
   );
 }

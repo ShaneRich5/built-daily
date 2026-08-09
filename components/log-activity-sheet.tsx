@@ -20,7 +20,12 @@ import {
   type ActivityDetailSuggestions,
 } from "@/lib/activity-suggestions";
 import type { SavedActivity } from "@/lib/activity-types";
-import { localDateKeyFromMs, normalizeWorkoutTime, formatActivityDatePreview } from "@/lib/workout-date";
+import { ActivityDatePreview } from "@/components/activity-date-preview";
+import {
+  localDateKeyFromMs,
+  normalizeWorkoutTime,
+  formatActivityDatePreview,
+} from "@/lib/workout-date";
 
 type LogActivitySheetProps = {
   open: boolean;
@@ -30,9 +35,17 @@ type LogActivitySheetProps = {
   defaultDateKey?: string;
 };
 
-function emptyForm() {
+function resolveDefaultDateKey(defaultDateKey?: string): string {
+  if (defaultDateKey && /^\d{4}-\d{2}-\d{2}$/.test(defaultDateKey)) {
+    return defaultDateKey;
+  }
+  return localDateKeyFromMs(Date.now());
+}
+
+function emptyForm(defaultDateKey?: string) {
   return {
     typeId: null as string | null,
+    activityDate: resolveDefaultDateKey(defaultDateKey),
     activityTime: "",
     durationMin: "",
     distanceMiles: "",
@@ -57,6 +70,9 @@ export function LogActivitySheet({
   defaultDateKey,
 }: LogActivitySheetProps) {
   const [typeId, setTypeId] = useState<string | null>(null);
+  const [activityDate, setActivityDate] = useState(() =>
+    resolveDefaultDateKey(defaultDateKey),
+  );
   const [activityTime, setActivityTime] = useState("");
   const [durationMin, setDurationMin] = useState("");
   const [distanceMiles, setDistanceMiles] = useState("");
@@ -69,8 +85,9 @@ export function LogActivitySheet({
 
   useEffect(() => {
     if (!open) return;
+    setActivityDate(resolveDefaultDateKey(defaultDateKey));
     return subscribeRecentActivities(setHistory, { maxDocs: 80 });
-  }, [open]);
+  }, [open, defaultDateKey]);
 
   const selected = typeId ? getActivityTypeById(typeId) : undefined;
   const suggestions = useMemo(
@@ -79,8 +96,9 @@ export function LogActivitySheet({
   );
 
   const resetAndClose = () => {
-    const empty = emptyForm();
+    const empty = emptyForm(defaultDateKey);
     setTypeId(empty.typeId);
+    setActivityDate(empty.activityDate);
     setActivityTime(empty.activityTime);
     setDurationMin(empty.durationMin);
     setDistanceMiles(empty.distanceMiles);
@@ -125,14 +143,15 @@ export function LogActivitySheet({
       setError("Pick an activity type.");
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(activityDate)) {
+      setError("Pick a valid date.");
+      return;
+    }
     setSaving(true);
     setError(null);
     const id = await logActivity({
       activityTypeId: typeId,
-      activityDate:
-        defaultDateKey && /^\d{4}-\d{2}-\d{2}$/.test(defaultDateKey)
-          ? defaultDateKey
-          : localDateKeyFromMs(Date.now()),
+      activityDate,
       activityTime: normalizeWorkoutTime(activityTime),
       durationMin: durationMin ? Number(durationMin) : null,
       distanceMiles: distanceMiles ? Number(distanceMiles) : null,
@@ -150,11 +169,7 @@ export function LogActivitySheet({
 
   if (!open) return null;
 
-  const journalDateKey =
-    defaultDateKey && /^\d{4}-\d{2}-\d{2}$/.test(defaultDateKey)
-      ? defaultDateKey
-      : localDateKeyFromMs(Date.now());
-  const journalPreview = formatActivityDatePreview(journalDateKey);
+  const journalPreview = formatActivityDatePreview(activityDate);
 
   return (
     <div
@@ -253,15 +268,31 @@ export function LogActivitySheet({
                 </div>
               ) : null}
 
-              <div className="space-y-2">
-                <Label htmlFor="activity-time">Time (optional)</Label>
-                <Input
-                  id="activity-time"
-                  type="time"
-                  value={activityTime}
-                  onChange={(e) => setActivityTime(e.target.value)}
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
+                  <Label htmlFor="activity-date">Date</Label>
+                  <Input
+                    id="activity-date"
+                    type="date"
+                    value={activityDate}
+                    onChange={(e) => setActivityDate(e.target.value)}
+                    required
+                  />
+                  <ActivityDatePreview dateKey={activityDate} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="activity-time">Time (optional)</Label>
+                  <Input
+                    id="activity-time"
+                    type="time"
+                    value={activityTime}
+                    onChange={(e) => setActivityTime(e.target.value)}
+                  />
+                </div>
               </div>
+              <p className="text-[11px] text-zinc-400">
+                Leave time blank if you only know the day.
+              </p>
 
               <div className="space-y-2">
                 <Label htmlFor="activity-duration">Duration (minutes)</Label>
