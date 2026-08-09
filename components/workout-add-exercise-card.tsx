@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Replace } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,12 @@ export function WorkoutAddExerciseCard({
   const [query, setQuery] = useState("");
   const isReplace = replacingName !== undefined;
   const atLimit = !isReplace && currentCount >= maxExercises;
+  const emptyWorkout = currentCount === 0;
+  const [addPanelOpen, setAddPanelOpen] = useState(emptyWorkout);
+
+  useEffect(() => {
+    setAddPanelOpen(emptyWorkout);
+  }, [emptyWorkout]);
 
   const filtered = useMemo(() => filterCatalogExercises(query), [query]);
 
@@ -191,12 +197,11 @@ export function WorkoutAddExerciseCard({
   }
 
   if (collapsible && !isReplace) {
-    const empty = currentCount === 0;
     return (
       <details
-        key={empty ? "empty" : "filled"}
         className="group shrink-0 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-        defaultOpen={empty}
+        open={addPanelOpen}
+        onToggle={(e) => setAddPanelOpen(e.currentTarget.open)}
       >
         <summary className="cursor-pointer list-none px-3 py-2.5 marker:content-none [&::-webkit-details-marker]:hidden">
           <span className="flex items-center justify-between gap-2">
@@ -212,7 +217,7 @@ export function WorkoutAddExerciseCard({
                 <span className="truncate text-xs font-normal text-zinc-400">
                   Limit reached
                 </span>
-              ) : empty ? (
+              ) : emptyWorkout ? (
                 <span className="truncate text-xs font-normal text-zinc-400">
                   Search or add custom
                 </span>
