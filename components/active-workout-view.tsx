@@ -11,6 +11,7 @@ import {
   CopyPlus,
   Download,
   List,
+  MoreHorizontal,
   Pause,
   Play,
   Rows3,
@@ -23,6 +24,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { ExerciseHistoryControls } from "@/components/exercise-history-controls";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   catalogExerciseFromCustomName,
   getCatalogExerciseById,
@@ -1027,7 +1036,7 @@ export function ActiveWorkoutView({
       <ul
         className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${
           compact ? "gap-1.5" : "gap-3"
-        } ${onDiscard ? "pb-56" : "pb-44"}`}
+        } ${onDiscard ? "pb-40" : "pb-36"}`}
       >
         {activeExercises.length === 0 ? (
           <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center dark:border-zinc-800 dark:bg-zinc-950/40">
@@ -1304,59 +1313,78 @@ export function ActiveWorkoutView({
         })}
       </ul>
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-5">
           <p className="mb-2 text-center text-xs text-zinc-500">
             {activeExercises.length === 0
               ? "No exercises yet — you can still finish to log that you showed up."
               : "Progress saves automatically when you’re signed in. You can leave and continue later from Recent workouts."}
           </p>
-          <div className="mb-2 flex flex-col gap-2 sm:flex-row">
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-lg"
+                    className="size-12 shrink-0 rounded-xl"
+                    aria-label="More actions"
+                  />
+                }
+              >
+                <MoreHorizontal className="size-5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                sideOffset={8}
+                className="min-w-52 w-56"
+              >
+                <DropdownMenuItem
+                  className="min-h-10 gap-2"
+                  onClick={() => void handleCopyJournal()}
+                >
+                  {copied ? (
+                    <Check className="size-4" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  {copied ? "Copied" : "Copy journal"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="min-h-10 gap-2"
+                  onClick={handleDownloadJournal}
+                >
+                  <Download className="size-4" />
+                  Download .txt
+                </DropdownMenuItem>
+                {onDiscard ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      variant="destructive"
+                      className="min-h-10 gap-2"
+                      onClick={() => void handleDiscard()}
+                    >
+                      <Trash2 className="size-4" />
+                      Delete workout
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <button
               type="button"
-              onClick={() => void handleCopyJournal()}
-              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
+              onClick={handleFinish}
+              className="flex h-12 min-w-0 flex-1 items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white dark:bg-emerald-500"
             >
-              {copied ? (
-                <>
-                  <Check className="size-4" />
-                  Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="size-4" />
-                  Copy journal
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadJournal}
-              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
-            >
-              <Download className="size-4" />
-              Download .txt
+              {activeExercises.length === 0
+                ? "Finish without details"
+                : "Finish workout"}
             </button>
           </div>
-          <button
-            type="button"
-            onClick={handleFinish}
-            className="flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white dark:bg-emerald-500"
-          >
-            {activeExercises.length === 0
-              ? "Finish without details"
-              : "Finish workout"}
-          </button>
-          {onDiscard ? (
-            <button
-              type="button"
-              onClick={() => void handleDiscard()}
-              className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-            >
-              <Trash2 className="size-4" />
-              Delete workout
-            </button>
-          ) : null}
         </div>
       </div>
     </div>

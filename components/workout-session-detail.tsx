@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronDown, Copy, CopyPlus, Download, Play, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Copy, CopyPlus, Download, MoreHorizontal, Play, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -759,66 +766,76 @@ export function WorkoutSessionDetail({
         </p>
       ) : null}
 
-      <Button
-        type="button"
-        variant="outline"
-        className="h-11 w-full gap-2 rounded-xl"
-        disabled={creatingTemplate || previewDoc.lines.length === 0}
-        onClick={() => void handleCreateTemplate()}
-      >
-        <CopyPlus className="size-4" />
-        {creatingTemplate ? "Creating template…" : "Save as template"}
-      </Button>
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+        <div className="mx-auto flex w-full max-w-2xl items-center gap-2 px-4 sm:px-5">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-lg"
+                  className="size-12 shrink-0 rounded-xl"
+                  aria-label="More actions"
+                />
+              }
+            >
+              <MoreHorizontal className="size-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              align="start"
+              sideOffset={8}
+              className="min-w-52 w-56"
+            >
+              <DropdownMenuItem
+                className="min-h-10 gap-2"
+                disabled={creatingTemplate || previewDoc.lines.length === 0}
+                onClick={() => void handleCreateTemplate()}
+              >
+                <CopyPlus className="size-4" />
+                {creatingTemplate ? "Creating template…" : "Save as template"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="min-h-10 gap-2"
+                onClick={() => void handleCopy()}
+              >
+                {copied ? (
+                  <Check className="size-4" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
+                {copied ? "Copied" : "Copy journal"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="min-h-10 gap-2"
+                onClick={() =>
+                  downloadTextFile(
+                    workoutJournalFilename(previewDoc),
+                    journalText,
+                  )
+                }
+              >
+                <Download className="size-4" />
+                Download .txt
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                className="min-h-10 gap-2"
+                disabled={deleting}
+                onClick={() => void handleDelete()}
+              >
+                <Trash2 className="size-4" />
+                {deleting ? "Deleting…" : "Delete workout"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 flex-1 gap-2 rounded-xl"
-          onClick={() => void handleCopy()}
-        >
-          {copied ? (
-            <>
-              <Check className="size-4" />
-              Copied
-            </>
-          ) : (
-            <>
-              <Copy className="size-4" />
-              Copy journal
-            </>
-          )}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="h-11 flex-1 gap-2 rounded-xl"
-          onClick={() =>
-            downloadTextFile(workoutJournalFilename(previewDoc), journalText)
-          }
-        >
-          <Download className="size-4" />
-          Download .txt
-        </Button>
-      </div>
-
-      <Button
-        type="button"
-        variant="ghost"
-        className="h-11 w-full gap-2 rounded-xl text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-400 dark:hover:bg-red-950/40 dark:hover:text-red-300"
-        disabled={deleting}
-        onClick={() => void handleDelete()}
-      >
-        <Trash2 className="size-4" />
-        {deleting ? "Deleting…" : "Delete workout"}
-      </Button>
-
-      <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-        <div className="mx-auto w-full max-w-2xl px-4 sm:px-5">
           <Button
             type="button"
             size="lg"
-            className="h-12 w-full gap-2 rounded-xl bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-600/90 dark:bg-emerald-500 dark:hover:bg-emerald-500/90"
+            className="h-12 min-w-0 flex-1 gap-2 rounded-xl bg-emerald-600 text-base font-semibold text-white hover:bg-emerald-600/90 dark:bg-emerald-500 dark:hover:bg-emerald-500/90"
             disabled={!canSave || saving}
             onClick={() => void handleSave()}
           >
