@@ -1029,6 +1029,18 @@ export function ActiveWorkoutView({
           compact ? "gap-1.5" : "gap-3"
         } ${onDiscard ? "pb-56" : "pb-44"}`}
       >
+        {activeExercises.length === 0 ? (
+          <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center dark:border-zinc-800 dark:bg-zinc-950/40">
+            <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+              No exercises yet
+            </p>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              Open Add Exercise above to search the catalog or add a custom
+              name. You can still finish without details if you just want to
+              log that you showed up.
+            </p>
+          </li>
+        ) : null}
         {activeExercises.map((exercise, exerciseIndex) => {
           const sets = setsByExercise[exerciseIndex] ?? [];
           const lineId = lineIds[exerciseIndex] ?? `${exerciseIndex}-${exercise.id}`;
