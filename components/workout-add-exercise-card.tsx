@@ -48,6 +48,11 @@ export type WorkoutAddExerciseCardProps = {
   onCancelReplace?: () => void;
   /** Skip Card chrome when nested inside another panel. */
   embedded?: boolean;
+  /**
+   * Collapse the catalog behind a compact summary (active workout).
+   * Opens by default when there are no exercises yet.
+   */
+  collapsible?: boolean;
 };
 
 const DEFAULT_MAX = 40;
@@ -60,6 +65,7 @@ export function WorkoutAddExerciseCard({
   replacingName,
   onCancelReplace,
   embedded = false,
+  collapsible = false,
 }: WorkoutAddExerciseCardProps) {
   const [customName, setCustomName] = useState("");
   const [query, setQuery] = useState("");
@@ -84,7 +90,7 @@ export function WorkoutAddExerciseCard({
   const customButtonLabel = isReplace ? "Use Custom" : "Add Custom";
 
   const body = (
-    <div className={embedded ? "space-y-3" : "space-y-4"}>
+    <div className={embedded || collapsible ? "space-y-3" : "space-y-4"}>
       {embedded ? (
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -112,7 +118,7 @@ export function WorkoutAddExerciseCard({
       />
       <div
         className={`grid grid-cols-1 gap-2 overflow-y-auto md:grid-cols-2 ${
-          embedded
+          embedded || collapsible
             ? "max-h-[min(16rem,35vh)]"
             : "max-h-[min(20rem,40vh)]"
         }`}
@@ -168,6 +174,11 @@ export function WorkoutAddExerciseCard({
           {customButtonLabel}
         </Button>
       </div>
+      {atLimit ? (
+        <p className="text-xs text-muted-foreground">
+          You’ve reached the {maxExercises}-exercise limit for this workout.
+        </p>
+      ) : null}
     </div>
   );
 
@@ -176,6 +187,50 @@ export function WorkoutAddExerciseCard({
       <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-900/50">
         {body}
       </div>
+    );
+  }
+
+  if (collapsible && !isReplace) {
+    const empty = currentCount === 0;
+    return (
+      <details
+        key={empty ? "empty" : "filled"}
+        className="group shrink-0 rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+        defaultOpen={empty}
+      >
+        <summary className="cursor-pointer list-none px-3 py-2.5 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-2">
+            <span className="inline-flex min-w-0 items-center gap-2">
+              <Plus
+                className="size-4 shrink-0 text-zinc-500 group-open:hidden"
+                aria-hidden
+              />
+              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                {title}
+              </span>
+              {atLimit ? (
+                <span className="truncate text-xs font-normal text-zinc-400">
+                  Limit reached
+                </span>
+              ) : empty ? (
+                <span className="truncate text-xs font-normal text-zinc-400">
+                  Search or add custom
+                </span>
+              ) : null}
+            </span>
+            <span className="shrink-0 text-xs font-medium text-zinc-400 underline-offset-2 group-open:hidden group-hover:text-zinc-600 group-hover:underline dark:group-hover:text-zinc-300">
+              Open
+            </span>
+            <span className="hidden shrink-0 text-xs font-medium text-zinc-400 group-open:inline dark:text-zinc-500">
+              Close
+            </span>
+          </span>
+        </summary>
+        <div className="border-t border-zinc-100 px-3 pb-3 pt-3 dark:border-zinc-800">
+          <p className="mb-3 text-xs text-zinc-500">{description}</p>
+          {body}
+        </div>
+      </details>
     );
   }
 

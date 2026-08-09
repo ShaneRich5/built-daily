@@ -957,7 +957,7 @@ export function ActiveWorkoutView({
         </Link>
       </header>
 
-      <section className="shrink-0 space-y-3 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="shrink-0 space-y-2 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
         <WorkoutMetaFields
           title={title}
           workoutDate={workoutDate}
@@ -966,6 +966,7 @@ export function ActiveWorkoutView({
           onWorkoutDateChange={setWorkoutDate}
           onWorkoutTimeChange={setWorkoutTime}
           titleFallbackMs={sessionStartedAtMs}
+          collapsible
         />
         <CollapsibleNote
           id="workout-session-note"
@@ -982,6 +983,7 @@ export function ActiveWorkoutView({
         maxExercises={MAX_SESSION_EXERCISES}
         onAddCatalog={handleAddCatalogExercise}
         onAddCustom={handleAddCustomExercise}
+        collapsible
       />
 
       <div className="flex shrink-0 items-center justify-between gap-2">

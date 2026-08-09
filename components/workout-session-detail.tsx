@@ -15,7 +15,6 @@ import {
   workoutJournalFilename,
 } from "@/lib/workout-journal-export";
 import {
-  formatSessionJournalMeta,
   isDefaultWorkoutTitle,
   normalizeWorkoutDate,
   normalizeWorkoutTime,
@@ -243,16 +242,10 @@ export function WorkoutSessionDetail({
     (lines.every((l) => l.sets.length > 0) &&
       lines.reduce((acc, l) => acc + l.sets.length, 0) > 0);
 
-  const metaParts = [
-    formatSessionJournalMeta(
-      normalizeWorkoutDate(workoutDate),
-      normalizeWorkoutTime(workoutTime),
-      (base.endedAt ?? base.startedAt).getTime(),
-    ),
+  const sessionDurationLabel =
     base.activeDurationSec != null && base.activeDurationSec > 0
       ? formatDurationSec(base.activeDurationSec)
-      : null,
-  ].filter(Boolean);
+      : null;
 
   const updateSetField = (
     lineIndex: number,
@@ -498,11 +491,15 @@ export function WorkoutSessionDetail({
           <ArrowLeft className="size-4" />
           Back
         </Link>
-        <header className="space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
+
+        <section className="space-y-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
               Finished
             </p>
+            {sessionDurationLabel ? (
+              <p className="text-xs text-zinc-500">{sessionDurationLabel}</p>
+            ) : null}
           </div>
           <WorkoutMetaFields
             title={title}
@@ -512,10 +509,39 @@ export function WorkoutSessionDetail({
             onWorkoutDateChange={setWorkoutDate}
             onWorkoutTimeChange={setWorkoutTime}
             titleFallbackMs={base.startedAt.getTime()}
-            compact
+            collapsible
           />
-          <p className="text-sm text-zinc-500">{metaParts.join(" · ")}</p>
-        </header>
+          <details className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-2 py-1.5 dark:border-zinc-800 dark:bg-zinc-900/40">
+            <summary className="cursor-pointer list-none text-xs font-medium text-zinc-600 marker:content-none dark:text-zinc-400 [&::-webkit-details-marker]:hidden">
+              <span className="underline-offset-2 hover:underline">
+                Workout note
+              </span>
+              <span className="ml-1.5 font-normal text-zinc-400">(optional)</span>
+              {workoutNote.trim() ? (
+                <span
+                  className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
+                  aria-hidden
+                >
+                  · has text
+                </span>
+              ) : null}
+            </summary>
+            <div className="mt-2">
+              <Label htmlFor="workout-note" className="sr-only">
+                Workout note
+              </Label>
+              <Textarea
+                id="workout-note"
+                value={workoutNote}
+                onChange={(e) => setWorkoutNote(e.target.value)}
+                maxLength={NOTE_LIMITS.workoutNote}
+                rows={2}
+                placeholder="How the session felt…"
+                className="rounded-md"
+              />
+            </div>
+          </details>
+        </section>
       </div>
 
       <Button
@@ -528,19 +554,6 @@ export function WorkoutSessionDetail({
         <Play className="size-4" />
         {reopening ? "Reopening…" : "Move back to in progress"}
       </Button>
-
-      <section className="space-y-2">
-        <Label htmlFor="workout-note">Notes</Label>
-        <Textarea
-          id="workout-note"
-          value={workoutNote}
-          onChange={(e) => setWorkoutNote(e.target.value)}
-          maxLength={NOTE_LIMITS.workoutNote}
-          rows={3}
-          placeholder="How the session felt…"
-          className="rounded-xl"
-        />
-      </section>
 
       <section className="space-y-3" aria-labelledby="exercises-heading">
         <h2
