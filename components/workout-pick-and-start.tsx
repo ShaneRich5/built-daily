@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { Play, Plus } from "lucide-react";
+import { ChevronDown, Play, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
   useMemo,
-  useReducer,
   useState,
 } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { filterCatalogExercises } from "@/lib/exercise-catalog";
+import {
+  filterCatalogExercises,
+  getCatalogExerciseById,
+} from "@/lib/exercise-catalog";
 import type { PlanLine } from "@/lib/workout-types";
 import {
   subscribeUserWorkoutPlans,
@@ -25,44 +27,6 @@ type TemplateMeta = {
   exerciseCount: number;
   lines: PlanLine[];
 };
-
-type SelectedLibrary = TemplateMeta | null;
-
-type PickState = {
-  library: SelectedLibrary;
-  exerciseIds: string[];
-};
-
-type PickAction =
-  | { type: "toggleTemplate"; template: TemplateMeta }
-  | { type: "toggleExercise"; exerciseId: string };
-
-function pickReducer(state: PickState, action: PickAction): PickState {
-  switch (action.type) {
-    case "toggleTemplate": {
-      const t = action.template;
-      const off =
-        state.library?.kind === "template" && state.library.id === t.id;
-      if (off) {
-        return { ...state, library: null };
-      }
-      return {
-        library: t,
-        exerciseIds: t.lines.map((line) => line.exerciseId),
-      };
-    }
-    case "toggleExercise": {
-      const id = action.exerciseId;
-      const has = state.exerciseIds.includes(id);
-      return {
-        ...state,
-        exerciseIds: has
-          ? state.exerciseIds.filter((x) => x !== id)
-          : [...state.exerciseIds, id],
-      };
-    }
-  }
-}
 
 function toTemplateMeta(p: SavedWorkoutPlan): TemplateMeta {
   return {
@@ -78,44 +42,77 @@ export function WorkoutPickAndStart() {
   const router = useRouter();
   const { user, firebaseReady } = useAuth();
   const savedPlans = useSavedWorkoutPlans(user, firebaseReady);
-  const [pick, dispatch] = useReducer(pickReducer, {
-    library: null,
-    exerciseIds: [],
-  });
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateMeta | null>(
+    null,
+  );
+  const [exerciseIds, setExerciseIds] = useState<string[]>([]);
   const [exerciseQuery, setExerciseQuery] = useState("");
+  const [exercisesOpen, setExercisesOpen] = useState(true);
 
   const filteredExercises = useMemo(
     () => filterCatalogExercises(exerciseQuery),
     [exerciseQuery],
   );
 
-  const toggleTemplate = useCallback((t: TemplateMeta) => {
-    dispatch({ type: "toggleTemplate", template: t });
+  const selectedExercises = useMemo(
+    () =>
+      exerciseIds
+        .map((id) => {
+          const catalog = getCatalogExerciseById(id);
+          if (catalog) return catalog;
+          const fromTemplate = selectedTemplate?.lines.find(
+            (line) => line.exerciseId === id,
+          );
+          if (!fromTemplate) return null;
+          return {
+            id: fromTemplate.exerciseId,
+            name: fromTemplate.nameSnapshot,
+          };
+        })
+        .filter((ex): ex is { id: string; name: string } => ex != null),
+    [exerciseIds, selectedTemplate],
+  );
+
+  const selectedIdSet = useMemo(() => new Set(exerciseIds), [exerciseIds]);
+
+  const toggleTemplate = useCallback((template: TemplateMeta) => {
+    setSelectedTemplate((current) =>
+      current?.id === template.id ? null : template,
+    );
   }, []);
 
-  const toggleExercise = useCallback((id: string) => {
-    dispatch({ type: "toggleExercise", exerciseId: id });
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    setExerciseIds(selectedTemplate.lines.map((line) => line.exerciseId));
+    setExercisesOpen(true);
+  }, [selectedTemplate]);
+
+  const toggleExercise = useCallback((exerciseId: string) => {
+    setSelectedTemplate(null);
+    setExerciseIds((prev) =>
+      prev.includes(exerciseId)
+        ? prev.filter((id) => id !== exerciseId)
+        : [...prev, exerciseId],
+    );
   }, []);
 
-  const selectedPlanLabel = useMemo(() => {
-    if (!pick.library) return null;
-    return pick.library.name;
-  }, [pick.library]);
-
-  const planIdForUrl = useMemo(() => {
-    return pick.library?.id ?? null;
-  }, [pick.library]);
+  const removeExercise = useCallback((exerciseId: string) => {
+    setSelectedTemplate(null);
+    setExerciseIds((prev) => prev.filter((id) => id !== exerciseId));
+  }, []);
 
   const startWorkout = useCallback(() => {
     const params = new URLSearchParams();
-    if (pick.exerciseIds.length > 0) {
-      params.set("e", pick.exerciseIds.join(","));
+    if (exerciseIds.length > 0) {
+      params.set("e", exerciseIds.join(","));
     }
-    if (selectedPlanLabel) params.set("t", selectedPlanLabel);
-    if (planIdForUrl) params.set("p", planIdForUrl);
+    if (selectedTemplate) {
+      params.set("t", selectedTemplate.name);
+      params.set("p", selectedTemplate.id);
+    }
     const qs = params.toString();
     router.push(qs ? `/workout?${qs}` : "/workout");
-  }, [router, pick.exerciseIds, selectedPlanLabel, planIdForUrl]);
+  }, [router, exerciseIds, selectedTemplate]);
 
   const startTemplate = useCallback(
     (template: TemplateMeta) => {
@@ -131,8 +128,6 @@ export function WorkoutPickAndStart() {
 
   return (
     <div className="space-y-6">
-      
-
       <section className="space-y-3" aria-labelledby="yours-heading">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <h2
@@ -183,9 +178,7 @@ export function WorkoutPickAndStart() {
           <ul className="space-y-2">
             {savedPlans.map((p) => {
               const meta = toTemplateMeta(p);
-              const selected =
-                pick.library?.kind === "template" &&
-                pick.library.id === meta.id;
+              const selected = selectedTemplate?.id === meta.id;
               return (
                 <li key={p.id}>
                   <div
@@ -232,82 +225,135 @@ export function WorkoutPickAndStart() {
         )}
       </section>
 
-      <section className="space-y-3" aria-labelledby="exercises-heading">
-        <div className="flex items-end justify-between gap-2">
-          <h2
-            id="exercises-heading"
-            className="text-sm font-semibold uppercase tracking-wide text-zinc-500"
+      <section
+        className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+        aria-labelledby="exercises-heading"
+      >
+        <button
+          type="button"
+          onClick={() => setExercisesOpen((open) => !open)}
+          className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+          aria-expanded={exercisesOpen}
+          aria-controls="exercises-picker-panel"
+        >
+          <span className="min-w-0">
+            <span
+              id="exercises-heading"
+              className="block text-sm font-semibold uppercase tracking-wide text-zinc-500"
+            >
+              Exercises for this session
+            </span>
+            <span className="mt-0.5 block text-xs font-medium tabular-nums text-zinc-500">
+              {exerciseIds.length === 0
+                ? "None selected"
+                : `${exerciseIds.length} selected`}
+            </span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 pt-0.5 text-xs font-medium text-zinc-400">
+            {exercisesOpen ? "Close" : "Open"}
+            <ChevronDown
+              className={`size-4 transition-transform ${exercisesOpen ? "rotate-180" : ""}`}
+              aria-hidden
+            />
+          </span>
+        </button>
+
+        {selectedExercises.length > 0 ? (
+          <ul
+            className="flex flex-wrap gap-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800"
+            aria-label="Selected exercises"
           >
-            Exercises for this session
-          </h2>
-          <span className="text-xs text-zinc-400">Tap to toggle</span>
-        </div>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Optionally pick moves now, or start empty and add exercises during the
-          session. Choosing a template above fills this list.
-        </p>
-        <input
-          type="search"
-          value={exerciseQuery}
-          onChange={(e) => setExerciseQuery(e.target.value)}
-          placeholder="Search exercises (e.g. leg press, cable…)"
-          className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
-          aria-label="Search exercises"
-        />
-        <ul className="grid max-h-[min(28rem,55vh)] grid-cols-1 gap-2 overflow-y-auto md:grid-cols-2">
-          {filteredExercises.length === 0 ? (
-            <li className="col-span-full rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
-              No exercises match “{exerciseQuery.trim()}”.
-            </li>
-          ) : (
-            filteredExercises.map((ex) => {
-            const on = pick.exerciseIds.includes(ex.id);
-            return (
+            {selectedExercises.map((ex) => (
               <li key={ex.id}>
                 <button
                   type="button"
-                  aria-pressed={on}
-                  onClick={() => toggleExercise(ex.id)}
-                  className={`flex h-full min-h-[3rem] w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                    on
-                      ? "border-emerald-600 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950/40"
-                      : "border-zinc-200 bg-white hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
-                  }`}
+                  onClick={() => removeExercise(ex.id)}
+                  className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-full border border-emerald-600 bg-emerald-50 px-3 text-xs font-semibold text-emerald-900 dark:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-200"
+                  aria-label={`Remove ${ex.name}`}
                 >
-                  <span className="min-w-0 truncate font-medium text-zinc-900 dark:text-zinc-50">
-                    {ex.name}
-                  </span>
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
-                      on
-                        ? "border-emerald-600 bg-emerald-600 text-white"
-                        : "border-zinc-200 text-zinc-400 dark:border-zinc-700"
-                    }`}
-                  >
-                    {on ? "✓" : "+"}
-                  </span>
+                  <span className="truncate">{ex.name}</span>
+                  <X className="size-3.5 shrink-0 opacity-70" aria-hidden />
                 </button>
               </li>
-            );
-          })
-          )}
-        </ul>
-      </section>
+            ))}
+          </ul>
+        ) : null}
 
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={startWorkout}
-          className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition active:scale-[0.99] dark:bg-zinc-50 dark:text-zinc-900"
-        >
-          {pick.exerciseIds.length === 0
-            ? "Start empty workout"
-            : "Start workout"}
-        </button>
-        <p className="text-center text-xs text-zinc-500">
-          Finishing a session saves it to your account when you are signed in.
-        </p>
-      </div>
+        {exercisesOpen ? (
+          <div
+            id="exercises-picker-panel"
+            className="space-y-3 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800"
+          >
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Tap exercises below to add or remove them. Choosing a template
+              above fills this list.
+            </p>
+            <input
+              type="search"
+              value={exerciseQuery}
+              onChange={(e) => setExerciseQuery(e.target.value)}
+              placeholder="Search exercises (e.g. leg press, cable…)"
+              className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
+              aria-label="Search exercises"
+            />
+            <ul className="grid max-h-[min(28rem,55vh)] grid-cols-1 gap-2 overflow-y-auto overscroll-contain md:grid-cols-2">
+              {filteredExercises.length === 0 ? (
+                <li className="col-span-full rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
+                  No exercises match “{exerciseQuery.trim()}”.
+                </li>
+              ) : (
+                filteredExercises.map((ex) => {
+                  const on = selectedIdSet.has(ex.id);
+                  return (
+                    <li key={ex.id}>
+                      <button
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleExercise(ex.id)}
+                        className={`flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition active:scale-[0.99] ${
+                          on
+                            ? "border-emerald-600 bg-emerald-50 shadow-[inset_0_0_0_1px_rgba(5,150,105,0.35)] dark:border-emerald-500 dark:bg-emerald-950/40"
+                            : "border-zinc-200 bg-zinc-50 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                        }`}
+                      >
+                        <span className="min-w-0 truncate font-medium text-zinc-900 dark:text-zinc-50">
+                          {ex.name}
+                        </span>
+                        <span
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                            on
+                              ? "border-emerald-600 bg-emerald-600 text-white"
+                              : "border-zinc-200 text-zinc-400 dark:border-zinc-700"
+                          }`}
+                        >
+                          {on ? "✓" : "+"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>
+        ) : null}
+
+        <div className="space-y-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={startWorkout}
+            className="flex h-12 w-full items-center justify-center rounded-xl bg-zinc-900 text-base font-semibold text-white transition active:scale-[0.99] dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            {exerciseIds.length === 0
+              ? "Start empty workout"
+              : `Start workout · ${exerciseIds.length}`}
+          </button>
+          <p className="text-center text-xs text-zinc-500">
+            {exercisesOpen
+              ? "Finishing a session saves it to your account when you are signed in."
+              : "Tap Open above to pick or change exercises. You can also start empty."}
+          </p>
+        </div>
+      </section>
     </div>
   );
 }
