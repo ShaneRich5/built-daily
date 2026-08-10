@@ -874,10 +874,19 @@ export function ActiveWorkoutView({
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <header className="flex shrink-0 items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-            In progress
-          </p>
-          <p className="mt-1 text-xs text-zinc-500">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 dark:border-amber-900/60 dark:bg-amber-950/40">
+            <span
+              className="relative flex size-2 shrink-0"
+              aria-hidden
+            >
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-400 opacity-60" />
+              <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+              In progress
+            </p>
+          </div>
+          <p className="mt-2 text-xs text-zinc-500">
             {formatSessionVolumeMeta(
               activeExercises.length,
               Number(setCountLabel),
