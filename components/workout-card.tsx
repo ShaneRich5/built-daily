@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { formatSessionVolumeMeta } from "@/lib/workout-date";
 
 export type WorkoutCardProps = {
@@ -9,6 +10,9 @@ export type WorkoutCardProps = {
   previewNames?: string[];
   href?: string;
   status?: "completed" | "in_progress";
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 };
 
 export function WorkoutCard({
@@ -19,6 +23,9 @@ export function WorkoutCard({
   previewNames,
   href,
   status = "completed",
+  selectable = false,
+  selected = false,
+  onToggleSelect,
 }: WorkoutCardProps) {
   const isInProgress = status === "in_progress";
   const meta = formatSessionVolumeMeta(exerciseCount, setCount, status);
@@ -49,7 +56,7 @@ export function WorkoutCard({
       {preview ? (
         <span className="truncate text-xs text-zinc-400">{preview}</span>
       ) : null}
-      {isInProgress ? (
+      {isInProgress && !selectable ? (
         <span className="pt-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
           Tap to continue
         </span>
@@ -57,9 +64,38 @@ export function WorkoutCard({
     </>
   );
 
-  const className = isInProgress
-    ? "flex w-full flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-left dark:border-amber-900/60 dark:bg-amber-950/20"
-    : "flex w-full flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-4 text-left dark:border-zinc-800 dark:bg-zinc-950";
+  const surfaceClass = isInProgress
+    ? "rounded-xl border border-amber-200 bg-amber-50/50 p-4 text-left dark:border-amber-900/60 dark:bg-amber-950/20"
+    : "rounded-xl border border-zinc-200 bg-white p-4 text-left dark:border-zinc-800 dark:bg-zinc-950";
+
+  if (selectable) {
+    return (
+      <button
+        type="button"
+        onClick={onToggleSelect}
+        aria-pressed={selected}
+        className={`flex w-full items-start gap-3 ${surfaceClass} transition active:scale-[0.99] ${
+          selected
+            ? "border-emerald-600 bg-emerald-50/80 dark:border-emerald-500 dark:bg-emerald-950/30"
+            : ""
+        }`}
+      >
+        <span
+          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border ${
+            selected
+              ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500"
+              : "border-zinc-300 bg-white text-transparent dark:border-zinc-600 dark:bg-zinc-950"
+          }`}
+          aria-hidden
+        >
+          <Check className="size-3.5" />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1">{body}</span>
+      </button>
+    );
+  }
+
+  const className = `flex w-full flex-col gap-1 ${surfaceClass}`;
 
   if (href) {
     return (

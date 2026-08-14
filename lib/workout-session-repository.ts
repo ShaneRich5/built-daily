@@ -475,6 +475,24 @@ export async function getWorkoutSession(
   return { id: snap.id, session };
 }
 
+/** Load several sessions, preserving the given id order. Missing ids are skipped. */
+export async function getWorkoutSessions(
+  sessionIds: string[],
+): Promise<SavedWorkoutSession[]> {
+  const unique = [...new Set(sessionIds.filter(Boolean))];
+  if (unique.length === 0) return [];
+  const rows = await Promise.all(unique.map((id) => getWorkoutSession(id)));
+  const byId = new Map(
+    rows.filter((row): row is SavedWorkoutSession => row !== null).map((row) => [row.id, row]),
+  );
+  const out: SavedWorkoutSession[] = [];
+  for (const id of sessionIds) {
+    const row = byId.get(id);
+    if (row) out.push(row);
+  }
+  return out;
+}
+
 /** @deprecated Use getWorkoutSession */
 export const getCompletedWorkoutSession = getWorkoutSession;
 

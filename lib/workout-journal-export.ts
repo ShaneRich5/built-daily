@@ -144,3 +144,20 @@ export function workoutJournalFilename(doc: WorkoutSessionDoc): string {
       .replace(/^-|-$/g, "");
   return `${dateStem}-${stem || "workout"}.txt`;
 }
+
+/** Join several workouts into one journal file, newest-first order preserved. */
+export function formatWorkoutJournalBundle(docs: WorkoutSessionDoc[]): string {
+  if (docs.length === 0) return "";
+  if (docs.length === 1) return formatWorkoutJournalEntry(docs[0]!);
+  const heading = `Built Daily · ${docs.length} workouts`;
+  const entries = docs.map((doc) => formatWorkoutJournalEntry(doc).trimEnd());
+  return `${heading}\n\n${entries.join("\n\n---\n\n")}\n`;
+}
+
+export function workoutJournalBundleFilename(count: number): string {
+  const today = formatWorkoutHeaderDate(Date.now())
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `${today}-${count}-workouts.txt`;
+}
