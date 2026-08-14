@@ -572,6 +572,27 @@ export function ActiveWorkoutView({
     [],
   );
 
+  const removeSet = useCallback(
+    (exerciseIndex: number, setIndex: number) => {
+      setSetsByExercise((prev) => {
+        const current = prev[exerciseIndex];
+        if (!current || current.length <= 1) return prev;
+        const next = prev.map((sets) => [...sets]);
+        next[exerciseIndex] = current.filter((_, i) => i !== setIndex);
+        return next;
+      });
+      setSetTimerActive((active) => {
+        if (!active || active.exerciseIndex !== exerciseIndex) return active;
+        if (active.setIndex === setIndex) return null;
+        if (active.setIndex > setIndex) {
+          return { ...active, setIndex: active.setIndex - 1 };
+        }
+        return active;
+      });
+    },
+    [],
+  );
+
   const applyHistoricalSets = useCallback(
     (
       exerciseIndex: number,
@@ -1178,36 +1199,40 @@ export function ActiveWorkoutView({
                   }`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {replacingExerciseIndex !== exerciseIndex ? (
                         <>
-                          <button
+                          <Button
                             type="button"
+                            variant="outline"
+                            size="xs"
                             onClick={() => addSet(exerciseIndex)}
-                            className="text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
                           >
                             Add set
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
+                            variant="outline"
+                            size="xs"
                             onClick={() =>
                               setReplacingExerciseIndex(exerciseIndex)
                             }
-                            className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
                             aria-label={`Change ${exercise.name}`}
                           >
                             <Replace className="size-3" aria-hidden />
                             Change
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
+                            variant="outline"
+                            size="xs"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => removeExercise(exerciseIndex)}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-zinc-400 hover:text-red-700 dark:hover:text-red-300"
                             aria-label={`Remove ${exercise.name}`}
                           >
-                            <Trash2 className="size-3" />
+                            <Trash2 className="size-3" aria-hidden />
                             Remove
-                          </button>
+                          </Button>
                         </>
                       ) : null}
                     </div>
@@ -1305,6 +1330,8 @@ export function ActiveWorkoutView({
                         compact={compact}
                         updateSet={updateSet}
                         onDuplicateSet={duplicateSet}
+                        onRemoveSet={removeSet}
+                        canRemoveSet={sets.length > 1}
                         setTimerActive={setTimerActive}
                         setTimerLiveMs={setTimerLiveMs}
                         onStartSetTimer={startSetTimer}
@@ -1469,6 +1496,8 @@ type SetRowFieldsProps = {
   onSaveSetTimer: () => void;
   onCancelSetTimer: () => void;
   onDuplicateSet: (exerciseIndex: number, setIndex: number) => void;
+  onRemoveSet: (exerciseIndex: number, setIndex: number) => void;
+  canRemoveSet: boolean;
   updateSet: (
     exerciseIndex: number,
     setIndex: number,
@@ -1489,6 +1518,8 @@ function SetRowFields({
   onSaveSetTimer,
   onCancelSetTimer,
   onDuplicateSet,
+  onRemoveSet,
+  canRemoveSet,
   updateSet,
 }: SetRowFieldsProps) {
   const setNo = setIndex + 1;
@@ -1499,18 +1530,51 @@ function SetRowFields({
       <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
         Set {setNo}
       </span>
-      <button
-        type="button"
-        onClick={() => onDuplicateSet(exerciseIndex, setIndex)}
-        className={`inline-flex items-center gap-1 rounded-md text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
-          compact ? "h-7 px-1.5" : "h-8 px-2"
-        }`}
-        aria-label={`Duplicate set ${setNo}`}
-        title="Duplicate this set’s weight and reps"
-      >
-        <CopyPlus className="size-3.5" aria-hidden />
-        {compact ? null : "Duplicate"}
-      </button>
+      <div className="flex items-center gap-0.5">
+        <button
+          type="button"
+          onClick={() => onDuplicateSet(exerciseIndex, setIndex)}
+          className={`inline-flex items-center gap-1 rounded-md text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
+            compact ? "h-7 px-1.5" : "h-8 px-2"
+          }`}
+          aria-label={`Duplicate set ${setNo}`}
+          title="Duplicate this set’s weight and reps"
+        >
+          <CopyPlus className="size-3.5" aria-hidden />
+          Duplicate
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <button
+                type="button"
+                className={`inline-flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
+                  compact ? "size-7" : "size-8"
+                }`}
+                aria-label={`More actions for set ${setNo}`}
+              />
+            }
+          >
+            <MoreHorizontal className="size-3.5" aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            side="bottom"
+            align="end"
+            sideOffset={4}
+            className="min-w-40"
+          >
+            <DropdownMenuItem
+              variant="destructive"
+              className="min-h-9 gap-2"
+              disabled={!canRemoveSet}
+              onClick={() => onRemoveSet(exerciseIndex, setIndex)}
+            >
+              <Trash2 className="size-3.5" aria-hidden />
+              Remove set
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 

@@ -101,6 +101,11 @@ export function WorkoutPickAndStart() {
     setExerciseIds((prev) => prev.filter((id) => id !== exerciseId));
   }, []);
 
+  const clearAllExercises = useCallback(() => {
+    setSelectedTemplate(null);
+    setExerciseIds([]);
+  }, []);
+
   const startWorkout = useCallback(() => {
     const params = new URLSearchParams();
     if (exerciseIds.length > 0) {
@@ -259,24 +264,33 @@ export function WorkoutPickAndStart() {
         </button>
 
         {selectedExercises.length > 0 ? (
-          <ul
-            className="flex flex-wrap gap-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800"
-            aria-label="Selected exercises"
-          >
-            {selectedExercises.map((ex) => (
-              <li key={ex.id}>
-                <button
-                  type="button"
-                  onClick={() => removeExercise(ex.id)}
-                  className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-full border border-emerald-600 bg-emerald-50 px-3 text-xs font-semibold text-emerald-900 dark:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-200"
-                  aria-label={`Remove ${ex.name}`}
-                >
-                  <span className="truncate">{ex.name}</span>
-                  <X className="size-3.5 shrink-0 opacity-70" aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-zinc-500">Selected</p>
+              <button
+                type="button"
+                onClick={clearAllExercises}
+                className="text-xs font-semibold text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
+              >
+                Clear all
+              </button>
+            </div>
+            <ul className="flex flex-wrap gap-2" aria-label="Selected exercises">
+              {selectedExercises.map((ex) => (
+                <li key={ex.id}>
+                  <button
+                    type="button"
+                    onClick={() => removeExercise(ex.id)}
+                    className="inline-flex h-9 max-w-full items-center gap-1.5 rounded-full border border-emerald-600 bg-emerald-50 px-3 text-xs font-semibold text-emerald-900 dark:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-200"
+                    aria-label={`Remove ${ex.name}`}
+                  >
+                    <span className="truncate">{ex.name}</span>
+                    <X className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
 
         {exercisesOpen ? (
