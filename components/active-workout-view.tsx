@@ -574,10 +574,21 @@ export function ActiveWorkoutView({
 
   const removeSet = useCallback(
     (exerciseIndex: number, setIndex: number) => {
+      const sets = setsByExercise[exerciseIndex];
+      if (!sets || sets.length <= 1) return;
+      const exerciseName =
+        activeExercises[exerciseIndex]?.name ?? "this exercise";
+      if (
+        !window.confirm(
+          `Remove set ${setIndex + 1} from ${exerciseName}?`,
+        )
+      ) {
+        return;
+      }
       setSetsByExercise((prev) => {
         const current = prev[exerciseIndex];
         if (!current || current.length <= 1) return prev;
-        const next = prev.map((sets) => [...sets]);
+        const next = prev.map((row) => [...row]);
         next[exerciseIndex] = current.filter((_, i) => i !== setIndex);
         return next;
       });
@@ -590,7 +601,7 @@ export function ActiveWorkoutView({
         return active;
       });
     },
-    [],
+    [activeExercises, setsByExercise],
   );
 
   const applyHistoricalSets = useCallback(
@@ -1123,14 +1134,12 @@ export function ActiveWorkoutView({
                       >
                         {exercise.name}
                       </span>
-                      {!compact ? (
-                        <span className="mt-0.5 block text-xs text-zinc-500">
-                          {metricHint(exercise.metric)}
-                          {exerciseNotesById[exercise.id]?.trim()
-                            ? " · has note"
-                            : ""}
-                        </span>
-                      ) : null}
+                      <span className="mt-0.5 block text-xs text-zinc-500">
+                        {metricHint(exercise.metric)}
+                        {!compact && exerciseNotesById[exercise.id]?.trim()
+                          ? " · has note"
+                          : ""}
+                      </span>
                       {!expanded ? (
                         <span
                           className={`block text-zinc-600 dark:text-zinc-300 ${
@@ -1543,37 +1552,18 @@ function SetRowFields({
           <CopyPlus className="size-3.5" aria-hidden />
           Duplicate
         </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <button
-                type="button"
-                className={`inline-flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
-                  compact ? "size-7" : "size-8"
-                }`}
-                aria-label={`More actions for set ${setNo}`}
-              />
-            }
-          >
-            <MoreHorizontal className="size-3.5" aria-hidden />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            side="bottom"
-            align="end"
-            sideOffset={4}
-            className="min-w-40"
-          >
-            <DropdownMenuItem
-              variant="destructive"
-              className="min-h-9 gap-2"
-              disabled={!canRemoveSet}
-              onClick={() => onRemoveSet(exerciseIndex, setIndex)}
-            >
-              <Trash2 className="size-3.5" aria-hidden />
-              Remove set
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <button
+          type="button"
+          onClick={() => onRemoveSet(exerciseIndex, setIndex)}
+          disabled={!canRemoveSet}
+          className={`inline-flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
+            compact ? "size-7" : "size-8"
+          }`}
+          aria-label={`Remove set ${setNo}`}
+          title="Remove this set"
+        >
+          <Trash2 className="size-3.5" aria-hidden />
+        </button>
       </div>
     </div>
   );
