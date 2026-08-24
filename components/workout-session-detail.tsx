@@ -72,6 +72,20 @@ function emptyUiSet(): UiSetRow {
   };
 }
 
+function setLogHasValues(set: SetLog): boolean {
+  return (
+    set.weight != null ||
+    set.reps != null ||
+    set.durationSec != null ||
+    set.timedSetSec != null ||
+    set.paceMph != null ||
+    set.inclinePercent != null ||
+    set.resistanceLevel != null ||
+    set.distanceMiles != null ||
+    Boolean(set.note?.trim())
+  );
+}
+
 /** Compact one-line summary for collapsed exercise cards. */
 function summarizeSessionSets(sets: SetLog[]): string {
   if (sets.length === 0) return "No sets";
@@ -331,7 +345,10 @@ export function WorkoutSessionDetail({
   const removeSet = (lineIndex: number, setIndex: number) => {
     const line = lines[lineIndex];
     if (!line || line.sets.length <= 1) return;
+    const target = line.sets[setIndex];
+    if (!target) return;
     if (
+      setLogHasValues(target) &&
       !window.confirm(
         `Remove set ${setIndex + 1} from ${line.nameSnapshot}?`,
       )
@@ -677,7 +694,9 @@ export function WorkoutSessionDetail({
               </div>
 
               <ul className="space-y-2">
-                {line.sets.map((set, setIndex) => (
+                {line.sets.map((set, setIndex) => {
+                  const isEmptySet = !setLogHasValues(set);
+                  return (
                   <li
                     key={`${line.lineId}-${setIndex}`}
                     className="rounded-lg border border-zinc-100 p-2 dark:border-zinc-800"
@@ -701,10 +720,24 @@ export function WorkoutSessionDetail({
                           type="button"
                           onClick={() => removeSet(lineIndex, setIndex)}
                           disabled={line.sets.length <= 1}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                          aria-label={`Remove set ${setIndex + 1}`}
+                          className={`inline-flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
+                            isEmptySet
+                              ? "h-8 gap-1 px-2 text-xs font-medium"
+                              : "h-8 w-8"
+                          }`}
+                          aria-label={
+                            isEmptySet
+                              ? `Clear empty set ${setIndex + 1}`
+                              : `Remove set ${setIndex + 1}`
+                          }
+                          title={
+                            isEmptySet
+                              ? "Clear this empty set"
+                              : "Remove this set"
+                          }
                         >
                           <Trash2 className="size-3.5" />
+                          {isEmptySet ? "Clear" : null}
                         </button>
                       </div>
                     </div>
@@ -738,7 +771,8 @@ export function WorkoutSessionDetail({
                       className="mt-1 h-9"
                     />
                   </li>
-                ))}
+                  );
+                })}
               </ul>
 
               <Button

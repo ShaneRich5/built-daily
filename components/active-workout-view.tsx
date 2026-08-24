@@ -576,14 +576,18 @@ export function ActiveWorkoutView({
     (exerciseIndex: number, setIndex: number) => {
       const sets = setsByExercise[exerciseIndex];
       if (!sets || sets.length <= 1) return;
-      const exerciseName =
-        activeExercises[exerciseIndex]?.name ?? "this exercise";
-      if (
-        !window.confirm(
-          `Remove set ${setIndex + 1} from ${exerciseName}?`,
-        )
-      ) {
-        return;
+      const target = sets[setIndex];
+      if (!target) return;
+      if (setRowHasValues(target)) {
+        const exerciseName =
+          activeExercises[exerciseIndex]?.name ?? "this exercise";
+        if (
+          !window.confirm(
+            `Remove set ${setIndex + 1} from ${exerciseName}?`,
+          )
+        ) {
+          return;
+        }
       }
       setSetsByExercise((prev) => {
         const current = prev[exerciseIndex];
@@ -1533,6 +1537,7 @@ function SetRowFields({
 }: SetRowFieldsProps) {
   const setNo = setIndex + 1;
   const idBase = `${exercise.id}-${setIndex}`;
+  const isEmptySet = !setRowHasValues(set);
 
   const setHeader = (
     <div className="flex items-center justify-between gap-2">
@@ -1557,12 +1562,21 @@ function SetRowFields({
           onClick={() => onRemoveSet(exerciseIndex, setIndex)}
           disabled={!canRemoveSet}
           className={`inline-flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
-            compact ? "size-7" : "size-8"
+            isEmptySet
+              ? compact
+                ? "h-7 gap-1 px-1.5 text-xs font-medium"
+                : "h-8 gap-1 px-2 text-xs font-medium"
+              : compact
+                ? "size-7"
+                : "size-8"
           }`}
-          aria-label={`Remove set ${setNo}`}
-          title="Remove this set"
+          aria-label={
+            isEmptySet ? `Clear empty set ${setNo}` : `Remove set ${setNo}`
+          }
+          title={isEmptySet ? "Clear this empty set" : "Remove this set"}
         >
           <Trash2 className="size-3.5" aria-hidden />
+          {isEmptySet ? "Clear" : null}
         </button>
       </div>
     </div>

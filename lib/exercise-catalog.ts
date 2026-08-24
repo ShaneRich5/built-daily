@@ -135,6 +135,8 @@ export const EXERCISE_CATALOG: CatalogExercise[] = ([
   { id: "rotary-torso-machine", name: "Rotary torso machine", metric: "weight_reps" },
   { id: "captains-chair", name: "Captain's chair knee raise", metric: "bodyweight_reps" },
   { id: "hanging-leg-raise", name: "Hanging leg raise", metric: "bodyweight_reps" },
+  { id: "lying-leg-raise", name: "Lying leg raise", metric: "bodyweight_reps" },
+  { id: "dead-bug", name: "Dead bug", metric: "bodyweight_reps" },
   { id: "ab-wheel", name: "Ab wheel rollout", metric: "bodyweight_reps" },
   { id: "side-plank", name: "Side plank", metric: "duration" },
   { id: "hanging-knee-raise", name: "Hanging knee raise", metric: "bodyweight_reps" },

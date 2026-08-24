@@ -42,6 +42,13 @@ const BY_ID: Record<string, MuscleGroup> = {
   plank: "core",
   "side-plank": "core",
   crunch: "core",
+  "lying-leg-raise": "core",
+  "hanging-leg-raise": "core",
+  "hanging-knee-raise": "core",
+  "dead-bug": "core",
+  "ab-wheel": "core",
+  "cable-crunch": "core",
+  "captains-chair": "core",
   "treadmill-run": "cardio",
   "treadmill-walk": "cardio",
   "stationary-bike": "cardio",
@@ -52,10 +59,10 @@ const BY_ID: Record<string, MuscleGroup> = {
 const NAME_HINTS: Array<{ re: RegExp; group: MuscleGroup }> = [
   { re: /bench|chest|fly|pec/i, group: "chest" },
   { re: /row|pulldown|pull[- ]?up|lat|deadlift/i, group: "back" },
+  { re: /dead[- ]?bug|leg raise|knee raise|plank|crunch|core|ab /i, group: "core" },
   { re: /squat|lunge|leg |calf|rdl|hip thrust/i, group: "legs" },
   { re: /ohp|overhead|raise|delt|shoulder/i, group: "shoulders" },
   { re: /curl|tricep|bicep|skull|extension/i, group: "arms" },
-  { re: /plank|crunch|core|ab /i, group: "core" },
   { re: /run|bike|cardio|treadmill|elliptical|rowing/i, group: "cardio" },
 ];
 
