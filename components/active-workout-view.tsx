@@ -21,6 +21,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { ExerciseHistoryControls } from "@/components/exercise-history-controls";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
@@ -243,6 +244,54 @@ type ActiveWorkoutViewProps = {
 
 const MAX_SESSION_EXERCISES = 40;
 const LS_EXERCISE_DENSITY = "built-daily-active-workout-exercise-density";
+const EXERCISE_FLASH_MS = 900;
+const EXERCISE_EXIT_MS = 280;
+
+type ExerciseListMotionKind = "add" | "move" | "replace" | "exit";
+
+type ExerciseListMotion = {
+  lineId: string;
+  kind: ExerciseListMotionKind;
+  nonce: number;
+  usedViewTransition: boolean;
+};
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Animate list add / move / remove when the browser supports view transitions. */
+function runExerciseListMotion(
+  update: (usedViewTransition: boolean) => void,
+): boolean {
+  const doc = document as Document & {
+    startViewTransition?: (
+      cb:
+        | (() => void)
+        | { update: () => void; types?: string[] },
+    ) => unknown;
+  };
+  const usedViewTransition =
+    typeof doc.startViewTransition === "function" && !prefersReducedMotion();
+  const apply = () => update(usedViewTransition);
+  if (!usedViewTransition) {
+    apply();
+    return false;
+  }
+  try {
+    doc.startViewTransition({
+      update: () => {
+        flushSync(apply);
+      },
+      types: ["workout-exercise-list"],
+    });
+  } catch {
+    doc.startViewTransition(() => {
+      flushSync(apply);
+    });
+  }
+  return true;
+}
 
 type ExerciseListDensity = "comfortable" | "compact";
 
@@ -315,7 +364,15 @@ export function ActiveWorkoutView({
   const [replacingExerciseIndex, setReplacingExerciseIndex] = useState<
     number | null
   >(null);
-  const [flashLineId, setFlashLineId] = useState<string | null>(null);
+  const [listMotion, setListMotion] = useState<ExerciseListMotion | null>(
+    null,
+  );
+  const motionNonceRef = useRef(0);
+  const lineIdsRef = useRef(lineIds);
+  lineIdsRef.current = lineIds;
+  const activeExercisesRef = useRef(activeExercises);
+  activeExercisesRef.current = activeExercises;
+  const exitTimeoutRef = useRef<number | null>(null);
   const [exerciseDensity, setExerciseDensity] =
     useState<ExerciseListDensity>("comfortable");
   const [densityPrefsReady, setDensityPrefsReady] = useState(false);
@@ -342,14 +399,24 @@ export function ActiveWorkoutView({
   }, [exerciseDensity, densityPrefsReady]);
 
   useEffect(() => {
-    if (!flashLineId) return;
-    const el = document.getElementById(`exercise-card-${flashLineId}`);
+    return () => {
+      if (exitTimeoutRef.current != null) {
+        window.clearTimeout(exitTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!listMotion || listMotion.kind === "exit") return;
+    const el = document.getElementById(`exercise-card-${listMotion.lineId}`);
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     const timeoutId = window.setTimeout(() => {
-      setFlashLineId(null);
-    }, 1600);
+      setListMotion((current) =>
+        current?.nonce === listMotion.nonce ? null : current,
+      );
+    }, EXERCISE_FLASH_MS);
     return () => window.clearTimeout(timeoutId);
-  }, [flashLineId]);
+  }, [listMotion]);
 
   useEffect(() => {
     let cancelled = false;
@@ -375,23 +442,32 @@ export function ActiveWorkoutView({
     const ex = getCatalogExerciseById(exerciseId);
     if (!ex) return;
     let addedLineId: string | null = null;
-    setActiveExercises((prev) => {
-      if (prev.length >= MAX_SESSION_EXERCISES) return prev;
-      const newLineId = createLineId();
-      addedLineId = newLineId;
-      setLineIds((idsPrev) => {
-        if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
-        return [newLineId, ...idsPrev];
+    runExerciseListMotion((usedViewTransition) => {
+      setActiveExercises((prev) => {
+        if (prev.length >= MAX_SESSION_EXERCISES) return prev;
+        const newLineId = createLineId();
+        addedLineId = newLineId;
+        setLineIds((idsPrev) => {
+          if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
+          return [newLineId, ...idsPrev];
+        });
+        setSetsByExercise((setsPrev) => {
+          if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
+          return [[emptySetRow()], ...setsPrev];
+        });
+        setExpandedExerciseIndex(0);
+        // Newest first — keeps the new exercise near the add control.
+        return [ex, ...prev];
       });
-      setSetsByExercise((setsPrev) => {
-        if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
-        return [[emptySetRow()], ...setsPrev];
-      });
-      setExpandedExerciseIndex(0);
-      // Newest first — keeps the new exercise near the add control.
-      return [ex, ...prev];
+      if (addedLineId) {
+        setListMotion({
+          lineId: addedLineId,
+          kind: "add",
+          nonce: ++motionNonceRef.current,
+          usedViewTransition,
+        });
+      }
     });
-    if (addedLineId) setFlashLineId(addedLineId);
   }, []);
 
   const handleAddCustomExercise = useCallback((trimmed: string): boolean => {
@@ -399,23 +475,32 @@ export function ActiveWorkoutView({
     if (!ex) return false;
     let didAdd = false;
     let addedLineId: string | null = null;
-    setActiveExercises((prev) => {
-      if (prev.length >= MAX_SESSION_EXERCISES) return prev;
-      didAdd = true;
-      const newLineId = createLineId();
-      addedLineId = newLineId;
-      setLineIds((idsPrev) => {
-        if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
-        return [newLineId, ...idsPrev];
+    runExerciseListMotion((usedViewTransition) => {
+      setActiveExercises((prev) => {
+        if (prev.length >= MAX_SESSION_EXERCISES) return prev;
+        didAdd = true;
+        const newLineId = createLineId();
+        addedLineId = newLineId;
+        setLineIds((idsPrev) => {
+          if (idsPrev.length >= MAX_SESSION_EXERCISES) return idsPrev;
+          return [newLineId, ...idsPrev];
+        });
+        setSetsByExercise((setsPrev) => {
+          if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
+          return [[emptySetRow()], ...setsPrev];
+        });
+        setExpandedExerciseIndex(0);
+        return [ex, ...prev];
       });
-      setSetsByExercise((setsPrev) => {
-        if (setsPrev.length >= MAX_SESSION_EXERCISES) return setsPrev;
-        return [[emptySetRow()], ...setsPrev];
-      });
-      setExpandedExerciseIndex(0);
-      return [ex, ...prev];
+      if (addedLineId) {
+        setListMotion({
+          lineId: addedLineId,
+          kind: "add",
+          nonce: ++motionNonceRef.current,
+          usedViewTransition,
+        });
+      }
     });
-    if (addedLineId) setFlashLineId(addedLineId);
     return didAdd;
   }, []);
 
@@ -640,22 +725,24 @@ export function ActiveWorkoutView({
   );
 
   const moveExercise = useCallback((index: number, delta: -1 | 1) => {
-    setActiveExercises((prev) => {
-      const j = index + delta;
-      if (j < 0 || j >= prev.length) return prev;
+    const j = index + delta;
+    const currentLineIds = lineIdsRef.current;
+    const movedLineId = currentLineIds[index];
+    if (!movedLineId || j < 0 || j >= currentLineIds.length) return;
 
-      const swap = <T,>(arr: T[]): T[] => {
-        const next = [...arr];
-        const tmp = next[index]!;
-        next[index] = next[j]!;
-        next[j] = tmp;
-        return next;
-      };
+    const swap = <T,>(arr: T[]): T[] => {
+      if (j < 0 || j >= arr.length) return arr;
+      const next = [...arr];
+      const tmp = next[index]!;
+      next[index] = next[j]!;
+      next[j] = tmp;
+      return next;
+    };
 
-      setLineIds((ids) => (ids.length === prev.length ? swap(ids) : ids));
-      setSetsByExercise((sets) =>
-        sets.length === prev.length ? swap(sets) : sets,
-      );
+    runExerciseListMotion((usedViewTransition) => {
+      setActiveExercises(swap);
+      setLineIds(swap);
+      setSetsByExercise(swap);
       setExpandedExerciseIndex((expanded) => {
         if (expanded === null) return null;
         if (expanded === index) return j;
@@ -672,51 +759,89 @@ export function ActiveWorkoutView({
         }
         return active;
       });
-      return swap(prev);
+      setListMotion({
+        lineId: movedLineId,
+        kind: "move",
+        nonce: ++motionNonceRef.current,
+        usedViewTransition,
+      });
     });
   }, []);
 
-  const removeExercise = useCallback(
-    (exerciseIndex: number) => {
-      const removed = activeExercises[exerciseIndex];
-      if (!removed) return;
-      if (
-        !window.confirm(
-          `Remove “${removed.name}” and all of its sets from this workout?`,
-        )
-      ) {
-        return;
+  const commitRemoveByLineId = useCallback((lineId: string) => {
+    const exerciseIndex = lineIdsRef.current.indexOf(lineId);
+    if (exerciseIndex < 0) return;
+    const removed = activeExercisesRef.current[exerciseIndex];
+    if (!removed) return;
+
+    setReplacingExerciseIndex(null);
+    setActiveExercises((prev) => prev.filter((_, i) => i !== exerciseIndex));
+    setLineIds((ids) => ids.filter((_, i) => i !== exerciseIndex));
+    setSetsByExercise((sets) => sets.filter((_, i) => i !== exerciseIndex));
+    setExerciseNotesById((notes) => {
+      const next = { ...notes };
+      delete next[removed.id];
+      return next;
+    });
+    setSetTimerActive((active) => {
+      if (!active) return null;
+      if (active.exerciseIndex === exerciseIndex) return null;
+      if (active.exerciseIndex > exerciseIndex) {
+        return { ...active, exerciseIndex: active.exerciseIndex - 1 };
       }
-      setReplacingExerciseIndex(null);
-      setActiveExercises((prev) => prev.filter((_, i) => i !== exerciseIndex));
-      setLineIds((ids) => ids.filter((_, i) => i !== exerciseIndex));
-      setSetsByExercise((sets) => sets.filter((_, i) => i !== exerciseIndex));
-      setExerciseNotesById((notes) => {
-        const next = { ...notes };
-        delete next[removed.id];
-        return next;
+      return active;
+    });
+    setExpandedExerciseIndex((prev) => {
+      if (prev === null) return null;
+      if (prev === exerciseIndex) {
+        const nextLen = activeExercisesRef.current.length - 1;
+        if (nextLen <= 0) return null;
+        return Math.min(exerciseIndex, nextLen - 1);
+      }
+      if (prev > exerciseIndex) return prev - 1;
+      return prev;
+    });
+  }, []);
+
+  const removeExercise = useCallback((exerciseIndex: number) => {
+    const removed = activeExercises[exerciseIndex];
+    const lineId = lineIds[exerciseIndex];
+    if (!removed || !lineId) return;
+    if (
+      !window.confirm(
+        `Remove “${removed.name}” and all of its sets from this workout?`,
+      )
+    ) {
+      return;
+    }
+    if (exitTimeoutRef.current != null) {
+      window.clearTimeout(exitTimeoutRef.current);
+    }
+
+    const reduced = prefersReducedMotion();
+    setListMotion({
+      lineId,
+      kind: "exit",
+      nonce: ++motionNonceRef.current,
+      usedViewTransition: false,
+    });
+
+    const finish = () => {
+      exitTimeoutRef.current = null;
+      runExerciseListMotion(() => {
+        commitRemoveByLineId(lineId);
       });
-      setSetTimerActive((active) => {
-        if (!active) return null;
-        if (active.exerciseIndex === exerciseIndex) return null;
-        if (active.exerciseIndex > exerciseIndex) {
-          return { ...active, exerciseIndex: active.exerciseIndex - 1 };
-        }
-        return active;
-      });
-      setExpandedExerciseIndex((prev) => {
-        if (prev === null) return null;
-        if (prev === exerciseIndex) {
-          const nextLen = activeExercises.length - 1;
-          if (nextLen <= 0) return null;
-          return Math.min(exerciseIndex, nextLen - 1);
-        }
-        if (prev > exerciseIndex) return prev - 1;
-        return prev;
-      });
-    },
-    [activeExercises],
-  );
+      setListMotion((current) =>
+        current?.lineId === lineId && current.kind === "exit" ? null : current,
+      );
+    };
+
+    if (reduced) {
+      finish();
+      return;
+    }
+    exitTimeoutRef.current = window.setTimeout(finish, EXERCISE_EXIT_MS);
+  }, [activeExercises, commitRemoveByLineId, lineIds]);
 
   const changeExercise = useCallback(
     (exerciseIndex: number, next: CatalogExercise) => {
@@ -774,7 +899,14 @@ export function ActiveWorkoutView({
 
       setReplacingExerciseIndex(null);
       const lineId = lineIds[exerciseIndex];
-      if (lineId) setFlashLineId(lineId);
+      if (lineId) {
+        setListMotion({
+          lineId,
+          kind: "replace",
+          nonce: ++motionNonceRef.current,
+          usedViewTransition: false,
+        });
+      }
     },
     [activeExercises, lineIds, setsByExercise],
   );
@@ -1081,7 +1213,7 @@ export function ActiveWorkoutView({
       <ul
         className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${
           compact ? "gap-1.5" : "gap-3"
-        } ${onDiscard ? "pb-40" : "pb-36"}`}
+        } pb-24 sm:pb-36`}
       >
         {activeExercises.length === 0 ? (
           <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center dark:border-zinc-800 dark:bg-zinc-950/40">
@@ -1100,18 +1232,31 @@ export function ActiveWorkoutView({
           const lineId = lineIds[exerciseIndex] ?? `${exerciseIndex}-${exercise.id}`;
           const expanded = expandedExerciseIndex === exerciseIndex;
           const summary = summarizeExerciseSets(sets, exercise.metric);
-          const flashing = flashLineId === lineId;
+          const motion = listMotion?.lineId === lineId ? listMotion : null;
+          const motionClass =
+            motion?.kind === "exit"
+              ? "workout-exercise-exit"
+              : motion?.kind === "add" && !motion.usedViewTransition
+                ? "workout-exercise-enter"
+                : motion?.kind === "move" && !motion.usedViewTransition
+                  ? "workout-exercise-land"
+                  : "";
 
           return (
             <li
               key={lineId}
               id={`exercise-card-${lineId}`}
-              className={`rounded-xl border transition-[box-shadow,background-color,border-color] duration-500 ${
-                flashing
-                  ? "border-emerald-400 bg-emerald-50 shadow-[0_0_0_3px_rgba(16,185,129,0.35)] dark:border-emerald-500 dark:bg-emerald-950/40"
-                  : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-              }`}
+              className={`relative rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 ${motionClass}`}
+              style={{ viewTransitionName: `workout-ex-${lineId}` }}
             >
+              {motion ? (
+                <span
+                  key={motion.nonce}
+                  className="workout-exercise-flash-overlay"
+                  data-kind={motion.kind}
+                  aria-hidden
+                />
+              ) : null}
               <div className="flex items-start">
                 <button
                   type="button"
@@ -1362,27 +1507,27 @@ export function ActiveWorkoutView({
         })}
       </ul>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
-        <div className="mx-auto w-full max-w-2xl px-4 sm:px-5">
-          <p className="mb-2 text-center text-xs text-zinc-500">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95">
+        <div className="mx-auto w-full max-w-2xl sm:px-5">
+          <p className="mb-2 hidden text-center text-xs text-zinc-500 sm:block">
             {activeExercises.length === 0
               ? "No exercises yet — you can still finish to log that you showed up."
               : "Progress saves automatically when you’re signed in. You can leave and continue later from Recent workouts."}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon-lg"
-                    className="size-12 shrink-0 rounded-xl"
+                    size="icon"
+                    className="size-11 shrink-0 rounded-lg sm:size-12 sm:rounded-xl"
                     aria-label="More actions"
                   />
                 }
               >
-                <MoreHorizontal className="size-5" />
+                <MoreHorizontal className="size-4 sm:size-5" />
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side="top"
@@ -1427,7 +1572,7 @@ export function ActiveWorkoutView({
             <button
               type="button"
               onClick={handleFinish}
-              className="flex h-12 min-w-0 flex-1 items-center justify-center rounded-xl bg-emerald-600 text-base font-semibold text-white dark:bg-emerald-500"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white sm:h-12 sm:rounded-xl sm:text-base dark:bg-emerald-500"
             >
               {activeExercises.length === 0
                 ? "Finish without details"

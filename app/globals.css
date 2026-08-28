@@ -136,3 +136,114 @@ body {
     @apply font-sans;
   }
 }
+
+@keyframes workout-exercise-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes workout-exercise-exit {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+}
+
+@keyframes workout-exercise-land {
+  from {
+    transform: scale(0.985);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes workout-exercise-flash {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes workout-exercise-flash-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.workout-exercise-enter {
+  animation: workout-exercise-enter 0.38s ease-out;
+}
+
+.workout-exercise-exit {
+  animation: workout-exercise-exit 0.28s ease-in forwards;
+  pointer-events: none;
+}
+
+.workout-exercise-land {
+  animation: workout-exercise-land 0.4s ease-out;
+}
+
+.workout-exercise-flash-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  background: color-mix(in oklab, #34d399 38%, transparent);
+  animation: workout-exercise-flash 0.9s ease-out forwards;
+}
+
+.dark .workout-exercise-flash-overlay {
+  background: color-mix(in oklab, #34d399 26%, transparent);
+}
+
+.workout-exercise-flash-overlay[data-kind="exit"] {
+  background: color-mix(in oklab, #fb7185 30%, transparent);
+  animation: workout-exercise-flash-exit 0.28s ease-in forwards;
+}
+
+.dark .workout-exercise-flash-overlay[data-kind="exit"] {
+  background: color-mix(in oklab, #fb7185 24%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workout-exercise-enter,
+  .workout-exercise-exit,
+  .workout-exercise-land,
+  .workout-exercise-flash-overlay {
+    animation: none;
+  }
+
+  .workout-exercise-exit {
+    opacity: 0.4;
+  }
+}
+
+html:active-view-transition-type(workout-exercise-list)::view-transition-old(root),
+html:active-view-transition-type(workout-exercise-list)::view-transition-new(root) {
+  animation-duration: 0s;
+}
+
+html:active-view-transition-type(workout-exercise-list)::view-transition-group(*) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
