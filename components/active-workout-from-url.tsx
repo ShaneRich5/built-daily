@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ActiveWorkoutView } from "@/components/active-workout-view";
 import { useAuth } from "@/components/auth-provider";
+import { FinishConfetti } from "@/components/finish-confetti";
 import { WorkoutSavedExport } from "@/components/workout-saved-export";
 import {
   resolveExercisesFromUrl,
@@ -167,6 +168,7 @@ export function ActiveWorkoutFromUrl() {
     session: WorkoutSessionDoc;
     persisted: boolean;
   } | null>(null);
+  const [celebrateFinish, setCelebrateFinish] = useState(false);
   const createOnceRef = useRef(false);
 
   useEffect(() => {
@@ -301,6 +303,7 @@ export function ActiveWorkoutFromUrl() {
 
   const handleFinish = useCallback(
     async (snapshot: ActiveWorkoutFinishSnapshot) => {
+      setCelebrateFinish(true);
       const resumePlanId =
         resume && resume !== "loading" ? resume.planId : null;
       const withPlan: ActiveWorkoutFinishSnapshot = {
@@ -345,19 +348,19 @@ export function ActiveWorkoutFromUrl() {
     router.push("/");
   }, [liveSessionId, router]);
 
+  let main: ReactNode;
+
   if (savedSession) {
-    return (
+    main = (
       <WorkoutSavedExport
         session={savedSession.session}
         persisted={savedSession.persisted}
         onDone={handleExportDone}
       />
     );
-  }
-
-  if (sessionIdParam) {
+  } else if (sessionIdParam) {
     if (!firebaseReady || !user || resume === "loading") {
-      return (
+      main = (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
           <p className="text-sm text-muted-foreground">Loading workout…</p>
           {!user && firebaseReady ? (
@@ -370,10 +373,8 @@ export function ActiveWorkoutFromUrl() {
           ) : null}
         </div>
       );
-    }
-
-    if (!resume) {
-      return (
+    } else if (!resume) {
+      main = (
         <div className="flex flex-1 flex-col gap-4 py-2">
           <p className="text-sm text-muted-foreground">
             Could not find this workout.
@@ -386,48 +387,42 @@ export function ActiveWorkoutFromUrl() {
           </Link>
         </div>
       );
+    } else {
+      main = (
+        <ActiveWorkoutView
+          key={resume.sessionId}
+          title={resume.title}
+          titleIsCustom={resume.titleIsCustom}
+          initialWorkoutDate={resume.workoutDate}
+          initialWorkoutTime={resume.workoutTime}
+          exercises={resume.exercises}
+          planId={resume.planId}
+          initialLineIds={resume.lineIds}
+          initialSetsByExercise={resume.setsByExercise}
+          initialWorkoutNote={resume.workoutNote}
+          initialExerciseNotesById={resume.exerciseNotesById}
+          initialActiveDurationMs={resume.activeDurationMs}
+          sessionStartedAtMs={resume.sessionStartedAtMs}
+          onPersist={handlePersist}
+          onFinish={handleFinish}
+          onDiscard={liveSessionId ? handleDiscard : undefined}
+        />
+      );
     }
-
-    return (
-      <ActiveWorkoutView
-        key={resume.sessionId}
-        title={resume.title}
-        titleIsCustom={resume.titleIsCustom}
-        initialWorkoutDate={resume.workoutDate}
-        initialWorkoutTime={resume.workoutTime}
-        exercises={resume.exercises}
-        planId={resume.planId}
-        initialLineIds={resume.lineIds}
-        initialSetsByExercise={resume.setsByExercise}
-        initialWorkoutNote={resume.workoutNote}
-        initialExerciseNotesById={resume.exerciseNotesById}
-        initialActiveDurationMs={resume.activeDurationMs}
-        sessionStartedAtMs={resume.sessionStartedAtMs}
-        onPersist={handlePersist}
-        onFinish={handleFinish}
-        onDiscard={liveSessionId ? handleDiscard : undefined}
-      />
-    );
-  }
-
-  if (needsPlanFetch && !planReady) {
-    return (
+  } else if (needsPlanFetch && !planReady) {
+    main = (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
         <p className="text-sm text-muted-foreground">Loading workout…</p>
       </div>
     );
-  }
-
-  if (urlExercises === null) {
-    return (
+  } else if (urlExercises === null) {
+    main = (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
         <p className="text-sm text-muted-foreground">Loading workout…</p>
       </div>
     );
-  }
-
-  if (ids.length > 0 && urlExercises.length === 0) {
-    return (
+  } else if (ids.length > 0 && urlExercises.length === 0) {
+    main = (
       <div className="flex flex-1 flex-col gap-4 py-2">
         <p className="text-sm text-muted-foreground">
           Could not resolve these exercises. If this template uses custom moves,
@@ -441,28 +436,33 @@ export function ActiveWorkoutFromUrl() {
         </Link>
       </div>
     );
-  }
-
-  if (user && firebaseReady && creating) {
-    return (
+  } else if (user && firebaseReady && creating) {
+    main = (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12">
         <p className="text-sm text-muted-foreground">Starting workout…</p>
       </div>
     );
+  } else {
+    main = (
+      <ActiveWorkoutView
+        key={liveSessionId ?? `local:${ids.join(",") || "empty"}`}
+        title={title}
+        titleIsCustom={titleIsCustom}
+        exercises={urlExercises}
+        planId={planId}
+        initialSetsByExercise={planDefaults.setsByExercise}
+        initialExerciseNotesById={planDefaults.notes}
+        onPersist={liveSessionId ? handlePersist : undefined}
+        onFinish={handleFinish}
+        onDiscard={liveSessionId ? handleDiscard : undefined}
+      />
+    );
   }
 
   return (
-    <ActiveWorkoutView
-      key={liveSessionId ?? `local:${ids.join(",") || "empty"}`}
-      title={title}
-      titleIsCustom={titleIsCustom}
-      exercises={urlExercises}
-      planId={planId}
-      initialSetsByExercise={planDefaults.setsByExercise}
-      initialExerciseNotesById={planDefaults.notes}
-      onPersist={liveSessionId ? handlePersist : undefined}
-      onFinish={handleFinish}
-      onDiscard={liveSessionId ? handleDiscard : undefined}
-    />
+    <>
+      {celebrateFinish ? <FinishConfetti /> : null}
+      {main}
+    </>
   );
 }
