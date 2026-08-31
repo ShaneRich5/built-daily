@@ -1,60 +1,22 @@
+import { getCatalogExerciseById } from "@/lib/exercise-catalog";
 import type { MuscleGroup } from "@/lib/progress-types";
 
-/** Lightweight tags for progress “favorite muscle group” (catalog ids). */
-const BY_ID: Record<string, MuscleGroup> = {
-  bench: "chest",
-  "incline-bench": "chest",
-  "decline-bench": "chest",
-  "db-bench": "chest",
-  "db-incline-bench": "chest",
-  "chest-press-machine": "chest",
-  "incline-chest-press-machine": "chest",
-  "push-up": "chest",
-  row: "back",
-  "db-row": "back",
-  "lat-pulldown": "back",
-  "pull-up": "back",
-  "chin-up": "back",
-  "seated-row-machine": "back",
-  "cable-seated-row": "back",
-  deadlift: "back",
-  "romanian-deadlift": "legs",
-  squat: "legs",
-  "front-squat": "legs",
-  "goblet-squat": "legs",
-  "leg-press": "legs",
-  "horizontal-leg-press": "legs",
-  lunge: "legs",
-  "bulgarian-split-squat": "legs",
-  "leg-curl": "legs",
-  "leg-extension": "legs",
-  "standing-calf-raise": "legs",
-  "seated-calf-raise": "legs",
-  ohp: "shoulders",
-  "db-shoulder-press": "shoulders",
-  "shoulder-press-machine": "shoulders",
-  "lateral-raise": "shoulders",
-  "face-pull": "shoulders",
-  "bicep-curl": "arms",
-  "hammer-curl": "arms",
-  "tricep-pushdown": "arms",
-  dip: "arms",
-  plank: "core",
-  "side-plank": "core",
-  crunch: "core",
-  "lying-leg-raise": "core",
-  "hanging-leg-raise": "core",
-  "hanging-knee-raise": "core",
-  "dead-bug": "core",
-  "ab-wheel": "core",
-  "cable-crunch": "core",
-  "captains-chair": "core",
-  "treadmill-run": "cardio",
-  "treadmill-walk": "cardio",
-  "stationary-bike": "cardio",
-  elliptical: "cardio",
-  "row-erg": "cardio",
-};
+export type MuscleFocus = "full" | "upper" | "lower" | "arms";
+
+export const MUSCLE_FOCUS_OPTIONS: Array<{ id: MuscleFocus; label: string }> = [
+  { id: "full", label: "Full" },
+  { id: "upper", label: "Upper" },
+  { id: "lower", label: "Lower" },
+  { id: "arms", label: "Arms" },
+];
+
+const UPPER_GROUPS: ReadonlySet<MuscleGroup> = new Set([
+  "chest",
+  "back",
+  "shoulders",
+  "arms",
+  "core",
+]);
 
 const NAME_HINTS: Array<{ re: RegExp; group: MuscleGroup }> = [
   { re: /bench|chest|fly|pec/i, group: "chest" },
@@ -70,8 +32,8 @@ export function muscleGroupForExercise(
   exerciseId: string,
   nameSnapshot: string,
 ): MuscleGroup {
-  const fromId = BY_ID[exerciseId];
-  if (fromId) return fromId;
+  const fromCatalog = getCatalogExerciseById(exerciseId)?.primary;
+  if (fromCatalog) return fromCatalog;
   for (const { re, group } of NAME_HINTS) {
     if (re.test(nameSnapshot) || re.test(exerciseId)) return group;
   }
@@ -101,4 +63,49 @@ export function muscleGroupLabel(group: MuscleGroup): string {
       return _e;
     }
   }
+}
+
+/** Short picker subtitle, e.g. "Chest · also shoulders, arms". */
+export function muscleTargetSummary(
+  primary?: MuscleGroup,
+  secondary?: MuscleGroup[],
+): string | null {
+  if (!primary || primary === "other") return null;
+  const main = muscleGroupLabel(primary);
+  const also = (secondary ?? []).filter(
+    (g) => g !== primary && g !== "other" && g !== "cardio",
+  );
+  if (also.length === 0) return main;
+  return `${main} · also ${also.map((g) => muscleGroupLabel(g).toLowerCase()).join(", ")}`;
+}
+
+function diagramGroups(
+  primary?: MuscleGroup,
+  secondary?: MuscleGroup[],
+): MuscleGroup[] {
+  const out: MuscleGroup[] = [];
+  for (const g of [primary, ...(secondary ?? [])]) {
+    if (!g || g === "cardio" || g === "other") continue;
+    if (!out.includes(g)) out.push(g);
+  }
+  return out;
+}
+
+/**
+ * Camera for the body diagram. Uses every tagged group so compounds like
+ * deadlift stay on the full body instead of cropping out the legs.
+ */
+export function defaultMuscleFocus(
+  primary?: MuscleGroup,
+  secondary?: MuscleGroup[],
+): MuscleFocus {
+  const groups = diagramGroups(primary, secondary);
+  if (groups.length === 0) return "full";
+  const hasUpper = groups.some((g) => UPPER_GROUPS.has(g));
+  const hasLower = groups.includes("legs");
+  if (hasUpper && hasLower) return "full";
+  if (groups.length === 1 && groups[0] === "arms") return "arms";
+  if (hasLower) return "lower";
+  if (hasUpper) return "upper";
+  return "full";
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, Play, Plus, X } from "lucide-react";
+import { ChevronDown, Info, Play, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -10,10 +10,15 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { ExerciseMusclePeek } from "@/components/exercise-muscle-peek";
+import { MuscleTargetDiagram } from "@/components/muscle-target-diagram";
+import { Switch } from "@/components/ui/switch";
 import {
   filterCatalogExercises,
   getCatalogExerciseById,
+  type CatalogExercise,
 } from "@/lib/exercise-catalog";
+import { muscleTargetSummary } from "@/lib/exercise-muscle";
 import type { PlanLine } from "@/lib/workout-types";
 import {
   subscribeUserWorkoutPlans,
@@ -48,6 +53,10 @@ export function WorkoutPickAndStart() {
   const [exerciseIds, setExerciseIds] = useState<string[]>([]);
   const [exerciseQuery, setExerciseQuery] = useState("");
   const [exercisesOpen, setExercisesOpen] = useState(true);
+  const [peekExercise, setPeekExercise] = useState<CatalogExercise | null>(
+    null,
+  );
+  const [showMuscles, setShowMuscles] = useState(false);
 
   const filteredExercises = useMemo(
     () => filterCatalogExercises(exerciseQuery),
@@ -306,10 +315,28 @@ export function WorkoutPickAndStart() {
               type="search"
               value={exerciseQuery}
               onChange={(e) => setExerciseQuery(e.target.value)}
-              placeholder="Search exercises (e.g. leg press, cable…)"
+              placeholder="Search (leg press, chest, cable…)"
               className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
               aria-label="Search exercises"
             />
+            <div className="flex items-center justify-end gap-2">
+              <label
+                htmlFor="show-muscles-toggle"
+                className="text-xs font-medium text-zinc-500"
+              >
+                Show muscles
+              </label>
+              <Switch
+                id="show-muscles-toggle"
+                size="sm"
+                checked={showMuscles}
+                onCheckedChange={(checked) => {
+                  const next = Boolean(checked);
+                  setShowMuscles(next);
+                  if (!next) setPeekExercise(null);
+                }}
+              />
+            </div>
             <ul className="grid max-h-[min(28rem,55vh)] grid-cols-1 gap-2 overflow-y-auto overscroll-contain md:grid-cols-2">
               {filteredExercises.length === 0 ? (
                 <li className="col-span-full rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
@@ -318,31 +345,62 @@ export function WorkoutPickAndStart() {
               ) : (
                 filteredExercises.map((ex) => {
                   const on = selectedIdSet.has(ex.id);
+                  const targeting = showMuscles
+                    ? muscleTargetSummary(ex.primary, ex.secondary)
+                    : null;
                   return (
                     <li key={ex.id}>
-                      <button
-                        type="button"
-                        aria-pressed={on}
-                        onClick={() => toggleExercise(ex.id)}
-                        className={`flex min-h-12 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition active:scale-[0.99] ${
+                      <div
+                        className={`flex min-h-12 w-full items-stretch rounded-xl border transition ${
                           on
                             ? "border-emerald-600 bg-emerald-50 shadow-[inset_0_0_0_1px_rgba(5,150,105,0.35)] dark:border-emerald-500 dark:bg-emerald-950/40"
                             : "border-zinc-200 bg-zinc-50 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
                         }`}
                       >
-                        <span className="min-w-0 truncate font-medium text-zinc-900 dark:text-zinc-50">
-                          {ex.name}
-                        </span>
-                        <span
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
-                            on
-                              ? "border-emerald-600 bg-emerald-600 text-white"
-                              : "border-zinc-200 text-zinc-400 dark:border-zinc-700"
-                          }`}
+                        <button
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => toggleExercise(ex.id)}
+                          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-3 py-2.5 text-left active:scale-[0.99] sm:px-4"
                         >
-                          {on ? "✓" : "+"}
-                        </span>
-                      </button>
+                          {showMuscles ? (
+                            <MuscleTargetDiagram
+                              primary={ex.primary}
+                              secondary={ex.secondary}
+                              compact
+                            />
+                          ) : null}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-medium text-zinc-900 dark:text-zinc-50">
+                              {ex.name}
+                            </span>
+                            {targeting ? (
+                              <span className="mt-0.5 block truncate text-xs text-zinc-500">
+                                {targeting}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                              on
+                                ? "border-emerald-600 bg-emerald-600 text-white"
+                                : "border-zinc-200 text-zinc-400 dark:border-zinc-700"
+                            }`}
+                          >
+                            {on ? "✓" : "+"}
+                          </span>
+                        </button>
+                        {showMuscles ? (
+                          <button
+                            type="button"
+                            onClick={() => setPeekExercise(ex)}
+                            className="flex w-11 shrink-0 items-center justify-center border-l border-zinc-200 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 dark:border-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                            aria-label={`See muscles targeted by ${ex.name}`}
+                          >
+                            <Info className="size-4" aria-hidden />
+                          </button>
+                        ) : null}
+                      </div>
                     </li>
                   );
                 })
@@ -350,6 +408,13 @@ export function WorkoutPickAndStart() {
             </ul>
           </div>
         ) : null}
+
+        <ExerciseMusclePeek
+          key={peekExercise?.id ?? "closed"}
+          exercise={peekExercise}
+          open={peekExercise != null}
+          onClose={() => setPeekExercise(null)}
+        />
 
         <div className="space-y-2 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">
           <button

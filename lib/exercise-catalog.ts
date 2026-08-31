@@ -1,3 +1,5 @@
+import type { MuscleGroup } from "@/lib/progress-types";
+
 export type ExerciseMetric =
   | "weight_reps"
   | "bodyweight_reps"
@@ -8,157 +10,310 @@ export type CatalogExercise = {
   id: string;
   name: string;
   metric: ExerciseMetric;
+  /** Main muscle group this move trains. Omitted on custom exercises. */
+  primary?: MuscleGroup;
+  /** Other groups that work as helpers. */
+  secondary?: MuscleGroup[];
 };
 
 /**
  * Short `id` values (no commas) so they are safe in URL lists.
  * Keep existing starter ids stable: squat, deadlift, bench, row, ohp, pullup, dip, lunge, rdl, plank.
  */
-export const EXERCISE_CATALOG: CatalogExercise[] = ([
+function ex(
+  id: string,
+  name: string,
+  metric: ExerciseMetric,
+  primary: MuscleGroup,
+  secondary?: MuscleGroup[],
+): CatalogExercise {
+  return secondary && secondary.length > 0
+    ? { id, name, metric, primary, secondary }
+    : { id, name, metric, primary };
+}
+
+export const EXERCISE_CATALOG: CatalogExercise[] = [
   // —— Free weight / bodyweight staples ——
-  { id: "squat", name: "Barbell back squat", metric: "weight_reps" },
-  { id: "front-squat", name: "Barbell front squat", metric: "weight_reps" },
-  { id: "deadlift", name: "Conventional deadlift", metric: "weight_reps" },
-  { id: "sumo-deadlift", name: "Sumo deadlift", metric: "weight_reps" },
-  { id: "rdl", name: "Romanian deadlift", metric: "weight_reps" },
-  { id: "bench", name: "Barbell bench press", metric: "weight_reps" },
-  { id: "incline-bench", name: "Incline barbell bench press", metric: "weight_reps" },
-  { id: "decline-bench", name: "Decline barbell bench press", metric: "weight_reps" },
-  { id: "row", name: "Barbell row", metric: "weight_reps" },
-  { id: "ohp", name: "Overhead press", metric: "weight_reps" },
-  { id: "pullup", name: "Pull-up", metric: "bodyweight_reps" },
-  { id: "chinup", name: "Chin-up", metric: "bodyweight_reps" },
-  { id: "dip", name: "Dip", metric: "bodyweight_reps" },
-  { id: "lunge", name: "Walking lunge", metric: "weight_reps" },
-  { id: "db-lunge", name: "Dumbbell reverse lunge", metric: "weight_reps" },
-  { id: "plank", name: "Plank", metric: "duration" },
-  { id: "pushup", name: "Push-up", metric: "bodyweight_reps" },
-  { id: "db-bench", name: "Dumbbell bench press", metric: "weight_reps" },
-  { id: "db-incline-bench", name: "Dumbbell incline press", metric: "weight_reps" },
-  { id: "db-shoulder-press", name: "Dumbbell shoulder press", metric: "weight_reps" },
-  { id: "db-row", name: "Dumbbell row", metric: "weight_reps" },
-  { id: "db-rdl", name: "Dumbbell Romanian deadlift", metric: "weight_reps" },
-  { id: "goblet-squat", name: "Goblet squat", metric: "weight_reps" },
-  { id: "hip-thrust", name: "Barbell hip thrust", metric: "weight_reps" },
-  { id: "good-morning", name: "Good morning", metric: "weight_reps" },
-  { id: "barbell-curl", name: "Barbell curl", metric: "weight_reps" },
-  { id: "db-curl", name: "Dumbbell curl", metric: "weight_reps" },
-  { id: "skull-crusher", name: "Skull crusher", metric: "weight_reps" },
-  { id: "db-lateral-raise", name: "Dumbbell lateral raise", metric: "weight_reps" },
-  { id: "db-fly", name: "Dumbbell fly", metric: "weight_reps" },
-  { id: "bulgarian-split-squat", name: "Bulgarian split squat", metric: "weight_reps" },
+  ex("squat", "Barbell back squat", "weight_reps", "legs", ["core"]),
+  ex("front-squat", "Barbell front squat", "weight_reps", "legs", ["core"]),
+  ex("deadlift", "Conventional deadlift", "weight_reps", "back", ["legs"]),
+  ex("sumo-deadlift", "Sumo deadlift", "weight_reps", "legs", ["back"]),
+  ex("rdl", "Romanian deadlift", "weight_reps", "legs", ["back"]),
+  ex("bench", "Barbell bench press", "weight_reps", "chest", [
+    "shoulders",
+    "arms",
+  ]),
+  ex("incline-bench", "Incline barbell bench press", "weight_reps", "chest", [
+    "shoulders",
+    "arms",
+  ]),
+  ex("decline-bench", "Decline barbell bench press", "weight_reps", "chest", [
+    "arms",
+  ]),
+  ex("row", "Barbell row", "weight_reps", "back", ["arms"]),
+  ex("ohp", "Overhead press", "weight_reps", "shoulders", ["arms"]),
+  ex("pullup", "Pull-up", "bodyweight_reps", "back", ["arms"]),
+  ex("chinup", "Chin-up", "bodyweight_reps", "back", ["arms"]),
+  ex("dip", "Dip", "bodyweight_reps", "arms", ["chest", "shoulders"]),
+  ex("lunge", "Walking lunge", "weight_reps", "legs"),
+  ex("db-lunge", "Dumbbell reverse lunge", "weight_reps", "legs"),
+  ex("plank", "Plank", "duration", "core"),
+  ex("pushup", "Push-up", "bodyweight_reps", "chest", ["shoulders", "arms"]),
+  ex("db-bench", "Dumbbell bench press", "weight_reps", "chest", [
+    "shoulders",
+    "arms",
+  ]),
+  ex("db-incline-bench", "Dumbbell incline press", "weight_reps", "chest", [
+    "shoulders",
+    "arms",
+  ]),
+  ex("db-shoulder-press", "Dumbbell shoulder press", "weight_reps", "shoulders", [
+    "arms",
+  ]),
+  ex("db-row", "Dumbbell row", "weight_reps", "back", ["arms"]),
+  ex("db-rdl", "Dumbbell Romanian deadlift", "weight_reps", "legs", ["back"]),
+  ex("goblet-squat", "Goblet squat", "weight_reps", "legs", ["core"]),
+  ex("hip-thrust", "Barbell hip thrust", "weight_reps", "legs"),
+  ex("good-morning", "Good morning", "weight_reps", "legs", ["back"]),
+  ex("barbell-curl", "Barbell curl", "weight_reps", "arms"),
+  ex("db-curl", "Dumbbell curl", "weight_reps", "arms"),
+  ex("skull-crusher", "Skull crusher", "weight_reps", "arms"),
+  ex("db-lateral-raise", "Dumbbell lateral raise", "weight_reps", "shoulders"),
+  ex("db-front-raise", "Dumbbell front raise", "weight_reps", "shoulders"),
+  ex("db-rear-delt-fly", "Dumbbell rear delt fly", "weight_reps", "shoulders"),
+  ex("arnold-press", "Arnold press", "weight_reps", "shoulders", ["arms"]),
+  ex("upright-row", "Barbell upright row", "weight_reps", "shoulders", ["arms"]),
+  ex("barbell-shrug", "Barbell shrug", "weight_reps", "back", ["shoulders"]),
+  ex("db-shrug", "Dumbbell shrug", "weight_reps", "back", ["shoulders"]),
+  ex("db-fly", "Dumbbell fly", "weight_reps", "chest"),
+  ex("db-decline-bench", "Dumbbell decline press", "weight_reps", "chest", [
+    "arms",
+  ]),
+  ex("floor-press", "Dumbbell floor press", "weight_reps", "chest", ["arms"]),
+  ex("db-pullover", "Dumbbell pullover", "weight_reps", "back", ["chest"]),
+  ex("bulgarian-split-squat", "Bulgarian split squat", "weight_reps", "legs"),
+  ex("split-squat", "Split squat", "weight_reps", "legs"),
+  ex("db-squat", "Dumbbell squat", "weight_reps", "legs", ["core"]),
+  ex("step-up", "Dumbbell step-up", "weight_reps", "legs"),
+  ex("single-leg-rdl", "Single-leg Romanian deadlift", "weight_reps", "legs", [
+    "back",
+  ]),
+  ex("trap-bar-deadlift", "Trap-bar deadlift", "weight_reps", "legs", ["back"]),
+  ex("db-calf-raise", "Dumbbell calf raise", "weight_reps", "legs"),
+  ex("glute-bridge", "Glute bridge", "weight_reps", "legs"),
+  ex("chest-supported-db-row", "Chest-supported dumbbell row", "weight_reps", "back", [
+    "arms",
+  ]),
+  ex("inverted-row", "Inverted row", "bodyweight_reps", "back", ["arms"]),
+  ex("db-hammer-curl", "Dumbbell hammer curl", "weight_reps", "arms"),
+  ex("incline-db-curl", "Incline dumbbell curl", "weight_reps", "arms"),
+  ex("concentration-curl", "Concentration curl", "weight_reps", "arms"),
+  ex("ez-bar-curl", "EZ-bar curl", "weight_reps", "arms"),
+  ex("preacher-curl", "Preacher curl", "weight_reps", "arms"),
+  ex("reverse-curl", "Reverse curl", "weight_reps", "arms"),
+  ex("db-kickback", "Dumbbell triceps kickback", "weight_reps", "arms"),
+  ex(
+    "db-oh-extension",
+    "Dumbbell overhead triceps extension",
+    "weight_reps",
+    "arms",
+  ),
+  ex("close-grip-bench", "Close-grip bench press", "weight_reps", "arms", [
+    "chest",
+  ]),
+  ex("kb-swing", "Kettlebell swing", "weight_reps", "legs", ["back", "core"]),
+  ex("russian-twist", "Russian twist", "bodyweight_reps", "core"),
+  ex("sit-up", "Sit-up", "bodyweight_reps", "core"),
 
   // —— Chest machines ——
-  { id: "chest-press-machine", name: "Chest press machine", metric: "weight_reps" },
-  { id: "incline-chest-press-machine", name: "Incline chest press machine", metric: "weight_reps" },
-  { id: "decline-chest-press-machine", name: "Decline chest press machine", metric: "weight_reps" },
-  { id: "pec-deck", name: "Pec deck", metric: "weight_reps" },
-  { id: "chest-fly-machine", name: "Chest fly machine", metric: "weight_reps" },
-  { id: "smith-bench", name: "Smith machine bench press", metric: "weight_reps" },
-  { id: "smith-incline-bench", name: "Smith machine incline press", metric: "weight_reps" },
-  { id: "assisted-dip-machine", name: "Assisted dip machine", metric: "weight_reps" },
+  ex("chest-press-machine", "Chest press machine", "weight_reps", "chest", [
+    "shoulders",
+    "arms",
+  ]),
+  ex(
+    "incline-chest-press-machine",
+    "Incline chest press machine",
+    "weight_reps",
+    "chest",
+    ["shoulders", "arms"],
+  ),
+  ex(
+    "decline-chest-press-machine",
+    "Decline chest press machine",
+    "weight_reps",
+    "chest",
+    ["arms"],
+  ),
+  ex("pec-deck", "Pec deck", "weight_reps", "chest"),
+  ex("chest-fly-machine", "Chest fly machine", "weight_reps", "chest"),
+  ex("smith-bench", "Smith machine bench press", "weight_reps", "chest", [
+    "shoulders",
+    "arms",
+  ]),
+  ex("smith-incline-bench", "Smith machine incline press", "weight_reps", "chest", [
+    "shoulders",
+    "arms",
+  ]),
+  ex("assisted-dip-machine", "Assisted dip machine", "weight_reps", "arms", [
+    "chest",
+    "shoulders",
+  ]),
 
   // —— Back machines ——
-  { id: "lat-pulldown", name: "Lat pulldown", metric: "weight_reps" },
-  { id: "close-grip-lat-pulldown", name: "Close-grip lat pulldown", metric: "weight_reps" },
-  { id: "wide-grip-lat-pulldown", name: "Wide-grip lat pulldown", metric: "weight_reps" },
-  { id: "seated-row-machine", name: "Seated row machine", metric: "weight_reps" },
-  { id: "chest-supported-row-machine", name: "Chest-supported row machine", metric: "weight_reps" },
-  { id: "t-bar-row-machine", name: "T-bar row machine", metric: "weight_reps" },
-  { id: "assisted-pullup-machine", name: "Assisted pull-up machine", metric: "weight_reps" },
-  { id: "back-extension-machine", name: "Back extension machine", metric: "weight_reps" },
-  { id: "hyperextension", name: "Hyperextension (back raise)", metric: "weight_reps" },
-  { id: "smith-row", name: "Smith machine row", metric: "weight_reps" },
+  ex("lat-pulldown", "Lat pulldown", "weight_reps", "back", ["arms"]),
+  ex("close-grip-lat-pulldown", "Close-grip lat pulldown", "weight_reps", "back", [
+    "arms",
+  ]),
+  ex("wide-grip-lat-pulldown", "Wide-grip lat pulldown", "weight_reps", "back", [
+    "arms",
+  ]),
+  ex("seated-row-machine", "Seated row machine", "weight_reps", "back", ["arms"]),
+  ex(
+    "chest-supported-row-machine",
+    "Chest-supported row machine",
+    "weight_reps",
+    "back",
+    ["arms"],
+  ),
+  ex("t-bar-row-machine", "T-bar row machine", "weight_reps", "back", ["arms"]),
+  ex("assisted-pullup-machine", "Assisted pull-up machine", "weight_reps", "back", [
+    "arms",
+  ]),
+  ex("back-extension-machine", "Back extension machine", "weight_reps", "back", [
+    "legs",
+  ]),
+  ex("hyperextension", "Hyperextension (back raise)", "weight_reps", "back", [
+    "legs",
+  ]),
+  ex("smith-row", "Smith machine row", "weight_reps", "back", ["arms"]),
 
   // —— Shoulder machines ——
-  { id: "shoulder-press-machine", name: "Shoulder press machine", metric: "weight_reps" },
-  { id: "lateral-raise-machine", name: "Lateral raise machine", metric: "weight_reps" },
-  { id: "rear-delt-fly-machine", name: "Rear delt fly machine", metric: "weight_reps" },
-  { id: "smith-ohp", name: "Smith machine overhead press", metric: "weight_reps" },
-  { id: "shrug-machine", name: "Shrug machine", metric: "weight_reps" },
+  ex(
+    "shoulder-press-machine",
+    "Shoulder press machine",
+    "weight_reps",
+    "shoulders",
+    ["arms"],
+  ),
+  ex("lateral-raise-machine", "Lateral raise machine", "weight_reps", "shoulders"),
+  ex("rear-delt-fly-machine", "Rear delt fly machine", "weight_reps", "shoulders"),
+  ex("smith-ohp", "Smith machine overhead press", "weight_reps", "shoulders", [
+    "arms",
+  ]),
+  ex("shrug-machine", "Shrug machine", "weight_reps", "back", ["shoulders"]),
 
   // —— Leg machines ——
-  { id: "leg-press", name: "Leg press", metric: "weight_reps" },
-  { id: "horizontal-leg-press", name: "Horizontal leg press", metric: "weight_reps" },
-  { id: "hack-squat-machine", name: "Hack squat machine", metric: "weight_reps" },
-  { id: "v-squat-machine", name: "V-squat machine", metric: "weight_reps" },
-  { id: "smith-squat", name: "Smith machine squat", metric: "weight_reps" },
-  { id: "leg-extension", name: "Leg extension", metric: "weight_reps" },
-  { id: "lying-leg-curl", name: "Lying leg curl", metric: "weight_reps" },
-  { id: "seated-leg-curl", name: "Seated leg curl", metric: "weight_reps" },
-  { id: "standing-leg-curl", name: "Standing leg curl", metric: "weight_reps" },
-  { id: "hip-abduction-machine", name: "Hip abduction machine", metric: "weight_reps" },
-  { id: "hip-adduction-machine", name: "Hip adduction machine", metric: "weight_reps" },
-  { id: "glute-kickback-machine", name: "Glute kickback machine", metric: "weight_reps" },
-  { id: "hip-thrust-machine", name: "Hip thrust machine", metric: "weight_reps" },
-  { id: "calf-raise-machine", name: "Standing calf raise machine", metric: "weight_reps" },
-  { id: "seated-calf-raise", name: "Seated calf raise machine", metric: "weight_reps" },
-  { id: "calf-extension-machine", name: "Calf extension machine", metric: "weight_reps" },
-  { id: "donkey-calf-raise-machine", name: "Donkey calf raise machine", metric: "weight_reps" },
-  { id: "leg-press-calf-raise", name: "Leg press calf raise", metric: "weight_reps" },
-  { id: "adductor-machine", name: "Adductor machine", metric: "weight_reps" },
-  { id: "abductor-machine", name: "Abductor machine", metric: "weight_reps" },
-  { id: "multi-hip-machine", name: "Multi-hip machine", metric: "weight_reps" },
-  { id: "pendulum-squat", name: "Pendulum squat", metric: "weight_reps" },
-  { id: "belt-squat", name: "Belt squat machine", metric: "weight_reps" },
+  ex("leg-press", "Leg press", "weight_reps", "legs"),
+  ex("horizontal-leg-press", "Horizontal leg press", "weight_reps", "legs"),
+  ex("hack-squat-machine", "Hack squat machine", "weight_reps", "legs"),
+  ex("v-squat-machine", "V-squat machine", "weight_reps", "legs"),
+  ex("smith-squat", "Smith machine squat", "weight_reps", "legs"),
+  ex("leg-extension", "Leg extension", "weight_reps", "legs"),
+  ex("lying-leg-curl", "Lying leg curl", "weight_reps", "legs"),
+  ex("seated-leg-curl", "Seated leg curl", "weight_reps", "legs"),
+  ex("standing-leg-curl", "Standing leg curl", "weight_reps", "legs"),
+  ex("hip-abduction-machine", "Hip abduction machine", "weight_reps", "legs"),
+  ex("hip-adduction-machine", "Hip adduction machine", "weight_reps", "legs"),
+  ex("glute-kickback-machine", "Glute kickback machine", "weight_reps", "legs"),
+  ex("hip-thrust-machine", "Hip thrust machine", "weight_reps", "legs"),
+  ex("calf-raise-machine", "Standing calf raise machine", "weight_reps", "legs"),
+  ex("seated-calf-raise", "Seated calf raise machine", "weight_reps", "legs"),
+  ex("calf-extension-machine", "Calf extension machine", "weight_reps", "legs"),
+  ex(
+    "donkey-calf-raise-machine",
+    "Donkey calf raise machine",
+    "weight_reps",
+    "legs",
+  ),
+  ex("leg-press-calf-raise", "Leg press calf raise", "weight_reps", "legs"),
+  ex("adductor-machine", "Adductor machine", "weight_reps", "legs"),
+  ex("abductor-machine", "Abductor machine", "weight_reps", "legs"),
+  ex("multi-hip-machine", "Multi-hip machine", "weight_reps", "legs"),
+  ex("pendulum-squat", "Pendulum squat", "weight_reps", "legs"),
+  ex("belt-squat", "Belt squat machine", "weight_reps", "legs"),
 
   // —— Arm machines ——
-  { id: "preacher-curl-machine", name: "Preacher curl machine", metric: "weight_reps" },
-  { id: "bicep-curl-machine", name: "Biceps curl machine", metric: "weight_reps" },
-  { id: "triceps-extension-machine", name: "Triceps extension machine", metric: "weight_reps" },
-  { id: "triceps-pushdown-machine", name: "Triceps pushdown (machine stack)", metric: "weight_reps" },
-  { id: "arm-curl-machine", name: "Arm curl machine", metric: "weight_reps" },
-  { id: "dip-machine", name: "Triceps dip machine", metric: "weight_reps" },
+  ex("preacher-curl-machine", "Preacher curl machine", "weight_reps", "arms"),
+  ex("bicep-curl-machine", "Biceps curl machine", "weight_reps", "arms"),
+  ex(
+    "triceps-extension-machine",
+    "Triceps extension machine",
+    "weight_reps",
+    "arms",
+  ),
+  ex(
+    "triceps-pushdown-machine",
+    "Triceps pushdown (machine stack)",
+    "weight_reps",
+    "arms",
+  ),
+  ex("arm-curl-machine", "Arm curl machine", "weight_reps", "arms"),
+  ex("dip-machine", "Triceps dip machine", "weight_reps", "arms", ["chest"]),
 
   // —— Cable station ——
-  { id: "cable-fly", name: "Cable chest fly", metric: "weight_reps" },
-  { id: "cable-crossover", name: "Cable crossover", metric: "weight_reps" },
-  { id: "cable-lat-pulldown", name: "Cable lat pulldown", metric: "weight_reps" },
-  { id: "cable-seated-row", name: "Cable seated row", metric: "weight_reps" },
-  { id: "cable-face-pull", name: "Cable face pull", metric: "weight_reps" },
-  { id: "cable-lateral-raise", name: "Cable lateral raise", metric: "weight_reps" },
-  { id: "cable-rear-delt-fly", name: "Cable rear delt fly", metric: "weight_reps" },
-  { id: "cable-tricep-pushdown", name: "Cable triceps pushdown", metric: "weight_reps" },
-  { id: "cable-overhead-extension", name: "Cable overhead triceps extension", metric: "weight_reps" },
-  { id: "cable-bicep-curl", name: "Cable biceps curl", metric: "weight_reps" },
-  { id: "cable-hammer-curl", name: "Cable hammer curl", metric: "weight_reps" },
-  { id: "cable-crunch", name: "Cable crunch", metric: "weight_reps" },
-  { id: "cable-woodchop", name: "Cable woodchop", metric: "weight_reps" },
-  { id: "cable-pull-through", name: "Cable pull-through", metric: "weight_reps" },
-  { id: "cable-kickback", name: "Cable glute kickback", metric: "weight_reps" },
-  { id: "cable-shrug", name: "Cable shrug", metric: "weight_reps" },
-  { id: "straight-arm-pulldown", name: "Straight-arm pulldown", metric: "weight_reps" },
-  { id: "cable-upright-row", name: "Cable upright row", metric: "weight_reps" },
+  ex("cable-fly", "Cable chest fly", "weight_reps", "chest"),
+  ex("cable-crossover", "Cable crossover", "weight_reps", "chest"),
+  ex("cable-lat-pulldown", "Cable lat pulldown", "weight_reps", "back", ["arms"]),
+  ex("cable-seated-row", "Cable seated row", "weight_reps", "back", ["arms"]),
+  ex("cable-face-pull", "Cable face pull", "weight_reps", "shoulders", ["back"]),
+  ex("cable-lateral-raise", "Cable lateral raise", "weight_reps", "shoulders"),
+  ex("cable-rear-delt-fly", "Cable rear delt fly", "weight_reps", "shoulders"),
+  ex("cable-tricep-pushdown", "Cable triceps pushdown", "weight_reps", "arms"),
+  ex(
+    "cable-overhead-extension",
+    "Cable overhead triceps extension",
+    "weight_reps",
+    "arms",
+  ),
+  ex("cable-bicep-curl", "Cable biceps curl", "weight_reps", "arms"),
+  ex("cable-hammer-curl", "Cable hammer curl", "weight_reps", "arms"),
+  ex("cable-crunch", "Cable crunch", "weight_reps", "core"),
+  ex("cable-woodchop", "Cable woodchop", "weight_reps", "core", ["shoulders"]),
+  ex("cable-pull-through", "Cable pull-through", "weight_reps", "legs", ["back"]),
+  ex("cable-kickback", "Cable glute kickback", "weight_reps", "legs"),
+  ex("cable-shrug", "Cable shrug", "weight_reps", "back", ["shoulders"]),
+  ex("straight-arm-pulldown", "Straight-arm pulldown", "weight_reps", "back"),
+  ex("cable-upright-row", "Cable upright row", "weight_reps", "shoulders", [
+    "arms",
+  ]),
 
   // —— Core / midsection machines ——
-  { id: "ab-crunch-machine", name: "Ab crunch machine", metric: "weight_reps" },
-  { id: "rotary-torso-machine", name: "Rotary torso machine", metric: "weight_reps" },
-  { id: "captains-chair", name: "Captain's chair knee raise", metric: "bodyweight_reps" },
-  { id: "hanging-leg-raise", name: "Hanging leg raise", metric: "bodyweight_reps" },
-  { id: "lying-leg-raise", name: "Lying leg raise", metric: "bodyweight_reps" },
-  { id: "dead-bug", name: "Dead bug", metric: "bodyweight_reps" },
-  { id: "ab-wheel", name: "Ab wheel rollout", metric: "bodyweight_reps" },
-  { id: "side-plank", name: "Side plank", metric: "duration" },
-  { id: "hanging-knee-raise", name: "Hanging knee raise", metric: "bodyweight_reps" },
+  ex("ab-crunch-machine", "Ab crunch machine", "weight_reps", "core"),
+  ex("rotary-torso-machine", "Rotary torso machine", "weight_reps", "core"),
+  ex(
+    "captains-chair",
+    "Captain's chair knee raise",
+    "bodyweight_reps",
+    "core",
+  ),
+  ex("hanging-leg-raise", "Hanging leg raise", "bodyweight_reps", "core"),
+  ex("lying-leg-raise", "Lying leg raise", "bodyweight_reps", "core"),
+  ex("dead-bug", "Dead bug", "bodyweight_reps", "core"),
+  ex("ab-wheel", "Ab wheel rollout", "bodyweight_reps", "core", ["shoulders"]),
+  ex("side-plank", "Side plank", "duration", "core"),
+  ex("hanging-knee-raise", "Hanging knee raise", "bodyweight_reps", "core"),
 
   // —— Functional / selectorized commons ——
-  { id: "smith-lunge", name: "Smith machine lunge", metric: "weight_reps" },
-  { id: "smith-hip-thrust", name: "Smith machine hip thrust", metric: "weight_reps" },
-  { id: "smith-calf-raise", name: "Smith machine calf raise", metric: "weight_reps" },
-  { id: "smith-shrug", name: "Smith machine shrug", metric: "weight_reps" },
-  { id: "landmine-press", name: "Landmine press", metric: "weight_reps" },
-  { id: "landmine-row", name: "Landmine row", metric: "weight_reps" },
-  { id: "sled-push", name: "Sled push", metric: "weight_reps" },
-  { id: "farmer-carry", name: "Farmer carry", metric: "weight_reps" },
+  ex("smith-lunge", "Smith machine lunge", "weight_reps", "legs"),
+  ex("smith-hip-thrust", "Smith machine hip thrust", "weight_reps", "legs"),
+  ex("smith-calf-raise", "Smith machine calf raise", "weight_reps", "legs"),
+  ex("smith-shrug", "Smith machine shrug", "weight_reps", "back", ["shoulders"]),
+  ex("landmine-press", "Landmine press", "weight_reps", "shoulders", [
+    "chest",
+    "arms",
+  ]),
+  ex("landmine-row", "Landmine row", "weight_reps", "back", ["arms"]),
+  ex("sled-push", "Sled push", "weight_reps", "legs", ["core", "shoulders"]),
+  ex("farmer-carry", "Farmer carry", "weight_reps", "legs", ["core", "arms"]),
 
-  // —— Cardio machines (duration + optional pace / incline / resistance / distance) ——
-  { id: "treadmill", name: "Treadmill", metric: "cardio" },
-  { id: "elliptical", name: "Elliptical", metric: "cardio" },
-  { id: "stair-climber", name: "Stair climber", metric: "cardio" },
-  { id: "stationary-bike", name: "Stationary bike", metric: "cardio" },
-  { id: "row-erg", name: "Rowing machine", metric: "cardio" },
-  { id: "assault-bike", name: "Assault / air bike", metric: "cardio" },
-] as CatalogExercise[]).sort((a, b) => a.name.localeCompare(b.name, "en"));
+  // —— Cardio machines ——
+  ex("treadmill", "Treadmill", "cardio", "cardio"),
+  ex("elliptical", "Elliptical", "cardio", "cardio"),
+  ex("stair-climber", "Stair climber", "cardio", "cardio"),
+  ex("stationary-bike", "Stationary bike", "cardio", "cardio"),
+  ex("row-erg", "Rowing machine", "cardio", "cardio"),
+  ex("assault-bike", "Assault / air bike", "cardio", "cardio"),
+].sort((a, b) => a.name.localeCompare(b.name, "en"));
 
 const byId = new Map(EXERCISE_CATALOG.map((e) => [e.id, e]));
 
@@ -168,13 +323,28 @@ export function getCatalogExerciseById(
   return byId.get(id);
 }
 
-/** Filter catalog by name (case-insensitive). Empty query returns all. */
+function targetingMatchesQuery(
+  exercise: CatalogExercise,
+  q: string,
+): boolean {
+  const groups = [
+    exercise.primary,
+    ...(exercise.secondary ?? []),
+  ].filter((g): g is MuscleGroup => Boolean(g));
+  return groups.some(
+    (g) => g === q || (q.length >= 3 && g.includes(q)),
+  );
+}
+
+/** Filter catalog by name or muscle group (case-insensitive). Empty query returns all. */
 export function filterCatalogExercises(query: string): CatalogExercise[] {
   const q = query.trim().toLowerCase();
   if (!q) return EXERCISE_CATALOG;
   return EXERCISE_CATALOG.filter(
-    (ex) =>
-      ex.name.toLowerCase().includes(q) || ex.id.toLowerCase().includes(q),
+    (item) =>
+      item.name.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q) ||
+      targetingMatchesQuery(item, q),
   );
 }
 
@@ -196,8 +366,8 @@ export function catalogExerciseFromCustomName(name: string): CatalogExercise | n
 export function resolveCatalogExercises(ids: string[]): CatalogExercise[] {
   const out: CatalogExercise[] = [];
   for (const id of ids) {
-    const ex = byId.get(id);
-    if (ex) out.push(ex);
+    const found = byId.get(id);
+    if (found) out.push(found);
   }
   return out;
 }
