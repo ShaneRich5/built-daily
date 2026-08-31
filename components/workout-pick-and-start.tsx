@@ -11,7 +11,6 @@ import {
 } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { ExerciseMusclePeek } from "@/components/exercise-muscle-peek";
-import { MuscleTargetDiagram } from "@/components/muscle-target-diagram";
 import { Switch } from "@/components/ui/switch";
 import {
   filterCatalogExercises,
@@ -319,23 +318,31 @@ export function WorkoutPickAndStart() {
               className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
               aria-label="Search exercises"
             />
-            <div className="flex items-center justify-end gap-2">
-              <label
-                htmlFor="show-muscles-toggle"
-                className="text-xs font-medium text-zinc-500"
+            <div className="flex items-center justify-between gap-2">
+              <Link
+                href="/catalog"
+                className="text-xs font-semibold text-zinc-500 underline-offset-2 hover:text-zinc-800 hover:underline dark:hover:text-zinc-300"
               >
-                Show muscles
-              </label>
-              <Switch
-                id="show-muscles-toggle"
-                size="sm"
-                checked={showMuscles}
-                onCheckedChange={(checked) => {
-                  const next = Boolean(checked);
-                  setShowMuscles(next);
-                  if (!next) setPeekExercise(null);
-                }}
-              />
+                Browse catalog
+              </Link>
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="show-muscles-toggle"
+                  className="text-xs font-medium text-zinc-500"
+                >
+                  Show muscles
+                </label>
+                <Switch
+                  id="show-muscles-toggle"
+                  size="sm"
+                  checked={showMuscles}
+                  onCheckedChange={(checked) => {
+                    const next = Boolean(checked);
+                    setShowMuscles(next);
+                    if (!next) setPeekExercise(null);
+                  }}
+                />
+              </div>
             </div>
             <ul className="grid max-h-[min(28rem,55vh)] grid-cols-1 gap-2 overflow-y-auto overscroll-contain md:grid-cols-2">
               {filteredExercises.length === 0 ? (
@@ -363,13 +370,6 @@ export function WorkoutPickAndStart() {
                           onClick={() => toggleExercise(ex.id)}
                           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 px-3 py-2.5 text-left active:scale-[0.99] sm:px-4"
                         >
-                          {showMuscles ? (
-                            <MuscleTargetDiagram
-                              primary={ex.primary}
-                              secondary={ex.secondary}
-                              compact
-                            />
-                          ) : null}
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium text-zinc-900 dark:text-zinc-50">
                               {ex.name}

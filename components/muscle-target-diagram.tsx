@@ -1,173 +1,103 @@
+"use client";
+
+import { MuscleMap } from "@musclemap/react";
+import type {
+  MuscleGroup as MapMuscleGroup,
+  MuscleMapRegion,
+  MuscleMapValues,
+  MuscleMapView,
+} from "@musclemap/core";
 import type { MuscleFocus } from "@/lib/exercise-muscle";
 import type { MuscleGroup } from "@/lib/progress-types";
+import { cn } from "@/lib/utils";
 
-const FOCUS_VIEWBOX: Record<MuscleFocus, string> = {
-  full: "0 0 280 340",
-  upper: "0 0 280 185",
-  lower: "0 140 280 200",
-  arms: "0 42 280 130",
+type DiagramSize = "compact" | "card" | "full";
+
+const SIZE_CLASS: Record<DiagramSize, string> = {
+  compact: "w-[4.75rem] shrink-0",
+  card: "w-[6.5rem] shrink-0",
+  full: "w-full",
 };
 
-const FILL = {
-  idle: "fill-zinc-200 dark:fill-zinc-700",
-  secondary: "fill-emerald-200 dark:fill-emerald-800",
-  primary: "fill-emerald-500 dark:fill-emerald-400",
-  rest: "fill-zinc-100 dark:fill-zinc-800",
-} as const;
+const FIGURE_WIDTH: Record<DiagramSize, number> = {
+  compact: 28,
+  card: 40,
+  full: 148,
+};
 
-function fillFor(
-  group: MuscleGroup,
+const FOCUS_CAMERA: Record<
+  MuscleFocus,
+  { view: MuscleMapView; region: MuscleMapRegion; crop: boolean }
+> = {
+  full: { view: "BOTH", region: "FULL_BODY", crop: false },
+  torso: { view: "FRONT", region: "UPPER_BODY", crop: true },
+  back: { view: "BACK", region: "UPPER_BODY", crop: true },
+  arms: { view: "BOTH", region: "UPPER_BODY", crop: true },
+  legs: { view: "BOTH", region: "LOWER_BODY", crop: true },
+  core: { view: "FRONT", region: "CORE", crop: true },
+};
+
+const APP_TO_MAP: Record<
+  Exclude<MuscleGroup, "cardio" | "other">,
+  MapMuscleGroup[]
+> = {
+  chest: ["CHEST"],
+  back: ["TRAPEZIUS", "RHOMBOIDS", "LATS", "BACK_UPPER", "BACK_LOWER"],
+  shoulders: ["SHOULDERS_FRONT", "SHOULDERS_SIDE", "SHOULDERS_REAR"],
+  arms: ["BICEPS", "TRICEPS", "FOREARMS"],
+  core: ["CORE", "OBLIQUES"],
+  legs: [
+    "GLUTES",
+    "QUADS",
+    "HAMSTRINGS",
+    "CALVES",
+    "ADDUCTORS",
+    "ABDUCTORS",
+    "HIP_FLEXORS",
+  ],
+};
+
+const MAP_TO_APP: Record<MapMuscleGroup, MuscleGroup> = {
+  CHEST: "chest",
+  BACK_UPPER: "back",
+  BACK_LOWER: "back",
+  TRAPEZIUS: "back",
+  RHOMBOIDS: "back",
+  LATS: "back",
+  SHOULDERS_FRONT: "shoulders",
+  SHOULDERS_SIDE: "shoulders",
+  SHOULDERS_REAR: "shoulders",
+  BICEPS: "arms",
+  TRICEPS: "arms",
+  FOREARMS: "arms",
+  CORE: "core",
+  OBLIQUES: "core",
+  GLUTES: "legs",
+  QUADS: "legs",
+  HAMSTRINGS: "legs",
+  CALVES: "legs",
+  HIP_FLEXORS: "legs",
+  ADDUCTORS: "legs",
+  ABDUCTORS: "legs",
+};
+
+function valuesFor(
   primary?: MuscleGroup,
   secondary?: MuscleGroup[],
-): string {
-  if (!primary || primary === "cardio" || primary === "other") {
-    return FILL.idle;
+): MuscleMapValues {
+  const values: MuscleMapValues = {};
+  if (!primary || primary === "cardio" || primary === "other") return values;
+
+  for (const group of APP_TO_MAP[primary]) {
+    values[group] = { score: 100 };
   }
-  if (group === primary) return FILL.primary;
-  if (secondary?.includes(group)) return FILL.secondary;
-  return FILL.idle;
-}
-
-function BodyFigure({
-  variant,
-  primary,
-  secondary,
-}: {
-  variant: "front" | "back";
-  primary?: MuscleGroup;
-  secondary?: MuscleGroup[];
-}) {
-  const isFront = variant === "front";
-  const f = (g: MuscleGroup) => fillFor(g, primary, secondary);
-
-  return (
-    <g>
-      {/* Arms sit behind the torso so they tuck under the shoulders. */}
-      <rect
-        x="12"
-        y="62"
-        width="18"
-        height="50"
-        rx="9"
-        className={f("arms")}
-        transform="rotate(-18 21 87)"
-      />
-      <rect
-        x="100"
-        y="62"
-        width="18"
-        height="50"
-        rx="9"
-        className={f("arms")}
-        transform="rotate(18 109 87)"
-      />
-      <rect
-        x="4"
-        y="108"
-        width="16"
-        height="46"
-        rx="8"
-        className={f("arms")}
-        transform="rotate(-8 12 131)"
-      />
-      <rect
-        x="110"
-        y="108"
-        width="16"
-        height="46"
-        rx="8"
-        className={f("arms")}
-        transform="rotate(8 118 131)"
-      />
-
-      <ellipse cx="32" cy="58" rx="17" ry="13" className={f("shoulders")} />
-      <ellipse cx="98" cy="58" rx="17" ry="13" className={f("shoulders")} />
-
-      {isFront ? (
-        <>
-          <rect
-            x="48"
-            y="92"
-            width="34"
-            height="50"
-            rx="12"
-            className={f("core")}
-          />
-          <ellipse cx="52" cy="78" rx="17" ry="19" className={f("chest")} />
-          <ellipse cx="78" cy="78" rx="17" ry="19" className={f("chest")} />
-        </>
-      ) : (
-        <>
-          <path
-            d="M38 78 C42 118 65 128 65 128 C65 128 88 118 92 78 C78 108 52 108 38 78Z"
-            className={f("back")}
-          />
-          <ellipse cx="65" cy="76" rx="30" ry="22" className={f("back")} />
-        </>
-      )}
-
-      <ellipse cx="65" cy="22" rx="15" ry="17" className={FILL.rest} />
-      <rect
-        x="58"
-        y="36"
-        width="14"
-        height="12"
-        rx="4"
-        className={FILL.rest}
-      />
-
-      {isFront ? (
-        <rect
-          x="46"
-          y="138"
-          width="38"
-          height="16"
-          rx="8"
-          className={f("legs")}
-        />
-      ) : (
-        <>
-          <ellipse cx="52" cy="150" rx="15" ry="13" className={f("legs")} />
-          <ellipse cx="78" cy="150" rx="15" ry="13" className={f("legs")} />
-        </>
-      )}
-
-      <rect
-        x="44"
-        y="152"
-        width="20"
-        height="68"
-        rx="10"
-        className={f("legs")}
-      />
-      <rect
-        x="66"
-        y="152"
-        width="20"
-        height="68"
-        rx="10"
-        className={f("legs")}
-      />
-      <rect
-        x="46"
-        y="218"
-        width="16"
-        height="58"
-        rx="8"
-        className={f("legs")}
-      />
-      <rect
-        x="68"
-        y="218"
-        width="16"
-        height="58"
-        rx="8"
-        className={f("legs")}
-      />
-      <ellipse cx="52" cy="282" rx="12" ry="6" className={FILL.rest} />
-      <ellipse cx="78" cy="282" rx="12" ry="6" className={FILL.rest} />
-    </g>
-  );
+  for (const extra of secondary ?? []) {
+    if (extra === primary || extra === "cardio" || extra === "other") continue;
+    for (const group of APP_TO_MAP[extra]) {
+      if (!values[group]) values[group] = { score: 46 };
+    }
+  }
+  return values;
 }
 
 export function MuscleTargetDiagram({
@@ -175,62 +105,54 @@ export function MuscleTargetDiagram({
   secondary,
   focus = "full",
   compact = false,
+  size,
   className,
+  onSelectGroup,
 }: {
   primary?: MuscleGroup;
   secondary?: MuscleGroup[];
   focus?: MuscleFocus;
   compact?: boolean;
+  size?: DiagramSize;
   className?: string;
+  onSelectGroup?: (group: MuscleGroup) => void;
 }) {
-  const viewBox = compact ? FOCUS_VIEWBOX.full : FOCUS_VIEWBOX[focus];
+  const resolvedSize: DiagramSize = compact ? "compact" : (size ?? "full");
+  const interactive = Boolean(onSelectGroup);
+  const camera = FOCUS_CAMERA[focus];
+  const baseWidth = FIGURE_WIDTH[resolvedSize];
+  const figureWidth =
+    camera.view === "BOTH" ? baseWidth : Math.round(baseWidth * 1.55);
 
   return (
-    <svg
-      viewBox={viewBox}
-      aria-hidden
-      className={
-        compact
-          ? `pointer-events-none h-10 w-8 shrink-0 ${className ?? ""}`
-          : `h-auto w-full max-h-72 ${className ?? ""}`
-      }
-    >
-      <g transform="translate(5 8)">
-        <BodyFigure
-          variant="front"
-          primary={primary}
-          secondary={secondary}
-        />
-      </g>
-      <g transform="translate(145 8)">
-        <BodyFigure
-          variant="back"
-          primary={primary}
-          secondary={secondary}
-        />
-      </g>
-      {compact || focus !== "full" ? null : (
-        <>
-          <text
-            x="70"
-            y="328"
-            textAnchor="middle"
-            fontSize={11}
-            className="fill-zinc-400 dark:fill-zinc-500"
-          >
-            Front
-          </text>
-          <text
-            x="210"
-            y="328"
-            textAnchor="middle"
-            fontSize={11}
-            className="fill-zinc-400 dark:fill-zinc-500"
-          >
-            Back
-          </text>
-        </>
+    <div
+      className={cn(
+        "bg-[#0b1220]",
+        resolvedSize === "full" && "rounded-xl px-1 py-2",
+        resolvedSize === "card" && "rounded-md p-0.5",
+        resolvedSize === "compact" && "rounded-sm p-px",
+        SIZE_CLASS[resolvedSize],
+        !interactive && "pointer-events-none",
+        className,
       )}
-    </svg>
+    >
+      <MuscleMap
+        values={valuesFor(primary, secondary)}
+        view={camera.view}
+        region={camera.region}
+        cropToRegion={camera.crop}
+        monochromeColor="#10b981"
+        glow={resolvedSize === "full"}
+        showLegend={false}
+        tooltipFields={[]}
+        figureWidth={figureWidth}
+        onSelectMuscle={
+          onSelectGroup
+            ? ({ group }) => onSelectGroup(MAP_TO_APP[group])
+            : undefined
+        }
+        style={{ gap: 4 }}
+      />
+    </div>
   );
 }

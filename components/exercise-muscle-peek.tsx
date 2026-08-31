@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { MuscleFocusPicker } from "@/components/muscle-focus-picker";
 import { MuscleTargetDiagram } from "@/components/muscle-target-diagram";
 import type { CatalogExercise } from "@/lib/exercise-catalog";
 import {
   defaultMuscleFocus,
-  MUSCLE_FOCUS_OPTIONS,
   muscleGroupLabel,
   muscleTargetSummary,
   type MuscleFocus,
@@ -16,23 +17,27 @@ type ExerciseMusclePeekProps = {
   exercise: CatalogExercise | null;
   open: boolean;
   onClose: () => void;
+  /** Optional workout start URL, e.g. `/workout?e=bench`. */
+  startHref?: string;
 };
 
 export function ExerciseMusclePeek({
   exercise,
   open,
   onClose,
+  startHref,
 }: ExerciseMusclePeekProps) {
   const [focusOverride, setFocusOverride] = useState<MuscleFocus | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    setFocusOverride(null);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open, onClose, exercise?.id]);
 
   if (!open || !exercise) return null;
 
@@ -88,26 +93,8 @@ export function ExerciseMusclePeek({
           />
 
           <div>
-            <p className="mb-2 text-xs font-medium text-zinc-500">Focus</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {MUSCLE_FOCUS_OPTIONS.map((option) => {
-                const on = focus === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setFocusOverride(option.id)}
-                    className={`h-10 rounded-lg border text-xs font-semibold transition ${
-                      on
-                        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                        : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-zinc-700"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
+            <p className="mb-2 text-xs font-medium text-zinc-500">View</p>
+            <MuscleFocusPicker value={focus} onChange={setFocusOverride} />
           </div>
 
           {!isCardio && exercise.primary && exercise.primary !== "other" ? (
@@ -123,6 +110,15 @@ export function ExerciseMusclePeek({
                 </li>
               ))}
             </ul>
+          ) : null}
+
+          {startHref ? (
+            <Link
+              href={startHref}
+              className="flex h-11 w-full items-center justify-center rounded-xl bg-zinc-900 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              Start workout
+            </Link>
           ) : null}
         </div>
       </div>

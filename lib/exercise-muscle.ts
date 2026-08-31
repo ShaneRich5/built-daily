@@ -1,13 +1,35 @@
 import { getCatalogExerciseById } from "@/lib/exercise-catalog";
 import type { MuscleGroup } from "@/lib/progress-types";
 
-export type MuscleFocus = "full" | "upper" | "lower" | "arms";
+export type MuscleFocus =
+  | "full"
+  | "torso"
+  | "back"
+  | "arms"
+  | "legs"
+  | "core";
 
 export const MUSCLE_FOCUS_OPTIONS: Array<{ id: MuscleFocus; label: string }> = [
   { id: "full", label: "Full" },
-  { id: "upper", label: "Upper" },
-  { id: "lower", label: "Lower" },
+  { id: "torso", label: "Torso" },
+  { id: "back", label: "Back" },
   { id: "arms", label: "Arms" },
+  { id: "legs", label: "Legs" },
+  { id: "core", label: "Core" },
+];
+
+/** Muscle chips on the catalog page (excludes "other"). */
+export const CATALOG_MUSCLE_FILTERS: Array<{
+  id: MuscleGroup;
+  label: string;
+}> = [
+  { id: "chest", label: "Chest" },
+  { id: "back", label: "Back" },
+  { id: "shoulders", label: "Shoulders" },
+  { id: "arms", label: "Arms" },
+  { id: "core", label: "Core" },
+  { id: "legs", label: "Legs" },
+  { id: "cardio", label: "Cardio" },
 ];
 
 const UPPER_GROUPS: ReadonlySet<MuscleGroup> = new Set([
@@ -91,6 +113,25 @@ function diagramGroups(
   return out;
 }
 
+/** Camera that best shows a catalog muscle filter. */
+export function focusForMuscleGroup(group: MuscleGroup | null): MuscleFocus {
+  switch (group) {
+    case "chest":
+    case "shoulders":
+      return "torso";
+    case "back":
+      return "back";
+    case "arms":
+      return "arms";
+    case "legs":
+      return "legs";
+    case "core":
+      return "core";
+    default:
+      return "full";
+  }
+}
+
 /**
  * Camera for the body diagram. Uses every tagged group so compounds like
  * deadlift stay on the full body instead of cropping out the legs.
@@ -104,8 +145,9 @@ export function defaultMuscleFocus(
   const hasUpper = groups.some((g) => UPPER_GROUPS.has(g));
   const hasLower = groups.includes("legs");
   if (hasUpper && hasLower) return "full";
-  if (groups.length === 1 && groups[0] === "arms") return "arms";
-  if (hasLower) return "lower";
-  if (hasUpper) return "upper";
+  if (groups.length === 1) return focusForMuscleGroup(groups[0]);
+  if (hasLower) return "legs";
+  if (groups.includes("back") && !groups.includes("chest")) return "back";
+  if (hasUpper) return "torso";
   return "full";
 }

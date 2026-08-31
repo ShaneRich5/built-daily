@@ -348,6 +348,24 @@ export function filterCatalogExercises(query: string): CatalogExercise[] {
   );
 }
 
+/**
+ * Keep primary matches first so a "chest" filter leads with chest work,
+ * then compounds that only use chest as a helper.
+ */
+export function filterCatalogByMuscle(
+  exercises: CatalogExercise[],
+  group: MuscleGroup | null,
+): CatalogExercise[] {
+  if (!group) return exercises;
+  const primary: CatalogExercise[] = [];
+  const helper: CatalogExercise[] = [];
+  for (const item of exercises) {
+    if (item.primary === group) primary.push(item);
+    else if (item.secondary?.includes(group)) helper.push(item);
+  }
+  return [...primary, ...helper];
+}
+
 /** Ad-hoc exercise for a live session or template line (bodyweight-style logging). */
 export function catalogExerciseFromCustomName(name: string): CatalogExercise | null {
   const trimmed = name.trim().slice(0, 200);
