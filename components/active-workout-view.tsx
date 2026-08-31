@@ -26,6 +26,7 @@ import { flushSync } from "react-dom";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { ExerciseHistoryControls } from "@/components/exercise-history-controls";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
+import { WorkoutSessionMuscles } from "@/components/workout-session-muscles";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -61,6 +62,10 @@ import {
   combineToTotalSeconds,
   splitTotalSeconds,
 } from "@/lib/duration-input";
+import {
+  muscleTargetSummary,
+  targetingForExercise,
+} from "@/lib/exercise-muscle";
 import {
   localDateKeyFromMs,
   formatSessionVolumeMeta,
@@ -1207,6 +1212,8 @@ export function ActiveWorkoutView({
         collapsible
       />
 
+      <WorkoutSessionMuscles exercises={activeExercises} />
+
       <div className="flex shrink-0 items-center justify-between gap-2">
         <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
           Exercises
@@ -1267,6 +1274,11 @@ export function ActiveWorkoutView({
           const lineId = lineIds[exerciseIndex] ?? `${exerciseIndex}-${exercise.id}`;
           const expanded = expandedExerciseIndex === exerciseIndex;
           const summary = summarizeExerciseSets(sets, exercise.metric);
+          const targetingHit = targetingForExercise(exercise);
+          const targeting = muscleTargetSummary(
+            targetingHit.primary,
+            targetingHit.secondary,
+          );
           const motion = listMotion?.lineId === lineId ? listMotion : null;
           const motionClass =
             motion?.kind === "exit"
@@ -1319,7 +1331,9 @@ export function ActiveWorkoutView({
                         {exercise.name}
                       </span>
                       <span className="mt-0.5 block text-xs text-zinc-500">
-                        {metricHint(exercise.metric)}
+                        {targeting
+                          ? `${metricHint(exercise.metric)} · ${targeting}`
+                          : metricHint(exercise.metric)}
                         {!compact && exerciseNotesById[exercise.id]?.trim()
                           ? " · has note"
                           : ""}

@@ -7,7 +7,10 @@ import type {
   MuscleMapValues,
   MuscleMapView,
 } from "@musclemap/core";
-import type { MuscleFocus } from "@/lib/exercise-muscle";
+import {
+  sessionMuscleScores,
+  type MuscleFocus,
+} from "@/lib/exercise-muscle";
 import type { MuscleGroup } from "@/lib/progress-types";
 import { cn } from "@/lib/utils";
 
@@ -81,28 +84,41 @@ const MAP_TO_APP: Record<MapMuscleGroup, MuscleGroup> = {
   ABDUCTORS: "legs",
 };
 
-function valuesFor(
-  primary?: MuscleGroup,
-  secondary?: MuscleGroup[],
+function valuesFromScores(
+  scores: Partial<Record<MuscleGroup, number>>,
 ): MuscleMapValues {
   const values: MuscleMapValues = {};
-  if (!primary || primary === "cardio" || primary === "other") return values;
-
-  for (const group of APP_TO_MAP[primary]) {
-    values[group] = { score: 100 };
-  }
-  for (const extra of secondary ?? []) {
-    if (extra === primary || extra === "cardio" || extra === "other") continue;
-    for (const group of APP_TO_MAP[extra]) {
-      if (!values[group]) values[group] = { score: 46 };
+  for (const [rawGroup, score] of Object.entries(scores)) {
+    const group = rawGroup as MuscleGroup;
+    if (group === "cardio" || group === "other" || score == null || score <= 0) {
+      continue;
+    }
+    for (const mapGroup of APP_TO_MAP[group as keyof typeof APP_TO_MAP]) {
+      const current = values[mapGroup]?.score ?? 0;
+      if (score > current) values[mapGroup] = { score };
     }
   }
   return values;
 }
 
+function valuesFor(
+  primary?: MuscleGroup,
+  secondary?: MuscleGroup[],
+): MuscleMapValues {
+  const scores: Partial<Record<MuscleGroup, number>> = {};
+  if (!primary || primary === "cardio" || primary === "other") return {};
+  scores[primary] = 100;
+  for (const extra of secondary ?? []) {
+    if (extra === primary || extra === "cardio" || extra === "other") continue;
+    if (scores[extra] == null) scores[extra] = 46;
+  }
+  return valuesFromScores(scores);
+}
+
 export function MuscleTargetDiagram({
   primary,
   secondary,
+  exercises,
   focus = "full",
   compact = false,
   size,
@@ -111,6 +127,13 @@ export function MuscleTargetDiagram({
 }: {
   primary?: MuscleGroup;
   secondary?: MuscleGroup[];
+  /** When set, scores stack across the session so the map fills in as you add moves. */
+  exercises?: Array<{
+    id: string;
+    name: string;
+    primary?: MuscleGroup;
+    secondary?: MuscleGroup[];
+  }>;
   focus?: MuscleFocus;
   compact?: boolean;
   size?: DiagramSize;
@@ -123,6 +146,9 @@ export function MuscleTargetDiagram({
   const baseWidth = FIGURE_WIDTH[resolvedSize];
   const figureWidth =
     camera.view === "BOTH" ? baseWidth : Math.round(baseWidth * 1.55);
+  const values = exercises
+    ? valuesFromScores(sessionMuscleScores(exercises))
+    : valuesFor(primary, secondary);
 
   return (
     <div
@@ -137,7 +163,7 @@ export function MuscleTargetDiagram({
       )}
     >
       <MuscleMap
-        values={valuesFor(primary, secondary)}
+        values={values}
         view={camera.view}
         region={camera.region}
         cropToRegion={camera.crop}

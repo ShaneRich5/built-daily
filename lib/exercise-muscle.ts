@@ -113,7 +113,74 @@ function diagramGroups(
   return out;
 }
 
-/** Camera that best shows a catalog muscle filter. */
+/** Resolve catalog tags, then name hints for custom / resumed lines. */
+export function targetingForExercise(exercise: {
+  id: string;
+  name: string;
+  primary?: MuscleGroup;
+  secondary?: MuscleGroup[];
+}): { primary?: MuscleGroup; secondary?: MuscleGroup[] } {
+  const catalog = getCatalogExerciseById(exercise.id);
+  const primary = catalog?.primary ?? exercise.primary;
+  const secondary = catalog?.secondary ?? exercise.secondary;
+  if (primary && primary !== "other") {
+    return { primary, secondary };
+  }
+  const inferred = muscleGroupForExercise(exercise.id, exercise.name);
+  if (inferred === "other") return {};
+  return { primary: inferred };
+}
+
+const PRIMARY_SCORE_BUMP = 52;
+const SECONDARY_SCORE_BUMP = 22;
+
+/** How hard this session is hitting each group (0–100). Grows as moves are added. */
+export function sessionMuscleScores(
+  exercises: Array<{
+    id: string;
+    name: string;
+    primary?: MuscleGroup;
+    secondary?: MuscleGroup[];
+  }>,
+): Partial<Record<MuscleGroup, number>> {
+  const scores: Partial<Record<MuscleGroup, number>> = {};
+  const bump = (group: MuscleGroup | undefined, amount: number) => {
+    if (!group || group === "cardio" || group === "other") return;
+    scores[group] = Math.min(100, (scores[group] ?? 0) + amount);
+  };
+  for (const exercise of exercises) {
+    const { primary, secondary } = targetingForExercise(exercise);
+    bump(primary, PRIMARY_SCORE_BUMP);
+    for (const extra of secondary ?? []) {
+      if (extra === primary) continue;
+      bump(extra, SECONDARY_SCORE_BUMP);
+    }
+  }
+  return scores;
+}
+
+/** Hit groups, strongest first — e.g. "Chest · shoulders · arms". */
+export function sessionMuscleSummary(
+  exercises: Array<{
+    id: string;
+    name: string;
+    primary?: MuscleGroup;
+    secondary?: MuscleGroup[];
+  }>,
+): string | null {
+  const scores = sessionMuscleScores(exercises);
+  const hits = (Object.entries(scores) as Array<[MuscleGroup, number]>)
+    .filter(([, score]) => score > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([group], index) =>
+      index === 0
+        ? muscleGroupLabel(group)
+        : muscleGroupLabel(group).toLowerCase(),
+    );
+  if (hits.length === 0) return null;
+  return hits.join(" · ");
+}
+
 export function focusForMuscleGroup(group: MuscleGroup | null): MuscleFocus {
   switch (group) {
     case "chest":

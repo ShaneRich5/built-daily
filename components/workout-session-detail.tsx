@@ -47,6 +47,11 @@ import {
   type WorkoutSessionDoc,
 } from "@/lib/workout-types";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
+import { WorkoutSessionMuscles } from "@/components/workout-session-muscles";
+import {
+  muscleTargetSummary,
+  targetingForExercise,
+} from "@/lib/exercise-muscle";
 
 type WorkoutSessionDetailProps = {
   sessionId: string;
@@ -294,6 +299,16 @@ export function WorkoutSessionDetail({
     base.activeDurationSec != null && base.activeDurationSec > 0
       ? formatDurationSec(base.activeDurationSec)
       : null;
+
+  const sessionExercises = useMemo(
+    () =>
+      lines.map((line) => ({
+        id: line.exerciseId,
+        name: line.nameSnapshot,
+        metric: line.metric,
+      })),
+    [lines],
+  );
 
   const updateSetField = (
     lineIndex: number,
@@ -605,6 +620,11 @@ export function WorkoutSessionDetail({
         </section>
       </div>
 
+      <WorkoutSessionMuscles
+        exercises={sessionExercises}
+        emptyLabel="No tagged exercises in this workout"
+      />
+
       <Button
         type="button"
         variant="outline"
@@ -635,6 +655,14 @@ export function WorkoutSessionDetail({
             const hasExerciseNote = Boolean(
               exerciseNotes[line.lineId]?.trim(),
             );
+            const targetingHit = targetingForExercise({
+              id: line.exerciseId,
+              name: line.nameSnapshot,
+            });
+            const targeting = muscleTargetSummary(
+              targetingHit.primary,
+              targetingHit.secondary,
+            );
             return (
             <li
               key={line.lineId}
@@ -647,6 +675,7 @@ export function WorkoutSessionDetail({
                       {line.nameSnapshot || "Untitled exercise"}
                     </span>
                     <span className="mt-0.5 block text-xs text-zinc-500">
+                      {targeting ? `${targeting} · ` : ""}
                       {setSummary}
                       {hasExerciseNote ? " · has note" : ""}
                     </span>
