@@ -11,6 +11,7 @@ import {
   CopyPlus,
   Download,
   List,
+  ListMinus,
   MoreHorizontal,
   Pause,
   Play,
@@ -130,6 +131,17 @@ function setRowHasValues(row: SetRow): boolean {
       row.distanceMiles.trim() ||
       row.note.trim(),
   );
+}
+
+function pruneEmptySetRows(sets: SetRow[]): SetRow[] {
+  const filled = sets.filter(setRowHasValues);
+  if (filled.length > 0) return filled;
+  return [sets[0] ?? emptySetRow()];
+}
+
+function canPruneEmptySets(sets: SetRow[]): boolean {
+  if (sets.length <= 1) return false;
+  return sets.some((set) => !setRowHasValues(set));
 }
 
 /** Compact one-line summary of logged sets for collapsed exercise cards. */
@@ -692,6 +704,29 @@ export function ActiveWorkoutView({
     },
     [activeExercises, setsByExercise],
   );
+
+  const removeEmptySets = useCallback((exerciseIndex: number) => {
+    setSetsByExercise((prev) => {
+      const current = prev[exerciseIndex];
+      if (!current || !canPruneEmptySets(current)) return prev;
+      const next = prev.map((row) => [...row]);
+      next[exerciseIndex] = pruneEmptySetRows(current);
+      return next;
+    });
+    setSetTimerActive((active) => {
+      if (!active || active.exerciseIndex !== exerciseIndex) return active;
+      const current = setsByExercise[exerciseIndex];
+      if (!current) return active;
+      const keptIndices = current
+        .map((row, i) => (setRowHasValues(row) ? i : -1))
+        .filter((i) => i >= 0);
+      const remaining =
+        keptIndices.length > 0 ? keptIndices : current.length > 0 ? [0] : [];
+      const nextIndex = remaining.indexOf(active.setIndex);
+      if (nextIndex < 0) return null;
+      return { ...active, setIndex: nextIndex };
+    });
+  }, [setsByExercise]);
 
   const applyHistoricalSets = useCallback(
     (
@@ -1321,12 +1356,79 @@ export function ActiveWorkoutView({
                   </span>
                 </button>
                 <div
-                  className={`flex shrink-0 flex-col gap-0.5 pr-1.5 ${
+                  className={`flex shrink-0 items-start gap-0.5 pr-1.5 ${
                     compact ? "pt-1.5" : "pt-2.5"
                   }`}
-                  role="group"
-                  aria-label={`Reorder ${exercise.name}`}
                 >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                          aria-label={`${exercise.name} actions`}
+                        />
+                      }
+                    >
+                      <MoreHorizontal className="size-3.5" aria-hidden />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      side="bottom"
+                      sideOffset={4}
+                      className="min-w-48"
+                    >
+                      <DropdownMenuItem
+                        className="min-h-10 gap-2"
+                        disabled={!canPruneEmptySets(sets)}
+                        onClick={() => removeEmptySets(exerciseIndex)}
+                      >
+                        <ListMinus className="size-4" />
+                        Clear empty sets
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="min-h-10 gap-2"
+                        onClick={() => {
+                          setExpandedExerciseIndex(exerciseIndex);
+                          setReplacingExerciseIndex(exerciseIndex);
+                        }}
+                      >
+                        <Replace className="size-4" />
+                        Change exercise
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="min-h-10 gap-2"
+                        disabled={exerciseIndex === 0}
+                        onClick={() => moveExercise(exerciseIndex, -1)}
+                      >
+                        <ArrowUp className="size-4" />
+                        Move up
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="min-h-10 gap-2"
+                        disabled={exerciseIndex >= activeExercises.length - 1}
+                        onClick={() => moveExercise(exerciseIndex, 1)}
+                      >
+                        <ArrowDown className="size-4" />
+                        Move down
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        className="min-h-10 gap-2"
+                        onClick={() => removeExercise(exerciseIndex)}
+                      >
+                        <Trash2 className="size-4" />
+                        Remove exercise
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div
+                    className="flex flex-col gap-0.5"
+                    role="group"
+                    aria-label={`Reorder ${exercise.name}`}
+                  >
                   <button
                     type="button"
                     onClick={() => moveExercise(exerciseIndex, -1)}
@@ -1345,6 +1447,7 @@ export function ActiveWorkoutView({
                   >
                     <ArrowDown className="size-3.5" aria-hidden />
                   </button>
+                  </div>
                 </div>
               </div>
 
@@ -1359,39 +1462,14 @@ export function ActiveWorkoutView({
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
                       {replacingExerciseIndex !== exerciseIndex ? (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="xs"
-                            onClick={() => addSet(exerciseIndex)}
-                          >
-                            Add set
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="xs"
-                            onClick={() =>
-                              setReplacingExerciseIndex(exerciseIndex)
-                            }
-                            aria-label={`Change ${exercise.name}`}
-                          >
-                            <Replace className="size-3" aria-hidden />
-                            Change
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="xs"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => removeExercise(exerciseIndex)}
-                            aria-label={`Remove ${exercise.name}`}
-                          >
-                            <Trash2 className="size-3" aria-hidden />
-                            Remove
-                          </Button>
-                        </>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="xs"
+                          onClick={() => addSet(exerciseIndex)}
+                        >
+                          Add set
+                        </Button>
                       ) : null}
                     </div>
                     <button

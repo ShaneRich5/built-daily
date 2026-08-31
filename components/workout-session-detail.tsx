@@ -86,6 +86,17 @@ function setLogHasValues(set: SetLog): boolean {
   );
 }
 
+function pruneEmptySetLogs(sets: SetLog[]): SetLog[] {
+  const filled = sets.filter(setLogHasValues);
+  if (filled.length > 0) return filled;
+  return sets.length > 0 ? [sets[0]!] : sets;
+}
+
+function canPruneEmptySetLogs(sets: SetLog[]): boolean {
+  if (sets.length <= 1) return false;
+  return sets.some((set) => !setLogHasValues(set));
+}
+
 /** Compact one-line summary for collapsed exercise cards. */
 function summarizeSessionSets(sets: SetLog[]): string {
   if (sets.length === 0) return "No sets";
@@ -314,6 +325,16 @@ export function WorkoutSessionDetail({
           ...line,
           sets: [...line.sets, uiSetRowToSetLog(emptyUiSet(), line.metric)],
         };
+      }),
+    );
+  };
+
+  const removeEmptySets = (lineIndex: number) => {
+    setLines((prev) =>
+      prev.map((line, li) => {
+        if (li !== lineIndex) return line;
+        if (!canPruneEmptySetLogs(line.sets)) return line;
+        return { ...line, sets: pruneEmptySetLogs(line.sets) };
       }),
     );
   };
@@ -775,6 +796,7 @@ export function WorkoutSessionDetail({
                 })}
               </ul>
 
+              <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -785,6 +807,18 @@ export function WorkoutSessionDetail({
                 <Plus className="size-3.5" />
                 Add set
               </Button>
+              {canPruneEmptySetLogs(line.sets) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => removeEmptySets(lineIndex)}
+                  aria-label={`Clear empty sets from ${line.nameSnapshot}`}
+                >
+                  Clear empty
+                </Button>
+              ) : null}
+              </div>
                 </div>
               </details>
             </li>
