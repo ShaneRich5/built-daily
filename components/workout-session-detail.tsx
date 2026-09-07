@@ -49,9 +49,16 @@ import {
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
 import { WorkoutSessionMuscles } from "@/components/workout-session-muscles";
 import {
+  HiddenExercisesClearRow,
+  SessionMuscleFilterBanner,
+} from "@/components/session-muscle-filter-banner";
+import {
+  exerciseHitsMuscleGroup,
+  sessionMuscleFilterStats,
   muscleTargetSummary,
   targetingForExercise,
 } from "@/lib/exercise-muscle";
+import type { MuscleGroup } from "@/lib/progress-types";
 
 type WorkoutSessionDetailProps = {
   sessionId: string;
@@ -274,6 +281,7 @@ export function WorkoutSessionDetail({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [muscleFilter, setMuscleFilter] = useState<MuscleGroup | null>(null);
 
   const previewDoc = useMemo(
     () =>
@@ -308,6 +316,10 @@ export function WorkoutSessionDetail({
         metric: line.metric,
       })),
     [lines],
+  );
+  const muscleFilterStats = useMemo(
+    () => sessionMuscleFilterStats(sessionExercises, muscleFilter),
+    [sessionExercises, muscleFilter],
   );
 
   const updateSetField = (
@@ -623,6 +635,8 @@ export function WorkoutSessionDetail({
       <WorkoutSessionMuscles
         exercises={sessionExercises}
         emptyLabel="No tagged exercises in this workout"
+        filterGroup={muscleFilter}
+        onFilterGroupChange={setMuscleFilter}
       />
 
       <Button
@@ -643,6 +657,14 @@ export function WorkoutSessionDetail({
         >
           Exercises
         </h2>
+        {muscleFilter && lines.length > 0 ? (
+          <SessionMuscleFilterBanner
+            group={muscleFilter}
+            shown={muscleFilterStats.shown}
+            total={muscleFilterStats.total}
+            onClear={() => setMuscleFilter(null)}
+          />
+        ) : null}
         {lines.length === 0 ? (
           <p className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-5 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
             Logged without details — you still showed up. Add a note above if
@@ -651,6 +673,15 @@ export function WorkoutSessionDetail({
         ) : (
         <ul className="space-y-3">
           {lines.map((line, lineIndex) => {
+            if (
+              muscleFilter &&
+              !exerciseHitsMuscleGroup(
+                { id: line.exerciseId, name: line.nameSnapshot },
+                muscleFilter,
+              )
+            ) {
+              return null;
+            }
             const setSummary = summarizeSessionSets(line.sets);
             const hasExerciseNote = Boolean(
               exerciseNotes[line.lineId]?.trim(),
@@ -853,6 +884,12 @@ export function WorkoutSessionDetail({
             </li>
             );
           })}
+          {muscleFilter ? (
+            <HiddenExercisesClearRow
+              hidden={muscleFilterStats.hidden}
+              onClear={() => setMuscleFilter(null)}
+            />
+          ) : null}
         </ul>
         )}
       </section>

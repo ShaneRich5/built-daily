@@ -1,26 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { MuscleFocusPicker } from "@/components/muscle-focus-picker";
 import { MuscleTargetDiagram } from "@/components/muscle-target-diagram";
+import { SessionMuscleFilterBanner } from "@/components/session-muscle-filter-banner";
 import type { CatalogExercise } from "@/lib/exercise-catalog";
 import {
+  focusForMuscleGroup,
+  sessionMuscleFilterStats,
   sessionMuscleSummary,
   type MuscleFocus,
 } from "@/lib/exercise-muscle";
+import type { MuscleGroup } from "@/lib/progress-types";
 
 export function WorkoutSessionMuscles({
   exercises,
   emptyLabel = "Add exercises to fill in the map",
+  filterGroup = null,
+  onFilterGroupChange,
 }: {
   exercises: CatalogExercise[];
   emptyLabel?: string;
+  filterGroup?: MuscleGroup | null;
+  onFilterGroupChange?: (group: MuscleGroup | null) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [focus, setFocus] = useState<MuscleFocus>("full");
   const summary = sessionMuscleSummary(exercises);
   const empty = exercises.length === 0 || !summary;
+  const interactive = Boolean(onFilterGroupChange) && !empty;
+  const stats = useMemo(
+    () => sessionMuscleFilterStats(exercises, filterGroup),
+    [exercises, filterGroup],
+  );
+
+  function handleSelectGroup(group: MuscleGroup) {
+    if (!onFilterGroupChange) return;
+    const next = filterGroup === group ? null : group;
+    onFilterGroupChange(next);
+    setFocus(focusForMuscleGroup(next));
+  }
+
+  function clearFilter() {
+    onFilterGroupChange?.(null);
+    setFocus("full");
+  }
 
   return (
     <section className="shrink-0 overflow-hidden rounded-xl bg-[#0b1220]">
@@ -35,7 +60,11 @@ export function WorkoutSessionMuscles({
             This session
           </span>
           <span className="mt-0.5 block truncate text-sm text-slate-200">
-            {empty ? emptyLabel : summary}
+            {empty
+              ? emptyLabel
+              : filterGroup
+                ? `${stats.shown} of ${stats.total} shown`
+                : summary}
           </span>
         </span>
         <ChevronDown
@@ -51,10 +80,27 @@ export function WorkoutSessionMuscles({
           <MuscleTargetDiagram
             exercises={exercises}
             focus={focus}
+            selectedGroup={filterGroup}
+            onSelectGroup={interactive ? handleSelectGroup : undefined}
             className="bg-transparent"
           />
           <div className="mt-2 px-1">
             <MuscleFocusPicker value={focus} onChange={setFocus} tone="dark" />
+          </div>
+          <div className="mt-2 px-1">
+            {filterGroup ? (
+              <SessionMuscleFilterBanner
+                group={filterGroup}
+                shown={stats.shown}
+                total={stats.total}
+                onClear={clearFilter}
+                tone="dark"
+              />
+            ) : interactive ? (
+              <p className="text-center text-sm text-slate-400">
+                Tap a muscle to see those exercises
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -27,6 +27,10 @@ import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { ExerciseHistoryControls } from "@/components/exercise-history-controls";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
 import { WorkoutSessionMuscles } from "@/components/workout-session-muscles";
+import {
+  HiddenExercisesClearRow,
+  SessionMuscleFilterBanner,
+} from "@/components/session-muscle-filter-banner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -63,9 +67,12 @@ import {
   splitTotalSeconds,
 } from "@/lib/duration-input";
 import {
+  exerciseHitsMuscleGroup,
+  sessionMuscleFilterStats,
   muscleTargetSummary,
   targetingForExercise,
 } from "@/lib/exercise-muscle";
+import type { MuscleGroup } from "@/lib/progress-types";
 import {
   localDateKeyFromMs,
   formatSessionVolumeMeta,
@@ -393,6 +400,11 @@ export function ActiveWorkoutView({
   const [exerciseDensity, setExerciseDensity] =
     useState<ExerciseListDensity>("comfortable");
   const [densityPrefsReady, setDensityPrefsReady] = useState(false);
+  const [muscleFilter, setMuscleFilter] = useState<MuscleGroup | null>(null);
+  const muscleFilterStats = useMemo(
+    () => sessionMuscleFilterStats(activeExercises, muscleFilter),
+    [activeExercises, muscleFilter],
+  );
   const exerciseHistoryKey = activeExercises
     .map((exercise) => `${exercise.id}:${exercise.metric}:${exercise.name}`)
     .join("|");
@@ -458,6 +470,7 @@ export function ActiveWorkoutView({
   const handleAddCatalogExercise = useCallback((exerciseId: string) => {
     const ex = getCatalogExerciseById(exerciseId);
     if (!ex) return;
+    setMuscleFilter(null);
     let addedLineId: string | null = null;
     runExerciseListMotion((usedViewTransition) => {
       setActiveExercises((prev) => {
@@ -490,6 +503,7 @@ export function ActiveWorkoutView({
   const handleAddCustomExercise = useCallback((trimmed: string): boolean => {
     const ex = catalogExerciseFromCustomName(trimmed);
     if (!ex) return false;
+    setMuscleFilter(null);
     let didAdd = false;
     let addedLineId: string | null = null;
     runExerciseListMotion((usedViewTransition) => {
@@ -1212,17 +1226,22 @@ export function ActiveWorkoutView({
         collapsible
       />
 
-      <WorkoutSessionMuscles exercises={activeExercises} />
+      <WorkoutSessionMuscles
+        exercises={activeExercises}
+        filterGroup={muscleFilter}
+        onFilterGroupChange={setMuscleFilter}
+      />
 
-      <div className="flex shrink-0 items-center justify-between gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Exercises
-        </p>
-        <div
-          className="inline-flex rounded-lg border border-zinc-200 bg-white p-0.5 dark:border-zinc-700 dark:bg-zinc-950"
-          role="group"
-          aria-label="Exercise list density"
-        >
+      <div className="flex shrink-0 flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Exercises
+          </p>
+          <div
+            className="inline-flex rounded-lg border border-zinc-200 bg-white p-0.5 dark:border-zinc-700 dark:bg-zinc-950"
+            role="group"
+            aria-label="Exercise list density"
+          >
           <button
             type="button"
             onClick={() => setExerciseDensity("comfortable")}
@@ -1249,7 +1268,16 @@ export function ActiveWorkoutView({
             <Rows3 className="size-3.5" aria-hidden />
             Compact
           </button>
+          </div>
         </div>
+        {muscleFilter ? (
+          <SessionMuscleFilterBanner
+            group={muscleFilter}
+            shown={muscleFilterStats.shown}
+            total={muscleFilterStats.total}
+            onClear={() => setMuscleFilter(null)}
+          />
+        ) : null}
       </div>
 
       <ul
@@ -1270,6 +1298,12 @@ export function ActiveWorkoutView({
           </li>
         ) : null}
         {activeExercises.map((exercise, exerciseIndex) => {
+          if (
+            muscleFilter &&
+            !exerciseHitsMuscleGroup(exercise, muscleFilter)
+          ) {
+            return null;
+          }
           const sets = setsByExercise[exerciseIndex] ?? [];
           const lineId = lineIds[exerciseIndex] ?? `${exerciseIndex}-${exercise.id}`;
           const expanded = expandedExerciseIndex === exerciseIndex;
@@ -1597,6 +1631,12 @@ export function ActiveWorkoutView({
             </li>
           );
         })}
+        {muscleFilter ? (
+          <HiddenExercisesClearRow
+            hidden={muscleFilterStats.hidden}
+            onClear={() => setMuscleFilter(null)}
+          />
+        ) : null}
       </ul>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95">

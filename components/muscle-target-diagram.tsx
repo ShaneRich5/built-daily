@@ -86,6 +86,7 @@ const MAP_TO_APP: Record<MapMuscleGroup, MuscleGroup> = {
 
 function valuesFromScores(
   scores: Partial<Record<MuscleGroup, number>>,
+  emphasize?: MuscleGroup | null,
 ): MuscleMapValues {
   const values: MuscleMapValues = {};
   for (const [rawGroup, score] of Object.entries(scores)) {
@@ -93,9 +94,10 @@ function valuesFromScores(
     if (group === "cardio" || group === "other" || score == null || score <= 0) {
       continue;
     }
+    const nextScore = emphasize === group ? 100 : score;
     for (const mapGroup of APP_TO_MAP[group as keyof typeof APP_TO_MAP]) {
       const current = values[mapGroup]?.score ?? 0;
-      if (score > current) values[mapGroup] = { score };
+      if (nextScore > current) values[mapGroup] = { score: nextScore };
     }
   }
   return values;
@@ -123,6 +125,7 @@ export function MuscleTargetDiagram({
   compact = false,
   size,
   className,
+  selectedGroup,
   onSelectGroup,
 }: {
   primary?: MuscleGroup;
@@ -138,6 +141,8 @@ export function MuscleTargetDiagram({
   compact?: boolean;
   size?: DiagramSize;
   className?: string;
+  /** Brightens this group on a session heatmap while a filter is on. */
+  selectedGroup?: MuscleGroup | null;
   onSelectGroup?: (group: MuscleGroup) => void;
 }) {
   const resolvedSize: DiagramSize = compact ? "compact" : (size ?? "full");
@@ -147,7 +152,7 @@ export function MuscleTargetDiagram({
   const figureWidth =
     camera.view === "BOTH" ? baseWidth : Math.round(baseWidth * 1.55);
   const values = exercises
-    ? valuesFromScores(sessionMuscleScores(exercises))
+    ? valuesFromScores(sessionMuscleScores(exercises), selectedGroup)
     : valuesFor(primary, secondary);
 
   return (
@@ -158,7 +163,7 @@ export function MuscleTargetDiagram({
         resolvedSize === "card" && "rounded-md p-0.5",
         resolvedSize === "compact" && "rounded-sm p-px",
         SIZE_CLASS[resolvedSize],
-        !interactive && "pointer-events-none",
+        interactive ? "cursor-pointer" : "pointer-events-none",
         className,
       )}
     >

@@ -113,13 +113,18 @@ function diagramGroups(
   return out;
 }
 
-/** Resolve catalog tags, then name hints for custom / resumed lines. */
-export function targetingForExercise(exercise: {
+type TargetedExercise = {
   id: string;
   name: string;
   primary?: MuscleGroup;
   secondary?: MuscleGroup[];
-}): { primary?: MuscleGroup; secondary?: MuscleGroup[] } {
+};
+
+/** Resolve catalog tags, then name hints for custom / resumed lines. */
+export function targetingForExercise(exercise: TargetedExercise): {
+  primary?: MuscleGroup;
+  secondary?: MuscleGroup[];
+} {
   const catalog = getCatalogExerciseById(exercise.id);
   const primary = catalog?.primary ?? exercise.primary;
   const secondary = catalog?.secondary ?? exercise.secondary;
@@ -131,17 +136,35 @@ export function targetingForExercise(exercise: {
   return { primary: inferred };
 }
 
+/** True when this move trains `group` as a primary or helper. */
+export function exerciseHitsMuscleGroup(
+  exercise: TargetedExercise,
+  group: MuscleGroup,
+): boolean {
+  const { primary, secondary } = targetingForExercise(exercise);
+  if (primary === group) return true;
+  return secondary?.includes(group) ?? false;
+}
+
+/** How many session exercises match a tapped muscle, and how many are hidden. */
+export function sessionMuscleFilterStats(
+  exercises: TargetedExercise[],
+  group: MuscleGroup | null,
+): { shown: number; hidden: number; total: number } {
+  const total = exercises.length;
+  if (!group) return { shown: total, hidden: 0, total };
+  const shown = exercises.filter((exercise) =>
+    exerciseHitsMuscleGroup(exercise, group),
+  ).length;
+  return { shown, hidden: total - shown, total };
+}
+
 const PRIMARY_SCORE_BUMP = 52;
 const SECONDARY_SCORE_BUMP = 22;
 
 /** How hard this session is hitting each group (0–100). Grows as moves are added. */
 export function sessionMuscleScores(
-  exercises: Array<{
-    id: string;
-    name: string;
-    primary?: MuscleGroup;
-    secondary?: MuscleGroup[];
-  }>,
+  exercises: TargetedExercise[],
 ): Partial<Record<MuscleGroup, number>> {
   const scores: Partial<Record<MuscleGroup, number>> = {};
   const bump = (group: MuscleGroup | undefined, amount: number) => {
@@ -161,12 +184,7 @@ export function sessionMuscleScores(
 
 /** Hit groups, strongest first — e.g. "Chest · shoulders · arms". */
 export function sessionMuscleSummary(
-  exercises: Array<{
-    id: string;
-    name: string;
-    primary?: MuscleGroup;
-    secondary?: MuscleGroup[];
-  }>,
+  exercises: TargetedExercise[],
 ): string | null {
   const scores = sessionMuscleScores(exercises);
   const hits = (Object.entries(scores) as Array<[MuscleGroup, number]>)
