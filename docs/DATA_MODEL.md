@@ -470,4 +470,278 @@ Composite indexes: [`firestore.indexes.json`](../firestore.indexes.json)
 | [`firebase.json`](../firebase.json) | Rules + indexes paths for CLI |
 | [`.firebaserc`](../.firebaserc) | Default Firebase project id for `firebase deploy` |
 
+---
+
+## dbdiagram (DBML)
+
+Paste into [dbdiagram.io](https://dbdiagram.io). Firestore is document-based (no joins); this is a **conceptual** relational view of the same shapes.
+
+Nested arrays (`lines`, `sets`) are drawn as child tables even though they are **embedded** in the parent document. Client catalogs have no Firestore collection. `scheduledWorkouts.planId` may be a `starter-*` id that is not a `plans` document.
+
+```dbml
+//// Built Daily — conceptual ER (Firestore as tables)
+//// https://dbdiagram.io
+
+TableGroup personal {
+  sessions
+  session_lines
+  set_logs
+  plans
+  plan_lines
+  scheduled_workouts
+  activities
+  progress_settings
+  body_weight
+  group_memberships
+}
+
+TableGroup groups_top_level {
+  groups
+  group_members
+  invite_codes
+}
+
+TableGroup public_opt_in {
+  public_profiles
+}
+
+TableGroup client_catalogs [note: 'Not stored in Firestore'] {
+  catalog_exercises
+  catalog_activity_types
+}
+
+Table users {
+  userId string [pk, note: 'Firebase Auth uid. No user document — subcollections only.']
+}
+
+Table sessions {
+  sessionId string [pk]
+  userId string [not null]
+  status string [not null, note: 'in_progress | completed (discarded unused)']
+  title string [not null, note: 'max 200']
+  planId string [note: 'optional Firestore plan or starter-*']
+  workoutDate string [note: 'YYYY-MM-DD, optional']
+  workoutTime string [note: 'HH:mm, optional']
+  startedAt timestamp [not null]
+  endedAt timestamp [note: 'null while in_progress']
+  activeDurationSec int
+  workoutNote string [note: 'max 500']
+  exerciseNotesByLineId json [note: 'map lineId → note']
+  exerciseCount int [not null]
+  setCount int [not null]
+  previewExerciseNames json [note: 'string[], max 5']
+
+  indexes {
+    (status, endedAt) [name: 'recent completed / in_progress']
+  }
+
+  Note: 'users/{userId}/sessions/{sessionId}'
+}
+
+Table session_lines {
+  lineId string [pk]
+  sessionId string [not null]
+  exerciseId string [not null, note: 'catalog id or custom-{uuid}']
+  nameSnapshot string [not null]
+  metric string [not null, note: 'weight_reps | bodyweight_reps | duration | cardio']
+
+  Note: 'Embedded in sessions.lines[]'
+}
+
+Table set_logs {
+  setIndex int [pk, increment]
+  lineId string [not null]
+  weight float
+  reps int
+  durationSec int
+  timedSetSec int
+  paceMph float
+  inclinePercent float
+  resistanceLevel float
+  distanceMiles float
+  note string [note: 'max 200']
+
+  Note: 'Embedded in session_lines.sets[]'
+}
+
+Table plans {
+  planId string [pk]
+  userId string [not null]
+  name string [not null, note: 'max 200']
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+  source string [not null, note: 'starter_copy | custom']
+  restPreferences json [note: '{ autoRestTimer, defaultRestSec: 30|60|90|120 }']
+
+  Note: 'users/{userId}/plans/{planId}'
+}
+
+Table plan_lines {
+  lineId string [pk]
+  planId string [not null]
+  exerciseId string [not null, note: 'catalog id or custom-{uuid}']
+  nameSnapshot string [not null]
+  metric string [not null]
+  targetSets int
+  notes string
+
+  Note: 'Embedded in plans.lines[] (1–40)'
+}
+
+Table scheduled_workouts {
+  entryId string [pk]
+  userId string [not null]
+  dateKey string [not null, note: 'YYYY-MM-DD']
+  label string [not null, note: 'max 200']
+  planId string [note: 'plan id, starter-*, or null']
+  exerciseIds json [not null, note: 'string[], empty if reminder-only']
+  createdAt timestamp [not null]
+
+  Note: 'users/{userId}/scheduledWorkouts/{entryId} — create/delete only'
+}
+
+Table activities {
+  activityId string [pk]
+  userId string [not null]
+  activityTypeId string [not null, note: 'catalog id, max 64']
+  activityDate string [not null, note: 'YYYY-MM-DD']
+  activityTime string [note: 'HH:mm']
+  durationMin int [note: '1–1440']
+  distanceMiles float [note: 'when catalog supportsDistance']
+  locationName string [note: 'max 120']
+  notes string [note: 'max 400']
+  visibility string [not null, note: 'private']
+  source string [not null, note: 'manual']
+  startedAt timestamp [note: 'reserved, currently null']
+  endedAt timestamp [note: 'reserved, currently null']
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  indexes {
+    (activityTypeId, activityDate) [name: 'suggestions by type']
+  }
+
+  Note: 'users/{userId}/activities/{activityId}'
+}
+
+Table progress_settings {
+  userId string [pk]
+  weeklyGoal int [not null, note: '2–7 workouts / week']
+  movementGoalDays int [note: '3–7 active days; default 5']
+  goalWeightLbs float [note: 'optional, ≤ 1000']
+  updatedAt timestamp [not null]
+
+  Note: 'users/{userId}/settings/progress (singleton)'
+}
+
+Table body_weight {
+  entryId string [pk]
+  userId string [not null]
+  dateKey string [not null, note: 'YYYY-MM-DD']
+  weightLbs float [not null]
+  createdAt timestamp [not null]
+
+  Note: 'users/{userId}/bodyWeight/{entryId}'
+}
+
+Table group_memberships {
+  groupId string [pk]
+  userId string [not null]
+  nameSnapshot string [not null, note: 'group name, max 100']
+  role string [not null, note: 'owner | member']
+  joinedAt timestamp [not null]
+
+  Note: 'users/{userId}/groupMemberships/{groupId}'
+}
+
+Table groups {
+  groupId string [pk]
+  name string [not null, note: 'max 100']
+  createdBy string [not null, note: 'owner uid']
+  createdAt timestamp [not null]
+  inviteCode string [not null]
+  memberCount int [not null, note: 'max 12']
+
+  Note: 'groups/{groupId}'
+}
+
+Table group_members {
+  uid string [pk]
+  groupId string [not null]
+  displayName string [not null, note: 'max 80']
+  role string [not null, note: 'owner | member']
+  joinedAt timestamp [not null]
+  lastWorkoutDateKey string [note: 'YYYY-MM-DD']
+  lastWorkoutAt timestamp
+  currentStreak int [not null]
+
+  Note: 'groups/{groupId}/members/{uid} — show-up signals only'
+}
+
+Table invite_codes {
+  code string [pk]
+  groupId string [not null]
+  createdBy string [not null]
+  createdAt timestamp [not null]
+  active boolean [not null, note: 'false after rotation']
+
+  Note: 'inviteCodes/{code}'
+}
+
+Table public_profiles {
+  userId string [pk]
+  displayName string [not null, note: 'max 80']
+  profilePublic boolean [not null]
+  currentStreak int [not null]
+  workoutsThisWeek int [not null]
+  lastWorkoutDateKey string [note: 'YYYY-MM-DD']
+  activityByDay json [not null, note: 'YYYY-MM-DD → workout count, max 200']
+  updatedAt timestamp [not null]
+
+  Note: 'publicProfiles/{uid} — opt-in; no session details'
+}
+
+Table catalog_exercises {
+  id string [pk]
+  name string [not null]
+  metric string [not null]
+  primary string [note: 'MuscleGroup']
+  secondary json [note: 'MuscleGroup[]']
+
+  Note: 'lib/exercise-catalog.ts — client only'
+}
+
+Table catalog_activity_types {
+  id string [pk]
+  name string [not null]
+  icon string
+  supportsDistance boolean [not null]
+  isSocial boolean [not null]
+
+  Note: 'lib/activity-catalog.ts — client only'
+}
+
+Ref: sessions.userId > users.userId
+Ref: sessions.planId > plans.planId
+Ref: session_lines.sessionId > sessions.sessionId
+Ref: set_logs.lineId > session_lines.lineId
+Ref: plans.userId > users.userId
+Ref: plan_lines.planId > plans.planId
+Ref: scheduled_workouts.userId > users.userId
+Ref: activities.userId > users.userId
+Ref: progress_settings.userId - users.userId
+Ref: body_weight.userId > users.userId
+Ref: group_memberships.userId > users.userId
+Ref: group_memberships.groupId > groups.groupId
+Ref: groups.createdBy > users.userId
+Ref: group_members.groupId > groups.groupId
+Ref: group_members.uid > users.userId
+Ref: invite_codes.groupId > groups.groupId
+Ref: public_profiles.userId - users.userId
+Ref: session_lines.exerciseId > catalog_exercises.id
+Ref: plan_lines.exerciseId > catalog_exercises.id
+Ref: activities.activityTypeId > catalog_activity_types.id
+```
+
 When you change persisted fields, update **this doc**, the matching **types** file, the **mapper**, **`firestore.rules`**, and **`firestore.indexes.json`** if new queries need indexes. Push rules and indexes to Firebase with `firebase deploy --only firestore` after `firebase login` (uses the default project in `.firebaserc`).
+
