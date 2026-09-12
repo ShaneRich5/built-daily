@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
     "@musclemap/core",
     "@musclemap/assets",
   ],
-  serverExternalPackages: ["firebase-admin"],
 };
 
 export default withSentryConfig(nextConfig, {
