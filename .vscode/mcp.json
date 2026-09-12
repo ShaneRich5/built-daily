@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "Sentry": {
+      "url": "https://mcp.sentry.dev/mcp/devcore-studios/built-daily",
+      "type": "http"
+    }
+  }
+}

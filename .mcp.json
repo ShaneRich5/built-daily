@@ -1,12 +1,5 @@
 {
   "mcpServers": {
-    "built-daily": {
-      "command": "npx",
-      "args": [
-        "tsx",
-        "mcp/server.ts"
-      ]
-    },
     "Sentry": {
       "url": "https://mcp.sentry.dev/mcp/devcore-studios/built-daily"
     }
