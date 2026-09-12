@@ -1,13 +1,25 @@
+import path from "node:path";
 import { cert, getApps, initializeApp, applicationDefault } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { getMcpUserUid } from "./env";
 
 let db: Firestore | null = null;
 
+function resolveCredentialsPath(): void {
+  const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
+  if (creds && !path.isAbsolute(creds)) {
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(
+      process.cwd(),
+      creds,
+    );
+  }
+}
+
 function initAdmin(): Firestore {
   if (db) return db;
 
   if (getApps().length === 0) {
+    resolveCredentialsPath();
     const json = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
     if (json) {
       initializeApp({ credential: cert(JSON.parse(json) as object) });
