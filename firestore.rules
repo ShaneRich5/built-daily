@@ -376,5 +376,11 @@ service cloud.firestore {
       allow create, update: if isOwner(userId) && validPublicProfileWrite();
       allow delete: if isOwner(userId);
     }
+
+    // `mcpTokens/{tokenHash}` (MCP personal access tokens, see
+    // docs/MCP_MULTI_USER.md) is intentionally NOT matched here — it's
+    // written and read only by the Admin SDK (app/api/mcp/tokens/route.ts,
+    // mcp/tokens.ts), so it falls through to Firestore's default deny for
+    // client SDK access. Do not add client rules for this collection.
   }
 }

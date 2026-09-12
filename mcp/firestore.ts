@@ -1,36 +1,4 @@
-import path from "node:path";
-import { cert, getApps, initializeApp, applicationDefault } from "firebase-admin/app";
-import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { getMcpUserUid } from "./env";
-
-let db: Firestore | null = null;
-
-function resolveCredentialsPath(): void {
-  const creds = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
-  if (creds && !path.isAbsolute(creds)) {
-    process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(
-      process.cwd(),
-      creds,
-    );
-  }
-}
-
-function initAdmin(): Firestore {
-  if (db) return db;
-
-  if (getApps().length === 0) {
-    resolveCredentialsPath();
-    const json = process.env.FIREBASE_SERVICE_ACCOUNT?.trim();
-    if (json) {
-      initializeApp({ credential: cert(JSON.parse(json) as object) });
-    } else {
-      initializeApp({ credential: applicationDefault() });
-    }
-  }
-
-  db = getFirestore();
-  return db;
-}
+import { getAdminFirestore } from "@/lib/firebase-admin";
 
 function toDate(value: unknown): Date | null {
   if (value == null) return null;
@@ -121,12 +89,12 @@ function parseSummary(
   };
 }
 
-/** Last N completed sessions for MCP_USER_UID, newest ended first. */
+/** Last N completed sessions for `uid`, newest ended first. */
 export async function listRecentCompletedSessions(
+  uid: string,
   limit: number,
 ): Promise<{ uid: string; sessions: SessionSummaryJson[] }> {
-  const uid = getMcpUserUid();
-  const firestore = initAdmin();
+  const firestore = getAdminFirestore();
   const snap = await firestore
     .collection("users")
     .doc(uid)
@@ -144,12 +112,12 @@ export async function listRecentCompletedSessions(
   return { uid, sessions };
 }
 
-/** Full session document under MCP_USER_UID, or null if missing. */
+/** Full session document under `uid`, or null if missing. */
 export async function getSessionById(
+  uid: string,
   sessionId: string,
 ): Promise<Record<string, unknown> | null> {
-  const uid = getMcpUserUid();
-  const firestore = initAdmin();
+  const firestore = getAdminFirestore();
   const snap = await firestore
     .collection("users")
     .doc(uid)

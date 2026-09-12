@@ -6,11 +6,11 @@
  */
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { createBuiltDailyServer } from "./create-server";
-import { loadMcpEnv } from "./env";
+import { getMcpUserUid, loadMcpEnv } from "./env";
 
 loadMcpEnv();
 
-serveStdio(() => createBuiltDailyServer(), {
+serveStdio(() => createBuiltDailyServer(getMcpUserUid()), {
   onerror: (error) => {
     console.error(error);
   },

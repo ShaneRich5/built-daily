@@ -1,13 +1,12 @@
 # Built Daily — MCP server: from single-user to multi-user
 
-This is a reference/implementation guide for turning the current MCP server
-(scoped to one hardcoded Firebase uid) into one that other Built Daily users
-can connect to Claude with their own data. It's written to be followed
-step-by-step the first time through, and used as a lookup later.
+This is a reference/implementation guide for turning the MCP server (once
+scoped to one hardcoded Firebase uid) into one that other Built Daily users
+can connect to Claude with their own data.
 
-**Status:** not yet implemented. This document describes the plan and the
-concepts involved; see [Implementation checklist](#implementation-checklist)
-for what to actually change.
+**Status: implemented** via personal access tokens (PATs). The sections
+below describe the design; see [What actually shipped](#what-actually-shipped)
+for the final file list and how to use it.
 
 ---
 
@@ -186,28 +185,46 @@ not this file) covering:
 
 ---
 
-## Implementation checklist
+## What actually shipped
 
-- [ ] Add `mcpTokens/{tokenHash}` collection + Firestore rules (deny client access)
-- [ ] Token issuance UI + server action in account settings
-- [ ] Token list/revoke UI
-- [ ] `mcp/bearer.ts`: verifier does Firestore lookup, returns uid via `AuthInfo`
-- [ ] `mcp/firestore.ts`: `uid` becomes a parameter, not read from env
-- [ ] `mcp/create-server.ts`: accept uid, thread into tool handlers
-- [ ] `app/api/mcp/route.ts`: build/parameterize server per-request using the authenticated uid
-- [ ] Decide fate of `MCP_BEARER_TOKEN` / `MCP_USER_UID` (keep for local dev only, or remove)
-- [ ] Write end-user "connect to Claude" doc once shipped
-- [ ] (Optional) basic rate limiting per token
+| File | Role |
+|------|------|
+| [`lib/firebase-admin.ts`](../lib/firebase-admin.ts) | New. Single shared Admin SDK init (`getAdminFirestore()`, `getAdminAuth()`, `isFirebaseAdminConfigured()`) — used by both the MCP route and the token API route. Replaces the admin-init code that used to live directly in `mcp/firestore.ts`. |
+| [`mcp/tokens.ts`](../mcp/tokens.ts) | New. All `mcpTokens/{tokenHash}` reads/writes: `createMcpTokenForUid`, `listMcpTokensForUid`, `revokeMcpToken`, `resolveUidForToken`. Tokens are prefixed `bd_live_` and stored as a SHA-256 hash (doc ID), never in plaintext. |
+| [`mcp/bearer.ts`](../mcp/bearer.ts) | Rewritten. `mcpTokenVerifier` now calls `resolveUidForToken` and returns the uid via `AuthInfo.extra.uid`. Falls back to the old single-shared-secret path (`MCP_BEARER_TOKEN` + `MCP_USER_UID`) only if the Firestore lookup misses — kept as a maintainer escape hatch, not used by real users. New export `uidFromAuthInfo()` reads the uid back out. |
+| [`mcp/firestore.ts`](../mcp/firestore.ts) | `listRecentCompletedSessions(uid, limit)` and `getSessionById(uid, sessionId)` now take `uid` as a parameter instead of calling `getMcpUserUid()`. Uses `getAdminFirestore()` from the shared module. |
+| [`mcp/create-server.ts`](../mcp/create-server.ts) | `createBuiltDailyServer(uid)` now takes the uid and threads it into both Firestore-backed tools. `search_exercises` is unaffected (it's catalog-only, no Firestore). |
+| [`mcp/server.ts`](../mcp/server.ts) | Local stdio entrypoint (Cursor) unchanged in spirit — now explicitly calls `createBuiltDailyServer(getMcpUserUid())`, so your own `.env.local` workflow is untouched. |
+| [`app/api/mcp/route.ts`](../app/api/mcp/route.ts) | `createMcpHandler` now uses a per-request factory: `(ctx) => createBuiltDailyServer(uidFromAuthInfo(ctx.authInfo))`. The 503 "not configured" guard now checks `isFirebaseAdminConfigured()` instead of the old `MCP_BEARER_TOKEN`-only check (so it no longer 503s for every real user just because you didn't set a shared secret). |
+| [`app/api/mcp/tokens/route.ts`](../app/api/mcp/tokens/route.ts) | New. `GET`/`POST`/`DELETE` for a signed-in user's own tokens. Auth here is a normal Firebase **ID token** (`Authorization: Bearer <idToken>`, verified with `getAdminAuth().verifyIdToken`) — different from the MCP endpoint's long-lived PAT, and easy to mix up: this route authenticates *app users*, `/api/mcp` authenticates *MCP clients*. |
+| [`lib/mcp-token-repository.ts`](../lib/mcp-token-repository.ts) | New. Client-side wrapper (`listMcpTokens`, `createMcpToken`, `revokeMcpToken`) that attaches the current Firebase user's ID token to calls against `/api/mcp/tokens`. |
+| [`components/settings-mcp-tokens.tsx`](../components/settings-mcp-tokens.tsx) | New. "Connect to Claude" settings section: generate a labeled token (shown once, copy-to-clipboard), list existing tokens with created/last-used dates, revoke. Wired into [`app/settings/page.tsx`](../app/settings/page.tsx) alongside the existing public-profile settings. |
+| [`firestore.rules`](../firestore.rules) | Comment added noting `mcpTokens/*` is deliberately unmatched (default-denied to client SDKs) — Admin SDK only. |
 
----
+### How a user connects (end-user flow)
 
-## Open questions to resolve before/while implementing
+1. Sign in to Built Daily, go to **Settings → Connect to Claude**.
+2. Enter a label (e.g. "Claude Desktop") and click **Generate token**. Copy
+   the token shown — it is never shown again.
+3. In Claude, add a custom connector with URL `https://<your-domain>/api/mcp`
+   and paste the token as the API key. Claude sends it as `x-api-key`, which
+   `requestWithBearerToken` in `mcp/bearer.ts` copies into
+   `Authorization: Bearer` before the SDK's `requireBearerAuth` gate runs.
+4. Revoke anytime from the same settings section — revocation is immediate
+   because the verifier does a live Firestore lookup per request (no caching).
 
-- What does the installed `@modelcontextprotocol/server` version actually
-  expose on `AuthInfo` for carrying custom data (the uid) from the verifier
-  to the request handler? Check the installed package's types directly
-  (`node_modules/@modelcontextprotocol/server`) since this determines the
-  exact shape of the change in step 3.
-- Do tokens need scopes/expiry, or is "valid until revoked" fine for v1?
-  Given this is read-only personal data, indefinite tokens with easy
-  revocation is a reasonable starting point.
+### Notes / things to revisit later
+
+- **Local/legacy fallback:** `MCP_BEARER_TOKEN` + `MCP_USER_UID` still work
+  as a single hardcoded identity for your own testing, checked only after
+  the Firestore lookup misses. Fine to delete once you're comfortable
+  generating your own PAT through the UI instead.
+- **Rate limiting:** not implemented. Left out per the original plan — it's
+  read-only and scoped per-user, so abuse blast radius is limited to one
+  user's own Firestore reads. Revisit if this becomes a real concern.
+- **AuthInfo shape:** confirmed against the installed
+  `@modelcontextprotocol/server`/`sdk` types — `AuthInfo.extra` is a
+  `Record<string, unknown>` bag, and `McpServerFactory` is
+  `(ctx: McpRequestContext) => McpServer`, where `ctx.authInfo` is the
+  pass-through value set by `requireBearerAuth`. That's what
+  `uidFromAuthInfo()` and the route's factory rely on.

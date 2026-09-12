@@ -23,8 +23,8 @@ function errorResult(message: string) {
   };
 }
 
-/** Shared read-only tool set for stdio and HTTP MCP. */
-export function createBuiltDailyServer(): McpServer {
+/** Shared read-only tool set for stdio and HTTP MCP, scoped to one Firebase uid. */
+export function createBuiltDailyServer(uid: string): McpServer {
   const server = new McpServer({
     name: "built-daily",
     version: "0.1.0",
@@ -35,7 +35,7 @@ export function createBuiltDailyServer(): McpServer {
     {
       title: "List recent sessions",
       description:
-        "List the most recent completed workout sessions for MCP_USER_UID.",
+        "List the most recent completed workout sessions for the authenticated user.",
       inputSchema: z.object({
         limit: z
           .number()
@@ -49,7 +49,7 @@ export function createBuiltDailyServer(): McpServer {
     },
     async ({ limit }) => {
       try {
-        const result = await listRecentCompletedSessions(limit ?? 10);
+        const result = await listRecentCompletedSessions(uid, limit ?? 10);
         return textResult(result);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
@@ -62,7 +62,7 @@ export function createBuiltDailyServer(): McpServer {
     {
       title: "Get session",
       description:
-        "Fetch one workout session by id for MCP_USER_UID, including exercises and sets.",
+        "Fetch one workout session by id for the authenticated user, including exercises and sets.",
       inputSchema: z.object({
         sessionId: z.string().min(1).describe("Firestore session document id."),
       }),
@@ -70,7 +70,7 @@ export function createBuiltDailyServer(): McpServer {
     },
     async ({ sessionId }) => {
       try {
-        const session = await getSessionById(sessionId.trim());
+        const session = await getSessionById(uid, sessionId.trim());
         if (!session) {
           return errorResult(`Session not found: ${sessionId}`);
         }

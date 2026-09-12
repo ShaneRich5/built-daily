@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SettingsMcpTokens } from "@/components/settings-mcp-tokens";
 import { SettingsProfileSharing } from "@/components/settings-profile-sharing";
 
 export const metadata: Metadata = {
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
-  return <SettingsProfileSharing />;
+  return (
+    <div className="flex flex-1 flex-col gap-10">
+      <SettingsProfileSharing />
+      <SettingsMcpTokens />
+    </div>
+  );
 }

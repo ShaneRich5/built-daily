@@ -4,16 +4,19 @@ import {
 } from "@modelcontextprotocol/server";
 import { createBuiltDailyServer } from "@/mcp/create-server";
 import {
-  isMcpAuthConfigured,
   mcpTokenVerifier,
   requestWithBearerToken,
+  uidFromAuthInfo,
 } from "@/mcp/bearer";
+import { isFirebaseAdminConfigured } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const handler = createMcpHandler(() => createBuiltDailyServer());
+const handler = createMcpHandler((ctx) =>
+  createBuiltDailyServer(uidFromAuthInfo(ctx.authInfo)),
+);
 
 const gate = requireBearerAuth({
   verifier: mcpTokenVerifier,
@@ -40,10 +43,10 @@ function withCors(response: Response): Response {
 }
 
 async function handleMcp(request: Request): Promise<Response> {
-  if (!isMcpAuthConfigured()) {
+  if (!isFirebaseAdminConfigured()) {
     return withCors(
       new Response(
-        JSON.stringify({ error: "MCP_BEARER_TOKEN is not set" }),
+        JSON.stringify({ error: "Firebase Admin credentials are not configured" }),
         {
           status: 503,
           headers: { "Content-Type": "application/json" },
