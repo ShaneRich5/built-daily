@@ -1,4 +1,4 @@
-import { getAdminAuth } from "@/lib/firebase-admin";
+import { getAdminAuth, isFirebaseAdminConfigured } from "@/lib/firebase-admin";
 import {
   createMcpTokenForUid,
   listMcpTokensForUid,
@@ -8,15 +8,38 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Verifies the caller's Firebase ID token and returns their uid, or a 401 Response. */
+/**
+ * Verifies the caller's Firebase ID token and returns their uid, or an error
+ * Response — 503 if Admin credentials aren't configured on this deployment
+ * (set FIREBASE_SERVICE_ACCOUNT in Vercel; see .env.example), 401 otherwise.
+ */
 async function requireUid(request: Request): Promise<string | Response> {
+  if (!isFirebaseAdminConfigured()) {
+    return Response.json(
+      { error: "Firebase Admin credentials are not configured" },
+      { status: 503 },
+    );
+  }
+
   const header = request.headers.get("authorization") ?? "";
   const idToken = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
   if (!idToken) {
     return Response.json({ error: "Missing Authorization header" }, { status: 401 });
   }
+
+  let auth: ReturnType<typeof getAdminAuth>;
   try {
-    const decoded = await getAdminAuth().verifyIdToken(idToken);
+    auth = getAdminAuth();
+  } catch (err) {
+    console.error("Firebase Admin init failed:", err);
+    return Response.json(
+      { error: "Firebase Admin credentials are misconfigured" },
+      { status: 503 },
+    );
+  }
+
+  try {
+    const decoded = await auth.verifyIdToken(idToken);
     return decoded.uid;
   } catch {
     return Response.json({ error: "Invalid or expired session" }, { status: 401 });
