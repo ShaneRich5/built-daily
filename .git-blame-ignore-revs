@@ -1,0 +1,6 @@
+# Mechanical commits hidden from `git blame`.
+# GitHub honors this file automatically. Locally, run once:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# style: apply Prettier and normalize line endings to LF
+b73b5715dc22da5f569489d79cd09fd5bc7a6e1b
