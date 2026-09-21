@@ -66,8 +66,15 @@ export function LoginForm() {
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 p-6 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
         <p>Firebase is not configured.</p>
         <p className="mt-2 text-xs text-zinc-500">
-          Set <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">NEXT_PUBLIC_FIREBASE_*</code>{" "}
-          in <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">.env.local</code>.
+          Set{" "}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">
+            NEXT_PUBLIC_FIREBASE_*
+          </code>{" "}
+          in{" "}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">
+            .env.local
+          </code>
+          .
         </p>
         <Link
           href="/"
@@ -205,7 +212,10 @@ export function LoginForm() {
       </form>
 
       <p className="text-center text-sm text-zinc-500">
-        <Link href="/" className="font-medium text-zinc-800 underline-offset-2 hover:underline dark:text-zinc-200">
+        <Link
+          href="/"
+          className="font-medium text-zinc-800 underline-offset-2 hover:underline dark:text-zinc-200"
+        >
           Back to home
         </Link>
       </p>

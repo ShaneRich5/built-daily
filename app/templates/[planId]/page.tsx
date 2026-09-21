@@ -9,9 +9,7 @@ import {
   type SavedWorkoutPlan,
 } from "@/lib/workout-plan-repository";
 
-function planIdFromParams(
-  raw: string | string[] | undefined,
-): string | null {
+function planIdFromParams(raw: string | string[] | undefined): string | null {
   if (typeof raw === "string" && raw.length > 0) return raw;
   if (Array.isArray(raw) && typeof raw[0] === "string" && raw[0].length > 0) {
     return raw[0];
@@ -79,10 +77,5 @@ function EditTemplateLoader({ planId }: { planId: string }) {
     );
   }
 
-  return (
-    <WorkoutTemplateEditor
-      planId={loaded.id}
-      initialPlan={loaded.plan}
-    />
-  );
+  return <WorkoutTemplateEditor planId={loaded.id} initialPlan={loaded.plan} />;
 }

@@ -11,7 +11,8 @@ const STATUS_STYLES: Record<
   { badge: string; badgeText: string }
 > = {
   complete: {
-    badge: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
+    badge:
+      "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
     badgeText: "Week locked",
   },
   protecting: {
@@ -19,11 +20,13 @@ const STATUS_STYLES: Record<
     badgeText: "Streak safe",
   },
   on_track: {
-    badge: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
+    badge:
+      "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300",
     badgeText: "On track",
   },
   at_risk: {
-    badge: "bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
+    badge:
+      "bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200",
     badgeText: "Still possible",
   },
   starting: {

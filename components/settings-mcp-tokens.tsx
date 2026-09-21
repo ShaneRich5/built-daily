@@ -139,9 +139,8 @@ export function SettingsMcpTokens() {
         </h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           Generate a personal access token, then add Built Daily as a custom
-          connector in Claude using this token as the API key. Claude can
-          read your recent workouts and exercise catalog — nothing is
-          written back.
+          connector in Claude using this token as the API key. Claude can read
+          your recent workouts and exercise catalog — nothing is written back.
         </p>
       </div>
 

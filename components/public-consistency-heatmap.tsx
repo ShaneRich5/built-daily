@@ -19,8 +19,7 @@ const WORKOUT_LEVEL_CLASS: Record<1 | 2 | 3 | 4, string> = {
   4: "bg-emerald-700 dark:bg-emerald-400",
 };
 
-const CELL_OUTLINE =
-  "ring-1 ring-inset ring-zinc-200/90 dark:ring-zinc-700/90";
+const CELL_OUTLINE = "ring-1 ring-inset ring-zinc-200/90 dark:ring-zinc-700/90";
 
 const KIND_CLASS: Record<"recovery" | "today" | "future" | "empty", string> = {
   recovery: "bg-zinc-200 dark:bg-zinc-800",

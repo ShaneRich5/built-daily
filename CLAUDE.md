@@ -131,11 +131,11 @@ Prefer:
 Example structure:
 
 src/
-  app/
-  components/
-  features/
-  hooks/
-  lib/
+app/
+components/
+features/
+hooks/
+lib/
 
 ---
 

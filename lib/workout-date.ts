@@ -166,9 +166,7 @@ export function formatSessionVolumeMeta(
       ? "No exercises yet"
       : "Logged without details";
   }
-  const parts = [
-    `${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`,
-  ];
+  const parts = [`${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`];
   if (setCount != null) {
     parts.push(`${setCount} set${setCount === 1 ? "" : "s"}`);
   }

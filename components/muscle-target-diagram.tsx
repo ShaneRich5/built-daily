@@ -7,10 +7,7 @@ import type {
   MuscleMapValues,
   MuscleMapView,
 } from "@musclemap/core";
-import {
-  sessionMuscleScores,
-  type MuscleFocus,
-} from "@/lib/exercise-muscle";
+import { sessionMuscleScores, type MuscleFocus } from "@/lib/exercise-muscle";
 import type { MuscleGroup } from "@/lib/progress-types";
 import { cn } from "@/lib/utils";
 
@@ -91,7 +88,12 @@ function valuesFromScores(
   const values: MuscleMapValues = {};
   for (const [rawGroup, score] of Object.entries(scores)) {
     const group = rawGroup as MuscleGroup;
-    if (group === "cardio" || group === "other" || score == null || score <= 0) {
+    if (
+      group === "cardio" ||
+      group === "other" ||
+      score == null ||
+      score <= 0
+    ) {
       continue;
     }
     const nextScore = emphasize === group ? 100 : score;

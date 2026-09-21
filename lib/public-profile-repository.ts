@@ -18,10 +18,7 @@ import {
   currentWorkoutStreak,
   activityByDayFromSessions,
 } from "@/lib/workout-activity";
-import {
-  weekStartSundayKey,
-  workoutsInWeek,
-} from "@/lib/progress-insights";
+import { weekStartSundayKey, workoutsInWeek } from "@/lib/progress-insights";
 import {
   activityMapToRecord,
   firestoreToPublicProfileDoc,
@@ -141,8 +138,7 @@ async function computeConsistencyFromSessions(uid: string): Promise<{
   let lastWorkoutDateKey: string | null = null;
   for (const s of sessions) {
     const key =
-      s.workoutDate ??
-      localDateKeyFromMs((s.endedAt ?? s.startedAt).getTime());
+      s.workoutDate ?? localDateKeyFromMs((s.endedAt ?? s.startedAt).getTime());
     if (!lastWorkoutDateKey || key > lastWorkoutDateKey) {
       lastWorkoutDateKey = key;
     }

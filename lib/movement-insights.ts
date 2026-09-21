@@ -4,10 +4,7 @@ import {
   shiftLocalDateKey,
   type WorkoutActivityByDay,
 } from "@/lib/workout-activity";
-import {
-  dateFromLocalDateKey,
-  localDateKeyFromMs,
-} from "@/lib/workout-date";
+import { dateFromLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
 import type {
   DayActivityDetail,
   DayLoggedActivitySummary,
@@ -26,9 +23,7 @@ function weekStartSundayKey(dateKey: string): string {
   return localDateKeyFromMs(d.getTime());
 }
 
-export function activityByDayFromSaved(
-  rows: SavedActivity[],
-): ActivityByDay {
+export function activityByDayFromSaved(rows: SavedActivity[]): ActivityByDay {
   const map: ActivityByDay = new Map();
   for (const { activity } of rows) {
     const key = activity.activityDate;

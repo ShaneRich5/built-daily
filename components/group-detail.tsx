@@ -16,10 +16,7 @@ import {
   type SavedGroupMember,
 } from "@/lib/group-repository";
 import { GROUP_LIMITS } from "@/lib/group-types";
-import {
-  formatLocalDateKey,
-  localDateKeyFromMs,
-} from "@/lib/workout-date";
+import { formatLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
 
 type GroupDetailProps = {
   groupId: string;
@@ -85,9 +82,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
     return subscribeGroupMembers(groupId, setMembers);
   }, [user, firebaseReady, groupId]);
 
-  const isOwner = Boolean(
-    user && group && group.group.createdBy === user.uid,
-  );
+  const isOwner = Boolean(user && group && group.group.createdBy === user.uid);
   const inviteCode = group?.group.inviteCode ?? "";
 
   async function onCopyCode() {
@@ -110,9 +105,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
         return;
       }
       setGroup((prev) =>
-        prev
-          ? { ...prev, group: { ...prev.group, inviteCode: next } }
-          : prev,
+        prev ? { ...prev, group: { ...prev.group, inviteCode: next } } : prev,
       );
     } catch {
       setError("Something went wrong rotating the code.");
@@ -159,7 +152,9 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
 
   async function onDelete() {
     if (busy || !isOwner) return;
-    if (!window.confirm("Delete this group for everyone? This can’t be undone.")) {
+    if (
+      !window.confirm("Delete this group for everyone? This can’t be undone.")
+    ) {
       return;
     }
     setError(null);
@@ -300,8 +295,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
             ) : (
               <ul className="divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-950">
                 {members.map(({ id, member }) => {
-                  const workedToday =
-                    member.lastWorkoutDateKey === todayKey;
+                  const workedToday = member.lastWorkoutDateKey === todayKey;
                   return (
                     <li
                       key={id}

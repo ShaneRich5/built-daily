@@ -2,7 +2,10 @@
 
 import { History, RotateCcw, X } from "lucide-react";
 import { useState } from "react";
-import { formatLocalDateKey, formatWorkoutHeaderDate } from "@/lib/workout-date";
+import {
+  formatLocalDateKey,
+  formatWorkoutHeaderDate,
+} from "@/lib/workout-date";
 import { formatSetSummary } from "@/lib/workout-journal-export";
 import type { ExerciseHistoryEntry } from "@/lib/workout-session-repository";
 import type { SetLog } from "@/lib/workout-types";

@@ -104,9 +104,7 @@ export function PublicProfileView({ userId }: { userId: string }) {
         <div>
           <dt className="text-sm text-zinc-500">Current streak</dt>
           <dd className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-            {profile.currentStreak > 0
-              ? `${profile.currentStreak}-day`
-              : "—"}
+            {profile.currentStreak > 0 ? `${profile.currentStreak}-day` : "—"}
           </dd>
         </div>
         <div>

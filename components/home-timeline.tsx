@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { Check, Copy, Download } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { ActivityTypeIcon } from "@/components/activity-type-icon";
 import { LogActivitySheet } from "@/components/log-activity-sheet";
 import { useAuth } from "@/components/auth-provider";
@@ -84,11 +90,7 @@ function buildTimeline(
         s.status === "in_progress"
           ? `/workout?s=${encodeURIComponent(s.id)}`
           : `/sessions/${s.id}`,
-      dateLabel: formatSessionJournalMeta(
-        s.workoutDate,
-        s.workoutTime,
-        dateMs,
-      ),
+      dateLabel: formatSessionJournalMeta(s.workoutDate, s.workoutTime, dateMs),
       status: s.status,
       exerciseCount: s.exerciseCount,
       setCount: s.setCount,
@@ -221,7 +223,9 @@ export function HomeTimeline() {
   const workoutIds = useMemo(
     () =>
       groups.flatMap((group) =>
-        group.items.filter((item) => item.kind === "workout").map((item) => item.id),
+        group.items
+          .filter((item) => item.kind === "workout")
+          .map((item) => item.id),
       ),
     [groups],
   );
@@ -293,10 +297,7 @@ export function HomeTimeline() {
     try {
       const text = await loadSelectedJournal();
       if (!text) return;
-      downloadTextFile(
-        workoutJournalBundleFilename(selectedIds.size),
-        text,
-      );
+      downloadTextFile(workoutJournalBundleFilename(selectedIds.size), text);
     } catch {
       setExportError("Couldn’t download. Check your connection and try again.");
     } finally {

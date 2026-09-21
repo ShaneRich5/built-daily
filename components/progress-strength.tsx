@@ -8,10 +8,7 @@ type ProgressStrengthProps = {
   lifts: PersonalRecord[];
 };
 
-export function ProgressStrength({
-  recentPrs,
-  lifts,
-}: ProgressStrengthProps) {
+export function ProgressStrength({ recentPrs, lifts }: ProgressStrengthProps) {
   return (
     <section
       className="space-y-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"

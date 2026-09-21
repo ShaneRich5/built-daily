@@ -150,7 +150,9 @@ export async function getSessionById(
     startedAt: toIso(data.startedAt),
     endedAt: toIso(data.endedAt),
     activeDurationSec:
-      typeof data.activeDurationSec === "number" ? data.activeDurationSec : null,
+      typeof data.activeDurationSec === "number"
+        ? data.activeDurationSec
+        : null,
     workoutNote: asOptionalString(data.workoutNote),
     exerciseNotesByLineId: data.exerciseNotesByLineId ?? null,
     lines: Array.isArray(data.lines) ? data.lines : [],
@@ -181,20 +183,21 @@ export type WorkoutSessionWriteInput = {
   exercises?: McpExerciseInput[];
 };
 
-type WorkoutSessionOk = { kind: "ok"; id: string; session: Record<string, unknown> };
+type WorkoutSessionOk = {
+  kind: "ok";
+  id: string;
+  session: Record<string, unknown>;
+};
 type WorkoutSessionUnknownExerciseIds = {
   kind: "unknown_exercise_ids";
   exerciseIds: string[];
 };
 
 export type CreateWorkoutSessionResult =
-  | WorkoutSessionOk
-  | WorkoutSessionUnknownExerciseIds;
+  WorkoutSessionOk | WorkoutSessionUnknownExerciseIds;
 
 export type WorkoutSessionWriteResult =
-  | WorkoutSessionOk
-  | WorkoutSessionUnknownExerciseIds
-  | { kind: "not_found" };
+  WorkoutSessionOk | WorkoutSessionUnknownExerciseIds | { kind: "not_found" };
 
 function trimNote(raw: string | undefined, max: number): string | null {
   if (!raw) return null;
@@ -215,13 +218,18 @@ export async function createWorkoutSession(
 ): Promise<CreateWorkoutSessionResult> {
   const built = buildSessionLines(input.exercises ?? []);
   if (built.unknownExerciseIds.length > 0) {
-    return { kind: "unknown_exercise_ids", exerciseIds: built.unknownExerciseIds };
+    return {
+      kind: "unknown_exercise_ids",
+      exerciseIds: built.unknownExerciseIds,
+    };
   }
 
   const status: WorkoutStatusInput = input.status ?? "completed";
   const startedAt = parseIsoDate(input.startedAt) ?? new Date();
   const endedAt =
-    status === "in_progress" ? null : (parseIsoDate(input.endedAt) ?? new Date());
+    status === "in_progress"
+      ? null
+      : (parseIsoDate(input.endedAt) ?? new Date());
   const workoutDate = input.workoutDate
     ? normalizeWorkoutDate(input.workoutDate)
     : null;
@@ -283,7 +291,9 @@ export async function updateWorkoutSession(
   let lines: unknown[] = Array.isArray(existing.lines) ? existing.lines : [];
   let exerciseNotesByLineId = existing.exerciseNotesByLineId ?? null;
   let exerciseCount =
-    typeof existing.exerciseCount === "number" ? existing.exerciseCount : lines.length;
+    typeof existing.exerciseCount === "number"
+      ? existing.exerciseCount
+      : lines.length;
   let setCount = typeof existing.setCount === "number" ? existing.setCount : 0;
   let previewExerciseNames = Array.isArray(existing.previewExerciseNames)
     ? existing.previewExerciseNames
@@ -292,7 +302,10 @@ export async function updateWorkoutSession(
   if (input.exercises) {
     const built = buildSessionLines(input.exercises);
     if (built.unknownExerciseIds.length > 0) {
-      return { kind: "unknown_exercise_ids", exerciseIds: built.unknownExerciseIds };
+      return {
+        kind: "unknown_exercise_ids",
+        exerciseIds: built.unknownExerciseIds,
+      };
     }
     lines = built.lines;
     exerciseNotesByLineId = built.exerciseNotesByLineId;

@@ -190,13 +190,7 @@ export async function createAccountabilityGroup(
   const groupRef = doc(collection(db, "groups"));
   const memberRef = doc(db, "groups", groupRef.id, "members", user.uid);
   const inviteRef = doc(db, "inviteCodes", inviteCode);
-  const indexRef = doc(
-    db,
-    "users",
-    user.uid,
-    "groupMemberships",
-    groupRef.id,
-  );
+  const indexRef = doc(db, "users", user.uid, "groupMemberships", groupRef.id);
 
   const group: AccountabilityGroupDoc = {
     name,

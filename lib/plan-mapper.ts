@@ -1,7 +1,13 @@
 import { Timestamp } from "firebase/firestore";
 import type { ExerciseMetric } from "@/lib/exercise-catalog";
 import { getCatalogExerciseById } from "@/lib/exercise-catalog";
-import { NOTE_LIMITS, type PlanLine, type PlanRestPreferences, type PlanSource, type WorkoutPlanDoc } from "@/lib/workout-types";
+import {
+  NOTE_LIMITS,
+  type PlanLine,
+  type PlanRestPreferences,
+  type PlanSource,
+  type WorkoutPlanDoc,
+} from "@/lib/workout-types";
 
 function newLineId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -10,7 +16,9 @@ function newLineId(): string {
   return `line-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export function planLineFromCatalogExercise(exerciseId: string): PlanLine | null {
+export function planLineFromCatalogExercise(
+  exerciseId: string,
+): PlanLine | null {
   const ex = getCatalogExerciseById(exerciseId);
   if (!ex) return null;
   return {
@@ -52,7 +60,8 @@ function asTimestamp(v: unknown): Date | null {
   ) {
     return new Timestamp(
       (v as { seconds: number }).seconds,
-      "nanoseconds" in v && typeof (v as { nanoseconds: unknown }).nanoseconds === "number"
+      "nanoseconds" in v &&
+        typeof (v as { nanoseconds: unknown }).nanoseconds === "number"
         ? (v as { nanoseconds: number }).nanoseconds
         : 0,
     ).toDate();
@@ -99,7 +108,10 @@ function parsePlanLine(raw: unknown): PlanLine | null {
   let targetSets: number | null | undefined;
   if (o.targetSets === null || o.targetSets === undefined) {
     targetSets = o.targetSets === null ? null : undefined;
-  } else if (typeof o.targetSets === "number" && Number.isFinite(o.targetSets)) {
+  } else if (
+    typeof o.targetSets === "number" &&
+    Number.isFinite(o.targetSets)
+  ) {
     targetSets = Math.max(1, Math.min(99, Math.round(o.targetSets)));
   }
 
@@ -122,7 +134,9 @@ function parsePlanLine(raw: unknown): PlanLine | null {
 }
 
 /** Parse Firestore document fields into `WorkoutPlanDoc`, or null if invalid. */
-export function firestoreToWorkoutPlanDoc(data: Record<string, unknown>): WorkoutPlanDoc | null {
+export function firestoreToWorkoutPlanDoc(
+  data: Record<string, unknown>,
+): WorkoutPlanDoc | null {
   const name =
     typeof data.name === "string"
       ? data.name.trim().slice(0, NOTE_LIMITS.title)
@@ -147,7 +161,9 @@ export function firestoreToWorkoutPlanDoc(data: Record<string, unknown>): Workou
   return doc;
 }
 
-export function workoutPlanDocToFirestore(doc: WorkoutPlanDoc): Record<string, unknown> {
+export function workoutPlanDocToFirestore(
+  doc: WorkoutPlanDoc,
+): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     name: doc.name,
     createdAt: Timestamp.fromDate(doc.createdAt),

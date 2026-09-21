@@ -38,12 +38,15 @@ export async function createMcpTokenForUid(
 ): Promise<string> {
   const token = TOKEN_PREFIX + randomBytes(32).toString("base64url");
   const hash = hashToken(token);
-  await getAdminFirestore().collection(COLLECTION).doc(hash).set({
-    uid,
-    label: label?.trim() || null,
-    createdAt: FieldValue.serverTimestamp(),
-    lastUsedAt: null,
-  });
+  await getAdminFirestore()
+    .collection(COLLECTION)
+    .doc(hash)
+    .set({
+      uid,
+      label: label?.trim() || null,
+      createdAt: FieldValue.serverTimestamp(),
+      lastUsedAt: null,
+    });
   return token;
 }
 
@@ -87,7 +90,9 @@ export async function revokeMcpToken(
  * Resolves a bearer token to its owning uid, or null if unknown/revoked.
  * Best-effort touches `lastUsedAt` without blocking the caller.
  */
-export async function resolveUidForToken(token: string): Promise<string | null> {
+export async function resolveUidForToken(
+  token: string,
+): Promise<string | null> {
   const ref = getAdminFirestore().collection(COLLECTION).doc(hashToken(token));
   const snap = await ref.get();
   if (!snap.exists) return null;

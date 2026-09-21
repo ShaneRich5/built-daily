@@ -133,7 +133,9 @@ export function ProgressWeight({
           <p className="text-3xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
             {current ? current.entry.weightLbs : "—"}
             {current ? (
-              <span className="ml-1 text-sm font-medium text-zinc-500">lbs</span>
+              <span className="ml-1 text-sm font-medium text-zinc-500">
+                lbs
+              </span>
             ) : null}
           </p>
           <p className="text-xs text-zinc-500">Current</p>
@@ -142,7 +144,9 @@ export function ProgressWeight({
           <p className="text-xl font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">
             {delta == null ? "—" : delta > 0 ? `+${delta}` : `${delta}`}
             {delta != null ? (
-              <span className="ml-1 text-sm font-medium text-zinc-500">lbs</span>
+              <span className="ml-1 text-sm font-medium text-zinc-500">
+                lbs
+              </span>
             ) : null}
           </p>
           <p className="text-xs text-zinc-500">vs ~30 days ago</p>
@@ -151,7 +155,9 @@ export function ProgressWeight({
           <p className="text-xl font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">
             {goalWeightLbs != null ? goalWeightLbs : "—"}
             {goalWeightLbs != null ? (
-              <span className="ml-1 text-sm font-medium text-zinc-500">lbs</span>
+              <span className="ml-1 text-sm font-medium text-zinc-500">
+                lbs
+              </span>
             ) : null}
           </p>
           <p className="text-xs text-zinc-500">Goal</p>

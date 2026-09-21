@@ -18,7 +18,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { cn } from "@/lib/utils";
-import { getCatalogExerciseById, type ExerciseMetric } from "@/lib/exercise-catalog";
+import {
+  getCatalogExerciseById,
+  type ExerciseMetric,
+} from "@/lib/exercise-catalog";
 import {
   planLineFromCatalogExercise,
   planLineFromCustomName,
@@ -65,7 +68,9 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
   const isEdit = Boolean(planId);
 
   const [name, setName] = useState(() => initialPlan?.name ?? "");
-  const [lines, setLines] = useState<PlanLine[]>(() => initialPlan?.lines ?? []);
+  const [lines, setLines] = useState<PlanLine[]>(
+    () => initialPlan?.lines ?? [],
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [deletePending, setDeletePending] = useState(false);
@@ -80,7 +85,8 @@ export function WorkoutTemplateEditor({ planId, initialPlan }: Props) {
   );
 
   const canSave = useMemo(
-    () => name.trim().length > 0 && lines.length > 0 && lines.length <= MAX_LINES,
+    () =>
+      name.trim().length > 0 && lines.length > 0 && lines.length <= MAX_LINES,
     [name, lines.length],
   );
 
