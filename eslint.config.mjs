@@ -19,7 +19,7 @@ const eslintConfig = defineConfig([
       "no-console": ["warn", { allow: ["warn", "error"] }],
       eqeqeq: ["error", "always", { null: "ignore" }],
       // Ratcheted to warn: 18 pre-existing violations across 12 files, most of
-      // them in the active-workout flow. Raise back to error once BD-1 lands.
+      // them in the active-workout flow. Raise back to error once issue #2 lands.
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/refs": "warn",
     },
