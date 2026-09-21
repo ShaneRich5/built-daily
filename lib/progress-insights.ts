@@ -55,11 +55,11 @@ export function sessionVolumeLbs(session: WorkoutSessionDoc): number {
 }
 
 /** Monday of the local week containing dateKey. */
-export function weekStartMondayKey(dateKey: string): string {
+export function weekStartSundayKey(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
   if (!d) return dateKey;
   const dow = d.getDay(); // 0 Sun … 6 Sat
-  const delta = dow === 0 ? -6 : 1 - dow;
+  const delta = -dow; // Go back to Sunday (0)
   d.setDate(d.getDate() + delta);
   return localDateKeyFromMs(d.getTime());
 }
@@ -81,7 +81,7 @@ export function weekGoalStatus(
   weeklyGoal: WeeklyGoalTarget,
   todayKey: string,
 ): WeekGoalStatus {
-  const weekStartKey = weekStartMondayKey(todayKey);
+  const weekStartKey = weekStartSundayKey(todayKey);
   const completed = workoutsInWeek(activity, weekStartKey);
   return {
     weekStartKey,
@@ -216,7 +216,7 @@ export function goalWeekStreak(
   weeklyGoal: WeeklyGoalTarget,
   todayKey: string,
 ): { current: number; longest: number } {
-  const thisWeekStart = weekStartMondayKey(todayKey);
+  const thisWeekStart = weekStartSundayKey(todayKey);
   let cursor = thisWeekStart;
   const thisWeekCount = workoutsInWeek(activity, thisWeekStart);
   const thisWeekMet = thisWeekCount >= weeklyGoal;
@@ -248,7 +248,7 @@ export function goalWeekStreak(
   // Scan all weeks from first activity for longest
   const firstKey = earliestActivityKey(activity);
   if (firstKey) {
-    let w = weekStartMondayKey(firstKey);
+    let w = weekStartSundayKey(firstKey);
     const end = thisWeekStart;
     let run = 0;
     while (w <= end) {

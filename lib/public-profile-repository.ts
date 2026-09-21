@@ -19,7 +19,7 @@ import {
   activityByDayFromSessions,
 } from "@/lib/workout-activity";
 import {
-  weekStartMondayKey,
+  weekStartSundayKey,
   workoutsInWeek,
 } from "@/lib/progress-insights";
 import {
@@ -135,7 +135,7 @@ async function computeConsistencyFromSessions(uid: string): Promise<{
   const currentStreak = currentWorkoutStreak(activity, todayKey);
   const workoutsThisWeek = workoutsInWeek(
     activity,
-    weekStartMondayKey(todayKey),
+    weekStartSundayKey(todayKey),
   );
 
   let lastWorkoutDateKey: string | null = null;
@@ -249,9 +249,9 @@ export async function syncPublicProfileConsistency(options: {
     dateKey,
   );
 
-  const thisWeekStart = weekStartMondayKey(dateKey);
+  const thisWeekStart = weekStartSundayKey(dateKey);
   const prevWeekStart = existing.lastWorkoutDateKey
-    ? weekStartMondayKey(existing.lastWorkoutDateKey)
+    ? weekStartSundayKey(existing.lastWorkoutDateKey)
     : null;
   const workoutsThisWeek =
     prevWeekStart === thisWeekStart ? existing.workoutsThisWeek + 1 : 1;

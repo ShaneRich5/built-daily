@@ -17,11 +17,11 @@ import type {
 /** Activity counts per local calendar day. */
 export type ActivityByDay = Map<string, number>;
 
-function weekStartMondayKey(dateKey: string): string {
+function weekStartSundayKey(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
   if (!d) return dateKey;
-  const dow = d.getDay();
-  const delta = dow === 0 ? -6 : 1 - dow;
+  const dow = d.getDay(); // 0 Sun … 6 Sat
+  const delta = -dow; // Go back to Sunday (0)
   d.setDate(d.getDate() + delta);
   return localDateKeyFromMs(d.getTime());
 }
@@ -75,7 +75,7 @@ export function movementGoalStatus(
   target: MovementGoalTarget,
   todayKey: string = localDateKeyFromMs(Date.now()),
 ): MovementGoalStatus {
-  const weekStartKey = weekStartMondayKey(todayKey);
+  const weekStartKey = weekStartSundayKey(todayKey);
   const completed = movementDaysInWeek(movementDays, weekStartKey);
   return {
     weekStartKey,
