@@ -1,7 +1,4 @@
-import {
-  dateFromLocalDateKey,
-  localDateKeyFromMs,
-} from "@/lib/workout-date";
+import { dateFromLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
 
 /** Completed workouts per local calendar day (`YYYY-MM-DD` → count). */
 export type WorkoutActivityByDay = Map<string, number>;
@@ -29,8 +26,7 @@ export function activityByDayFromSessions(
   for (const s of sessions) {
     if (s.status !== "completed") continue;
     const key =
-      s.workoutDate ??
-      localDateKeyFromMs((s.endedAt ?? s.startedAt).getTime());
+      s.workoutDate ?? localDateKeyFromMs((s.endedAt ?? s.startedAt).getTime());
     map.set(key, (map.get(key) ?? 0) + 1);
   }
   return map;
@@ -137,13 +133,7 @@ export function activityLevel(count: number): 0 | 1 | 2 | 3 | 4 {
  * Days with both a workout and an activity use a split cell in the UI.
  */
 export type HeatmapDayKind =
-  | "workout"
-  | "activity"
-  | "both"
-  | "recovery"
-  | "today"
-  | "future"
-  | "empty";
+  "workout" | "activity" | "both" | "recovery" | "today" | "future" | "empty";
 
 export function heatmapDayKind(options: {
   dateKey: string;

@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { getCatalogExerciseById } from "@/lib/exercise-catalog";
-import { NOTE_LIMITS, type SessionLine, type SetLog } from "@/lib/workout-types";
+import {
+  NOTE_LIMITS,
+  type SessionLine,
+  type SetLog,
+} from "@/lib/workout-types";
 
 /** Per-set fields an MCP caller can supply (already numeric — no UI string parsing). */
 export type McpSetInput = {

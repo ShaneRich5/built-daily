@@ -169,15 +169,15 @@ Prefer feature-oriented organization over strict technical separation.
 Example:
 
 src/
-  features/
-    workouts/
-    exercises/
-    templates/
-    metrics/
-  components/
-  lib/
-  hooks/
-  app/
+features/
+workouts/
+exercises/
+templates/
+metrics/
+components/
+lib/
+hooks/
+app/
 
 ---
 

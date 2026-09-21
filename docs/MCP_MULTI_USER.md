@@ -12,14 +12,14 @@ for the final file list and how to use it.
 
 ## Current state (single-user)
 
-| File | Role today |
-|------|------------|
-| [`mcp/server.ts`](../mcp/server.ts) | Local stdio MCP entrypoint, started by Cursor via [`.cursor/mcp.json`](../.cursor/mcp.json). Read-only, personal use. |
-| [`mcp/env.ts`](../mcp/env.ts) | Loads `.env.local`/`.env`. `getMcpUserUid()` reads `MCP_USER_UID` — **one uid, hardcoded per process**. |
-| [`mcp/create-server.ts`](../mcp/create-server.ts) | Builds the `McpServer` and registers tools (`list_recent_sessions`, `get_session`, `search_exercises`). Tools call Firestore helpers with no uid argument — they all silently use `getMcpUserUid()`. |
-| [`mcp/firestore.ts`](../mcp/firestore.ts) | Firestore Admin SDK access. `listRecentCompletedSessions` / `getSessionById` both call `getMcpUserUid()` internally. |
-| [`mcp/bearer.ts`](../mcp/bearer.ts) | HTTP auth for the remote endpoint. `mcpTokenVerifier.verifyAccessToken` compares the incoming token against **one shared secret**, `MCP_BEARER_TOKEN`. Doesn't identify *who* is calling — just whether they know the one password. |
-| [`app/api/mcp/route.ts`](../app/api/mcp/route.ts) | Next.js route exposing the server over Streamable HTTP, gated by `requireBearerAuth`. This is the endpoint a remote Claude connector talks to. |
+| File                                              | Role today                                                                                                                                                                                                                          |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`mcp/server.ts`](../mcp/server.ts)               | Local stdio MCP entrypoint, started by Cursor via [`.cursor/mcp.json`](../.cursor/mcp.json). Read-only, personal use.                                                                                                               |
+| [`mcp/env.ts`](../mcp/env.ts)                     | Loads `.env.local`/`.env`. `getMcpUserUid()` reads `MCP_USER_UID` — **one uid, hardcoded per process**.                                                                                                                             |
+| [`mcp/create-server.ts`](../mcp/create-server.ts) | Builds the `McpServer` and registers tools (`list_recent_sessions`, `get_session`, `search_exercises`). Tools call Firestore helpers with no uid argument — they all silently use `getMcpUserUid()`.                                |
+| [`mcp/firestore.ts`](../mcp/firestore.ts)         | Firestore Admin SDK access. `listRecentCompletedSessions` / `getSessionById` both call `getMcpUserUid()` internally.                                                                                                                |
+| [`mcp/bearer.ts`](../mcp/bearer.ts)               | HTTP auth for the remote endpoint. `mcpTokenVerifier.verifyAccessToken` compares the incoming token against **one shared secret**, `MCP_BEARER_TOKEN`. Doesn't identify _who_ is calling — just whether they know the one password. |
+| [`app/api/mcp/route.ts`](../app/api/mcp/route.ts) | Next.js route exposing the server over Streamable HTTP, gated by `requireBearerAuth`. This is the endpoint a remote Claude connector talks to.                                                                                      |
 
 The problem in one sentence: **the token proves you're allowed in, but every
 token that gets in sees the same uid's data**, because the uid comes from an
@@ -58,6 +58,7 @@ and consent, which is a lot of new surface area for what's currently a
 read-only personal-data tool. Not chosen for the first version.
 
 Background reading:
+
 - MCP authorization spec: https://modelcontextprotocol.io/specification/draft/basic/authorization
 - MCP TypeScript SDK (what `@modelcontextprotocol/server` is built on): https://github.com/modelcontextprotocol/typescript-sdk
 - Claude custom connectors (how end users add a remote MCP server in Claude): https://support.claude.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp
@@ -166,6 +167,7 @@ This is the actual "single-tenant → multi-tenant" change:
 
 Once tokens aren't just yours, a buggy or malicious client could hammer the
 endpoint. Cheap options, roughly in order of effort:
+
 - Skip for v1 — it's read-only and scoped per-user, so the blast radius of
   abuse is "one user's own Firestore reads run up," not a cross-user leak.
 - A simple per-token counter doc with a rolling window, checked before
@@ -177,6 +179,7 @@ endpoint. Cheap options, roughly in order of effort:
 
 Once shipped, users need a short guide (separate doc or a help-center page,
 not this file) covering:
+
 1. Generate a token in Built Daily settings.
 2. In Claude, add a custom connector with URL `https://<your-domain>/api/mcp`.
 3. Paste the token as the API key (the route already accepts `x-api-key`
@@ -187,19 +190,19 @@ not this file) covering:
 
 ## What actually shipped
 
-| File | Role |
-|------|------|
-| [`lib/firebase-admin.ts`](../lib/firebase-admin.ts) | New. Single shared Admin SDK init (`getAdminFirestore()`, `getAdminAuth()`, `isFirebaseAdminConfigured()`) — used by both the MCP route and the token API route. Replaces the admin-init code that used to live directly in `mcp/firestore.ts`. |
-| [`mcp/tokens.ts`](../mcp/tokens.ts) | New. All `mcpTokens/{tokenHash}` reads/writes: `createMcpTokenForUid`, `listMcpTokensForUid`, `revokeMcpToken`, `resolveUidForToken`. Tokens are prefixed `bd_live_` and stored as a SHA-256 hash (doc ID), never in plaintext. |
-| [`mcp/bearer.ts`](../mcp/bearer.ts) | Rewritten. `mcpTokenVerifier` now calls `resolveUidForToken` and returns the uid via `AuthInfo.extra.uid`. Falls back to the old single-shared-secret path (`MCP_BEARER_TOKEN` + `MCP_USER_UID`) only if the Firestore lookup misses — kept as a maintainer escape hatch, not used by real users. New export `uidFromAuthInfo()` reads the uid back out. |
-| [`mcp/firestore.ts`](../mcp/firestore.ts) | `listRecentCompletedSessions(uid, limit)` and `getSessionById(uid, sessionId)` now take `uid` as a parameter instead of calling `getMcpUserUid()`. Uses `getAdminFirestore()` from the shared module. |
-| [`mcp/create-server.ts`](../mcp/create-server.ts) | `createBuiltDailyServer(uid)` now takes the uid and threads it into both Firestore-backed tools. `search_exercises` is unaffected (it's catalog-only, no Firestore). |
-| [`mcp/server.ts`](../mcp/server.ts) | Local stdio entrypoint (Cursor) unchanged in spirit — now explicitly calls `createBuiltDailyServer(getMcpUserUid())`, so your own `.env.local` workflow is untouched. |
-| [`app/api/mcp/route.ts`](../app/api/mcp/route.ts) | `createMcpHandler` now uses a per-request factory: `(ctx) => createBuiltDailyServer(uidFromAuthInfo(ctx.authInfo))`. The 503 "not configured" guard now checks `isFirebaseAdminConfigured()` instead of the old `MCP_BEARER_TOKEN`-only check (so it no longer 503s for every real user just because you didn't set a shared secret). |
-| [`app/api/mcp/tokens/route.ts`](../app/api/mcp/tokens/route.ts) | New. `GET`/`POST`/`DELETE` for a signed-in user's own tokens. Auth here is a normal Firebase **ID token** (`Authorization: Bearer <idToken>`, verified with `getAdminAuth().verifyIdToken`) — different from the MCP endpoint's long-lived PAT, and easy to mix up: this route authenticates *app users*, `/api/mcp` authenticates *MCP clients*. |
-| [`lib/mcp-token-repository.ts`](../lib/mcp-token-repository.ts) | New. Client-side wrapper (`listMcpTokens`, `createMcpToken`, `revokeMcpToken`) that attaches the current Firebase user's ID token to calls against `/api/mcp/tokens`. |
-| [`components/settings-mcp-tokens.tsx`](../components/settings-mcp-tokens.tsx) | New. "Connect to Claude" settings section: generate a labeled token (shown once, copy-to-clipboard), list existing tokens with created/last-used dates, revoke. Wired into [`app/settings/page.tsx`](../app/settings/page.tsx) alongside the existing public-profile settings. |
-| [`firestore.rules`](../firestore.rules) | Comment added noting `mcpTokens/*` is deliberately unmatched (default-denied to client SDKs) — Admin SDK only. |
+| File                                                                          | Role                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`lib/firebase-admin.ts`](../lib/firebase-admin.ts)                           | New. Single shared Admin SDK init (`getAdminFirestore()`, `getAdminAuth()`, `isFirebaseAdminConfigured()`) — used by both the MCP route and the token API route. Replaces the admin-init code that used to live directly in `mcp/firestore.ts`.                                                                                                          |
+| [`mcp/tokens.ts`](../mcp/tokens.ts)                                           | New. All `mcpTokens/{tokenHash}` reads/writes: `createMcpTokenForUid`, `listMcpTokensForUid`, `revokeMcpToken`, `resolveUidForToken`. Tokens are prefixed `bd_live_` and stored as a SHA-256 hash (doc ID), never in plaintext.                                                                                                                          |
+| [`mcp/bearer.ts`](../mcp/bearer.ts)                                           | Rewritten. `mcpTokenVerifier` now calls `resolveUidForToken` and returns the uid via `AuthInfo.extra.uid`. Falls back to the old single-shared-secret path (`MCP_BEARER_TOKEN` + `MCP_USER_UID`) only if the Firestore lookup misses — kept as a maintainer escape hatch, not used by real users. New export `uidFromAuthInfo()` reads the uid back out. |
+| [`mcp/firestore.ts`](../mcp/firestore.ts)                                     | `listRecentCompletedSessions(uid, limit)` and `getSessionById(uid, sessionId)` now take `uid` as a parameter instead of calling `getMcpUserUid()`. Uses `getAdminFirestore()` from the shared module.                                                                                                                                                    |
+| [`mcp/create-server.ts`](../mcp/create-server.ts)                             | `createBuiltDailyServer(uid)` now takes the uid and threads it into both Firestore-backed tools. `search_exercises` is unaffected (it's catalog-only, no Firestore).                                                                                                                                                                                     |
+| [`mcp/server.ts`](../mcp/server.ts)                                           | Local stdio entrypoint (Cursor) unchanged in spirit — now explicitly calls `createBuiltDailyServer(getMcpUserUid())`, so your own `.env.local` workflow is untouched.                                                                                                                                                                                    |
+| [`app/api/mcp/route.ts`](../app/api/mcp/route.ts)                             | `createMcpHandler` now uses a per-request factory: `(ctx) => createBuiltDailyServer(uidFromAuthInfo(ctx.authInfo))`. The 503 "not configured" guard now checks `isFirebaseAdminConfigured()` instead of the old `MCP_BEARER_TOKEN`-only check (so it no longer 503s for every real user just because you didn't set a shared secret).                    |
+| [`app/api/mcp/tokens/route.ts`](../app/api/mcp/tokens/route.ts)               | New. `GET`/`POST`/`DELETE` for a signed-in user's own tokens. Auth here is a normal Firebase **ID token** (`Authorization: Bearer <idToken>`, verified with `getAdminAuth().verifyIdToken`) — different from the MCP endpoint's long-lived PAT, and easy to mix up: this route authenticates _app users_, `/api/mcp` authenticates _MCP clients_.        |
+| [`lib/mcp-token-repository.ts`](../lib/mcp-token-repository.ts)               | New. Client-side wrapper (`listMcpTokens`, `createMcpToken`, `revokeMcpToken`) that attaches the current Firebase user's ID token to calls against `/api/mcp/tokens`.                                                                                                                                                                                    |
+| [`components/settings-mcp-tokens.tsx`](../components/settings-mcp-tokens.tsx) | New. "Connect to Claude" settings section: generate a labeled token (shown once, copy-to-clipboard), list existing tokens with created/last-used dates, revoke. Wired into [`app/settings/page.tsx`](../app/settings/page.tsx) alongside the existing public-profile settings.                                                                           |
+| [`firestore.rules`](../firestore.rules)                                       | Comment added noting `mcpTokens/*` is deliberately unmatched (default-denied to client SDKs) — Admin SDK only.                                                                                                                                                                                                                                           |
 
 ### How a user connects (end-user flow)
 

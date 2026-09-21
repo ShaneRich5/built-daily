@@ -1,10 +1,7 @@
 import type { MuscleGroup } from "@/lib/progress-types";
 
 export type ExerciseMetric =
-  | "weight_reps"
-  | "bodyweight_reps"
-  | "duration"
-  | "cardio";
+  "weight_reps" | "bodyweight_reps" | "duration" | "cardio";
 
 export type CatalogExercise = {
   id: string;
@@ -67,9 +64,13 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     "shoulders",
     "arms",
   ]),
-  ex("db-shoulder-press", "Dumbbell shoulder press", "weight_reps", "shoulders", [
-    "arms",
-  ]),
+  ex(
+    "db-shoulder-press",
+    "Dumbbell shoulder press",
+    "weight_reps",
+    "shoulders",
+    ["arms"],
+  ),
   ex("db-row", "Dumbbell row", "weight_reps", "back", ["arms"]),
   ex("db-rdl", "Dumbbell Romanian deadlift", "weight_reps", "legs", ["back"]),
   ex("goblet-squat", "Goblet squat", "weight_reps", "legs", ["core"]),
@@ -82,7 +83,9 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   ex("db-front-raise", "Dumbbell front raise", "weight_reps", "shoulders"),
   ex("db-rear-delt-fly", "Dumbbell rear delt fly", "weight_reps", "shoulders"),
   ex("arnold-press", "Arnold press", "weight_reps", "shoulders", ["arms"]),
-  ex("upright-row", "Barbell upright row", "weight_reps", "shoulders", ["arms"]),
+  ex("upright-row", "Barbell upright row", "weight_reps", "shoulders", [
+    "arms",
+  ]),
   ex("barbell-shrug", "Barbell shrug", "weight_reps", "back", ["shoulders"]),
   ex("db-shrug", "Dumbbell shrug", "weight_reps", "back", ["shoulders"]),
   ex("db-fly", "Dumbbell fly", "weight_reps", "chest"),
@@ -101,9 +104,13 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   ex("trap-bar-deadlift", "Trap-bar deadlift", "weight_reps", "legs", ["back"]),
   ex("db-calf-raise", "Dumbbell calf raise", "weight_reps", "legs"),
   ex("glute-bridge", "Glute bridge", "weight_reps", "legs"),
-  ex("chest-supported-db-row", "Chest-supported dumbbell row", "weight_reps", "back", [
-    "arms",
-  ]),
+  ex(
+    "chest-supported-db-row",
+    "Chest-supported dumbbell row",
+    "weight_reps",
+    "back",
+    ["arms"],
+  ),
   ex("inverted-row", "Inverted row", "bodyweight_reps", "back", ["arms"]),
   ex("db-hammer-curl", "Dumbbell hammer curl", "weight_reps", "arms"),
   ex("incline-db-curl", "Incline dumbbell curl", "weight_reps", "arms"),
@@ -150,10 +157,13 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     "shoulders",
     "arms",
   ]),
-  ex("smith-incline-bench", "Smith machine incline press", "weight_reps", "chest", [
-    "shoulders",
-    "arms",
-  ]),
+  ex(
+    "smith-incline-bench",
+    "Smith machine incline press",
+    "weight_reps",
+    "chest",
+    ["shoulders", "arms"],
+  ),
   ex("assisted-dip-machine", "Assisted dip machine", "weight_reps", "arms", [
     "chest",
     "shoulders",
@@ -161,13 +171,23 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
 
   // —— Back machines ——
   ex("lat-pulldown", "Lat pulldown", "weight_reps", "back", ["arms"]),
-  ex("close-grip-lat-pulldown", "Close-grip lat pulldown", "weight_reps", "back", [
+  ex(
+    "close-grip-lat-pulldown",
+    "Close-grip lat pulldown",
+    "weight_reps",
+    "back",
+    ["arms"],
+  ),
+  ex(
+    "wide-grip-lat-pulldown",
+    "Wide-grip lat pulldown",
+    "weight_reps",
+    "back",
+    ["arms"],
+  ),
+  ex("seated-row-machine", "Seated row machine", "weight_reps", "back", [
     "arms",
   ]),
-  ex("wide-grip-lat-pulldown", "Wide-grip lat pulldown", "weight_reps", "back", [
-    "arms",
-  ]),
-  ex("seated-row-machine", "Seated row machine", "weight_reps", "back", ["arms"]),
   ex(
     "chest-supported-row-machine",
     "Chest-supported row machine",
@@ -176,12 +196,20 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     ["arms"],
   ),
   ex("t-bar-row-machine", "T-bar row machine", "weight_reps", "back", ["arms"]),
-  ex("assisted-pullup-machine", "Assisted pull-up machine", "weight_reps", "back", [
-    "arms",
-  ]),
-  ex("back-extension-machine", "Back extension machine", "weight_reps", "back", [
-    "legs",
-  ]),
+  ex(
+    "assisted-pullup-machine",
+    "Assisted pull-up machine",
+    "weight_reps",
+    "back",
+    ["arms"],
+  ),
+  ex(
+    "back-extension-machine",
+    "Back extension machine",
+    "weight_reps",
+    "back",
+    ["legs"],
+  ),
   ex("hyperextension", "Hyperextension (back raise)", "weight_reps", "back", [
     "legs",
   ]),
@@ -195,8 +223,18 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     "shoulders",
     ["arms"],
   ),
-  ex("lateral-raise-machine", "Lateral raise machine", "weight_reps", "shoulders"),
-  ex("rear-delt-fly-machine", "Rear delt fly machine", "weight_reps", "shoulders"),
+  ex(
+    "lateral-raise-machine",
+    "Lateral raise machine",
+    "weight_reps",
+    "shoulders",
+  ),
+  ex(
+    "rear-delt-fly-machine",
+    "Rear delt fly machine",
+    "weight_reps",
+    "shoulders",
+  ),
   ex("smith-ohp", "Smith machine overhead press", "weight_reps", "shoulders", [
     "arms",
   ]),
@@ -216,7 +254,12 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   ex("hip-adduction-machine", "Hip adduction machine", "weight_reps", "legs"),
   ex("glute-kickback-machine", "Glute kickback machine", "weight_reps", "legs"),
   ex("hip-thrust-machine", "Hip thrust machine", "weight_reps", "legs"),
-  ex("calf-raise-machine", "Standing calf raise machine", "weight_reps", "legs"),
+  ex(
+    "calf-raise-machine",
+    "Standing calf raise machine",
+    "weight_reps",
+    "legs",
+  ),
   ex("seated-calf-raise", "Seated calf raise machine", "weight_reps", "legs"),
   ex("calf-extension-machine", "Calf extension machine", "weight_reps", "legs"),
   ex(
@@ -253,9 +296,13 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   // —— Cable station ——
   ex("cable-fly", "Cable chest fly", "weight_reps", "chest"),
   ex("cable-crossover", "Cable crossover", "weight_reps", "chest"),
-  ex("cable-lat-pulldown", "Cable lat pulldown", "weight_reps", "back", ["arms"]),
+  ex("cable-lat-pulldown", "Cable lat pulldown", "weight_reps", "back", [
+    "arms",
+  ]),
   ex("cable-seated-row", "Cable seated row", "weight_reps", "back", ["arms"]),
-  ex("cable-face-pull", "Cable face pull", "weight_reps", "shoulders", ["back"]),
+  ex("cable-face-pull", "Cable face pull", "weight_reps", "shoulders", [
+    "back",
+  ]),
   ex("cable-lateral-raise", "Cable lateral raise", "weight_reps", "shoulders"),
   ex("cable-rear-delt-fly", "Cable rear delt fly", "weight_reps", "shoulders"),
   ex("cable-tricep-pushdown", "Cable triceps pushdown", "weight_reps", "arms"),
@@ -269,7 +316,9 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   ex("cable-hammer-curl", "Cable hammer curl", "weight_reps", "arms"),
   ex("cable-crunch", "Cable crunch", "weight_reps", "core"),
   ex("cable-woodchop", "Cable woodchop", "weight_reps", "core", ["shoulders"]),
-  ex("cable-pull-through", "Cable pull-through", "weight_reps", "legs", ["back"]),
+  ex("cable-pull-through", "Cable pull-through", "weight_reps", "legs", [
+    "back",
+  ]),
   ex("cable-kickback", "Cable glute kickback", "weight_reps", "legs"),
   ex("cable-shrug", "Cable shrug", "weight_reps", "back", ["shoulders"]),
   ex("straight-arm-pulldown", "Straight-arm pulldown", "weight_reps", "back"),
@@ -280,12 +329,7 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   // —— Core / midsection machines ——
   ex("ab-crunch-machine", "Ab crunch machine", "weight_reps", "core"),
   ex("rotary-torso-machine", "Rotary torso machine", "weight_reps", "core"),
-  ex(
-    "captains-chair",
-    "Captain's chair knee raise",
-    "bodyweight_reps",
-    "core",
-  ),
+  ex("captains-chair", "Captain's chair knee raise", "bodyweight_reps", "core"),
   ex("hanging-leg-raise", "Hanging leg raise", "bodyweight_reps", "core"),
   ex("lying-leg-raise", "Lying leg raise", "bodyweight_reps", "core"),
   ex("dead-bug", "Dead bug", "bodyweight_reps", "core"),
@@ -297,7 +341,9 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   ex("smith-lunge", "Smith machine lunge", "weight_reps", "legs"),
   ex("smith-hip-thrust", "Smith machine hip thrust", "weight_reps", "legs"),
   ex("smith-calf-raise", "Smith machine calf raise", "weight_reps", "legs"),
-  ex("smith-shrug", "Smith machine shrug", "weight_reps", "back", ["shoulders"]),
+  ex("smith-shrug", "Smith machine shrug", "weight_reps", "back", [
+    "shoulders",
+  ]),
   ex("landmine-press", "Landmine press", "weight_reps", "shoulders", [
     "chest",
     "arms",
@@ -323,17 +369,11 @@ export function getCatalogExerciseById(
   return byId.get(id);
 }
 
-function targetingMatchesQuery(
-  exercise: CatalogExercise,
-  q: string,
-): boolean {
-  const groups = [
-    exercise.primary,
-    ...(exercise.secondary ?? []),
-  ].filter((g): g is MuscleGroup => Boolean(g));
-  return groups.some(
-    (g) => g === q || (q.length >= 3 && g.includes(q)),
+function targetingMatchesQuery(exercise: CatalogExercise, q: string): boolean {
+  const groups = [exercise.primary, ...(exercise.secondary ?? [])].filter(
+    (g): g is MuscleGroup => Boolean(g),
   );
+  return groups.some((g) => g === q || (q.length >= 3 && g.includes(q)));
 }
 
 /** Filter catalog by name or muscle group (case-insensitive). Empty query returns all. */
@@ -367,7 +407,9 @@ export function filterCatalogByMuscle(
 }
 
 /** Ad-hoc exercise for a live session or template line (bodyweight-style logging). */
-export function catalogExerciseFromCustomName(name: string): CatalogExercise | null {
+export function catalogExerciseFromCustomName(
+  name: string,
+): CatalogExercise | null {
   const trimmed = name.trim().slice(0, 200);
   if (!trimmed) return null;
   const id =

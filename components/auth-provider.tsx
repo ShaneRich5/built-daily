@@ -91,7 +91,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithGoogle,
       signOutUser,
     }),
-    [user, loading, firebaseReady, signIn, signUp, signInWithGoogle, signOutUser],
+    [
+      user,
+      loading,
+      firebaseReady,
+      signIn,
+      signUp,
+      signInWithGoogle,
+      signOutUser,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

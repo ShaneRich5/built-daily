@@ -91,12 +91,10 @@ export function WorkoutPlanner() {
 
   const [search, setSearch] = useState("");
   const [kind, setKind] = useState<PlannerKindFilter>("all");
-  const [datePreset, setDatePreset] =
-    useState<PlannerDatePreset>("this_month");
+  const [datePreset, setDatePreset] = useState<PlannerDatePreset>("this_month");
   const [customFrom, setCustomFrom] = useState(todayKey);
   const [customTo, setCustomTo] = useState(todayKey);
-  const [prevPreset, setPrevPreset] =
-    useState<PlannerDatePreset>("this_month");
+  const [prevPreset, setPrevPreset] = useState<PlannerDatePreset>("this_month");
 
   const [sessions, setSessions] = useState<CompletedSessionSummary[]>([]);
   const [scheduled, setScheduled] = useState<ScheduledWorkoutEntry[]>([]);
@@ -194,7 +192,12 @@ export function WorkoutPlanner() {
       scheduledSubRange.endKey,
       setScheduled,
     );
-  }, [user, firebaseReady, scheduledSubRange.startKey, scheduledSubRange.endKey]);
+  }, [
+    user,
+    firebaseReady,
+    scheduledSubRange.startKey,
+    scheduledSubRange.endKey,
+  ]);
 
   const allItems = useMemo(
     () => buildPlannerListItems(sessions, scheduled, activities),
@@ -408,14 +411,7 @@ export function WorkoutPlanner() {
         setAdding(false);
       }
     }
-  }, [
-    user,
-    firebaseReady,
-    scheduleDateKey,
-    planPick,
-    plans,
-    reminderLabel,
-  ]);
+  }, [user, firebaseReady, scheduleDateKey, planPick, plans, reminderLabel]);
 
   const handleRemoveScheduled = useCallback(async (entryId: string) => {
     if (!window.confirm("Remove this scheduled workout from the calendar?")) {

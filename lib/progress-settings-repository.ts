@@ -64,27 +64,36 @@ export function subscribeProgressSettings(
 
 export async function saveProgressSettings(
   patch: Partial<
-    Pick<ProgressSettingsDoc, "weeklyGoal" | "movementGoalDays" | "goalWeightLbs">
+    Pick<
+      ProgressSettingsDoc,
+      "weeklyGoal" | "movementGoalDays" | "goalWeightLbs"
+    >
   >,
 ): Promise<boolean> {
   const ref = settingsDocRef();
   if (!ref) return false;
   const existing = await getDoc(ref);
   const prev = firestoreToProgressSettings(
-    existing.exists() ? (existing.data() as Record<string, unknown>) : undefined,
+    existing.exists()
+      ? (existing.data() as Record<string, unknown>)
+      : undefined,
   );
   const next: ProgressSettingsDoc = {
     weeklyGoal: patch.weeklyGoal ?? prev.weeklyGoal,
     movementGoalDays: patch.movementGoalDays ?? prev.movementGoalDays,
     goalWeightLbs:
-      patch.goalWeightLbs !== undefined ? patch.goalWeightLbs : prev.goalWeightLbs,
+      patch.goalWeightLbs !== undefined
+        ? patch.goalWeightLbs
+        : prev.goalWeightLbs,
     updatedAt: new Date(),
   };
   await setDoc(ref, progressSettingsToFirestore(next), { merge: true });
   return true;
 }
 
-export async function setWeeklyGoal(weeklyGoal: WeeklyGoalTarget): Promise<boolean> {
+export async function setWeeklyGoal(
+  weeklyGoal: WeeklyGoalTarget,
+): Promise<boolean> {
   return saveProgressSettings({ weeklyGoal });
 }
 

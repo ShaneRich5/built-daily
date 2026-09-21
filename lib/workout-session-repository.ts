@@ -307,7 +307,9 @@ export async function getExerciseHistories(
   return result;
 }
 
-function normalizeSessionForWrite(draft: WorkoutSessionDoc): WorkoutSessionDoc | null {
+function normalizeSessionForWrite(
+  draft: WorkoutSessionDoc,
+): WorkoutSessionDoc | null {
   const normalizedLines = draft.lines;
   // Empty completed sessions are allowed ("logged without details").
   if (
@@ -483,7 +485,9 @@ export async function getWorkoutSessions(
   if (unique.length === 0) return [];
   const rows = await Promise.all(unique.map((id) => getWorkoutSession(id)));
   const byId = new Map(
-    rows.filter((row): row is SavedWorkoutSession => row !== null).map((row) => [row.id, row]),
+    rows
+      .filter((row): row is SavedWorkoutSession => row !== null)
+      .map((row) => [row.id, row]),
   );
   const out: SavedWorkoutSession[] = [];
   for (const id of sessionIds) {
@@ -507,9 +511,7 @@ export async function updateCompletedWorkoutSession(
     ...draft,
     status: draft.status === "in_progress" ? "in_progress" : "completed",
     endedAt:
-      draft.status === "in_progress"
-        ? null
-        : (draft.endedAt ?? new Date()),
+      draft.status === "in_progress" ? null : (draft.endedAt ?? new Date()),
   });
 }
 

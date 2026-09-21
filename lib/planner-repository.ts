@@ -65,7 +65,11 @@ export function subscribeScheduledWorkoutsInRange(
   onEntries: (entries: ScheduledWorkoutEntry[]) => void,
 ): () => void {
   const col = scheduledCollectionRef();
-  if (!col || !/^\d{4}-\d{2}-\d{2}$/.test(startKey) || !/^\d{4}-\d{2}-\d{2}$/.test(endKey)) {
+  if (
+    !col ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(startKey) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(endKey)
+  ) {
     onEntries([]);
     return () => {};
   }
@@ -147,7 +151,9 @@ export async function addScheduledWorkout(
   return ref.id;
 }
 
-export async function deleteScheduledWorkout(entryId: string): Promise<boolean> {
+export async function deleteScheduledWorkout(
+  entryId: string,
+): Promise<boolean> {
   const col = scheduledCollectionRef();
   if (!col) return false;
   await deleteDoc(doc(col, entryId));

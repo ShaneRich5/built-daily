@@ -7,7 +7,10 @@ export type McpTokenSummary = {
   lastUsedAt: string | null;
 };
 
-async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
+async function authedFetch(
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
   const user = getFirebaseAuth()?.currentUser;
   if (!user) throw new Error("Not signed in");
   const idToken = await user.getIdToken();

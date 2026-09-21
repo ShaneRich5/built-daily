@@ -48,7 +48,11 @@ export function generateInviteCode(): string {
 }
 
 export function normalizeInviteCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 12);
 }
 
 export function displayNameFromAuth(user: {
@@ -129,7 +133,8 @@ export function firestoreToMemberDoc(
   const lastWorkoutAt =
     lastWorkoutAtRaw == null ? null : asTimestamp(lastWorkoutAtRaw);
   const currentStreak =
-    typeof data.currentStreak === "number" && Number.isFinite(data.currentStreak)
+    typeof data.currentStreak === "number" &&
+    Number.isFinite(data.currentStreak)
       ? Math.max(0, Math.round(data.currentStreak))
       : 0;
   return {

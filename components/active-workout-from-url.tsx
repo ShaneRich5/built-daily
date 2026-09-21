@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { ActiveWorkoutView } from "@/components/active-workout-view";
 import { useAuth } from "@/components/auth-provider";
 import { FinishConfetti } from "@/components/finish-confetti";
@@ -27,10 +34,7 @@ import {
   upsertWorkoutSession,
 } from "@/lib/workout-session-repository";
 import type { WorkoutPlanDoc, WorkoutSessionDoc } from "@/lib/workout-types";
-import {
-  isDefaultWorkoutTitle,
-  localDateKeyFromMs,
-} from "@/lib/workout-date";
+import { isDefaultWorkoutTitle, localDateKeyFromMs } from "@/lib/workout-date";
 
 const QUERY_EXERCISES = "e";
 const QUERY_TITLE = "t";
@@ -144,8 +148,7 @@ export function ActiveWorkoutFromUrl() {
     !sessionIdParam && planId && !planId.startsWith("starter-"),
   );
 
-  const fetchKey =
-    needsPlanFetch && planId ? `${planId}:${ids.join(",")}` : "";
+  const fetchKey = needsPlanFetch && planId ? `${planId}:${ids.join(",")}` : "";
 
   const [planLoad, setPlanLoad] = useState<{
     key: string;

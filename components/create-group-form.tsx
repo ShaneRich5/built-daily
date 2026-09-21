@@ -55,8 +55,14 @@ export function CreateGroupForm({ disabled }: CreateGroupFormProps) {
           autoComplete="off"
         />
       </div>
-      {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
-      <Button type="submit" disabled={busy || disabled || !name.trim()} size="lg">
+      {error ? (
+        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+      ) : null}
+      <Button
+        type="submit"
+        disabled={busy || disabled || !name.trim()}
+        size="lg"
+      >
         {busy ? "Creating…" : "Create group"}
       </Button>
     </form>

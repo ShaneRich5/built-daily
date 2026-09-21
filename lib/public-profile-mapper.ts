@@ -76,7 +76,10 @@ export function pruneActivityByDay(
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
   if (entries.length > PUBLIC_PROFILE_LIMITS.activityByDayEntries) {
-    entries.splice(0, entries.length - PUBLIC_PROFILE_LIMITS.activityByDayEntries);
+    entries.splice(
+      0,
+      entries.length - PUBLIC_PROFILE_LIMITS.activityByDayEntries,
+    );
   }
 
   const out: PublicActivityByDay = {};

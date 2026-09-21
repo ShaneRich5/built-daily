@@ -2,7 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronDown, Copy, CopyPlus, Download, MoreHorizontal, Play, Plus, Save, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Copy,
+  CopyPlus,
+  Download,
+  MoreHorizontal,
+  Play,
+  Plus,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,10 +40,7 @@ import {
   normalizeWorkoutTime,
   resolveWorkoutTitle,
 } from "@/lib/workout-date";
-import {
-  combineToTotalSeconds,
-  splitTotalSeconds,
-} from "@/lib/duration-input";
+import { combineToTotalSeconds, splitTotalSeconds } from "@/lib/duration-input";
 import { uiSetRowToSetLog, type UiSetRow } from "@/lib/workout-session-mapper";
 import {
   deleteWorkoutSession,
@@ -131,7 +140,8 @@ function setLogToUi(set: SetLog): UiSetRow {
     seconds: set.durationSec != null ? String(set.durationSec) : "",
     timedSetSec: set.timedSetSec != null ? String(set.timedSetSec) : "",
     paceMph: set.paceMph != null ? String(set.paceMph) : "",
-    inclinePercent: set.inclinePercent != null ? String(set.inclinePercent) : "",
+    inclinePercent:
+      set.inclinePercent != null ? String(set.inclinePercent) : "",
     resistanceLevel:
       set.resistanceLevel != null ? String(set.resistanceLevel) : "",
     distanceMiles: set.distanceMiles != null ? String(set.distanceMiles) : "",
@@ -232,7 +242,9 @@ function buildSaveDoc(
 ): WorkoutSessionDoc {
   const cleanedNotes: Record<string, string> = {};
   for (const line of lines) {
-    const n = (exerciseNotes[line.lineId] ?? "").trim().slice(0, NOTE_LIMITS.exerciseNote);
+    const n = (exerciseNotes[line.lineId] ?? "")
+      .trim()
+      .slice(0, NOTE_LIMITS.exerciseNote);
     if (n) cleanedNotes[line.lineId] = n;
   }
   const setCount = lines.reduce((acc, l) => acc + l.sets.length, 0);
@@ -244,8 +256,7 @@ function buildSaveDoc(
     title: resolveWorkoutTitle(title, date, base.startedAt.getTime()),
     workoutDate: date,
     workoutTime: time,
-    workoutNote:
-      workoutNote.trim().slice(0, NOTE_LIMITS.workoutNote) || null,
+    workoutNote: workoutNote.trim().slice(0, NOTE_LIMITS.workoutNote) || null,
     exerciseNotesByLineId:
       Object.keys(cleanedNotes).length > 0 ? cleanedNotes : null,
     lines,
@@ -271,9 +282,7 @@ export function WorkoutSessionDetail({
   const [exerciseNotes, setExerciseNotes] = useState<Record<string, string>>(
     () => initialDraft.exerciseNotes,
   );
-  const [lines, setLines] = useState<SessionLine[]>(
-    () => initialDraft.lines,
-  );
+  const [lines, setLines] = useState<SessionLine[]>(() => initialDraft.lines);
   const [saving, setSaving] = useState(false);
   const [reopening, setReopening] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -397,9 +406,7 @@ export function WorkoutSessionDetail({
     if (!target) return;
     if (
       setLogHasValues(target) &&
-      !window.confirm(
-        `Remove set ${setIndex + 1} from ${line.nameSnapshot}?`,
-      )
+      !window.confirm(`Remove set ${setIndex + 1} from ${line.nameSnapshot}?`)
     ) {
       return;
     }
@@ -502,9 +509,7 @@ export function WorkoutSessionDetail({
   const handleDelete = useCallback(async () => {
     if (deleting) return;
     if (
-      !window.confirm(
-        "Delete this workout permanently? This cannot be undone.",
-      )
+      !window.confirm("Delete this workout permanently? This cannot be undone.")
     ) {
       return;
     }
@@ -558,7 +563,9 @@ export function WorkoutSessionDetail({
     try {
       const templateId = await createWorkoutPlan(template);
       if (!templateId) {
-        setSaveError("Couldn’t create a template. Check that you’re signed in.");
+        setSaveError(
+          "Couldn’t create a template. Check that you’re signed in.",
+        );
         return;
       }
       router.push(`/templates/${encodeURIComponent(templateId)}`);
@@ -604,7 +611,9 @@ export function WorkoutSessionDetail({
               <span className="underline-offset-2 hover:underline">
                 Workout note
               </span>
-              <span className="ml-1.5 font-normal text-zinc-400">(optional)</span>
+              <span className="ml-1.5 font-normal text-zinc-400">
+                (optional)
+              </span>
               {workoutNote.trim() ? (
                 <span
                   className="ml-1.5 text-[10px] font-normal uppercase tracking-wide text-emerald-700 dark:text-emerald-400"
@@ -671,226 +680,232 @@ export function WorkoutSessionDetail({
             you want context for later.
           </p>
         ) : (
-        <ul className="space-y-3">
-          {lines.map((line, lineIndex) => {
-            if (
-              muscleFilter &&
-              !exerciseHitsMuscleGroup(
-                { id: line.exerciseId, name: line.nameSnapshot },
-                muscleFilter,
-              )
-            ) {
-              return null;
-            }
-            const setSummary = summarizeSessionSets(line.sets);
-            const hasExerciseNote = Boolean(
-              exerciseNotes[line.lineId]?.trim(),
-            );
-            const targetingHit = targetingForExercise({
-              id: line.exerciseId,
-              name: line.nameSnapshot,
-            });
-            const targeting = muscleTargetSummary(
-              targetingHit.primary,
-              targetingHit.secondary,
-            );
-            return (
-            <li
-              key={line.lineId}
-              className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
-            >
-              <details className="group">
-                <summary className="flex cursor-pointer list-none items-start gap-2 p-3 marker:content-none [&::-webkit-details-marker]:hidden">
-                  <span className="min-w-0 flex-1 text-left">
-                    <span className="block font-medium text-zinc-900 dark:text-zinc-50">
-                      {line.nameSnapshot || "Untitled exercise"}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-zinc-500">
-                      {targeting ? `${targeting} · ` : ""}
-                      {setSummary}
-                      {hasExerciseNote ? " · has note" : ""}
-                    </span>
-                  </span>
-                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-zinc-500">
-                    <ChevronDown
-                      className="size-4 transition-transform group-open:rotate-180"
-                      aria-hidden
-                    />
-                    <span className="sr-only">Expand {line.nameSnapshot}</span>
-                  </span>
-                </summary>
-
-                <div className="space-y-3 border-t border-zinc-100 px-3 pb-3 pt-3 dark:border-zinc-800">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2">
-                  <Label
-                    htmlFor={`name-${line.lineId}`}
-                    className="text-xs text-zinc-500"
-                  >
-                    Exercise
-                  </Label>
-                  <button
-                    type="button"
-                    onClick={() => removeExercise(lineIndex)}
-                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-400 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 dark:hover:text-red-300"
-                    aria-label={`Remove ${line.nameSnapshot}`}
-                  >
-                    <Trash2 className="size-3.5" />
-                    Remove
-                  </button>
-                </div>
-                <Input
-                  id={`name-${line.lineId}`}
-                  value={line.nameSnapshot}
-                  onChange={(e) => {
-                    const nameSnapshot = e.target.value.slice(0, 200);
-                    setLines((prev) =>
-                      prev.map((l, i) =>
-                        i === lineIndex ? { ...l, nameSnapshot } : l,
-                      ),
-                    );
-                  }}
-                  className="h-10 rounded-lg font-medium"
-                />
-                <Label
-                  htmlFor={`ex-note-${line.lineId}`}
-                  className="text-xs text-zinc-500"
+          <ul className="space-y-3">
+            {lines.map((line, lineIndex) => {
+              if (
+                muscleFilter &&
+                !exerciseHitsMuscleGroup(
+                  { id: line.exerciseId, name: line.nameSnapshot },
+                  muscleFilter,
+                )
+              ) {
+                return null;
+              }
+              const setSummary = summarizeSessionSets(line.sets);
+              const hasExerciseNote = Boolean(
+                exerciseNotes[line.lineId]?.trim(),
+              );
+              const targetingHit = targetingForExercise({
+                id: line.exerciseId,
+                name: line.nameSnapshot,
+              });
+              const targeting = muscleTargetSummary(
+                targetingHit.primary,
+                targetingHit.secondary,
+              );
+              return (
+                <li
+                  key={line.lineId}
+                  className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
                 >
-                  Exercise note
-                </Label>
-                <Textarea
-                  id={`ex-note-${line.lineId}`}
-                  value={exerciseNotes[line.lineId] ?? ""}
-                  onChange={(e) =>
-                    setExerciseNotes((prev) => ({
-                      ...prev,
-                      [line.lineId]: e.target.value,
-                    }))
-                  }
-                  maxLength={NOTE_LIMITS.exerciseNote}
-                  rows={2}
-                  placeholder="Optional"
-                  className="rounded-lg"
-                />
-              </div>
-
-              <ul className="space-y-2">
-                {line.sets.map((set, setIndex) => {
-                  const isEmptySet = !setLogHasValues(set);
-                  return (
-                  <li
-                    key={`${line.lineId}-${setIndex}`}
-                    className="rounded-lg border border-zinc-100 p-2 dark:border-zinc-800"
-                  >
-                    <div className="mb-1.5 flex items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-zinc-400">
-                        Set {setIndex + 1}
+                  <details className="group">
+                    <summary className="flex cursor-pointer list-none items-start gap-2 p-3 marker:content-none [&::-webkit-details-marker]:hidden">
+                      <span className="min-w-0 flex-1 text-left">
+                        <span className="block font-medium text-zinc-900 dark:text-zinc-50">
+                          {line.nameSnapshot || "Untitled exercise"}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-zinc-500">
+                          {targeting ? `${targeting} · ` : ""}
+                          {setSummary}
+                          {hasExerciseNote ? " · has note" : ""}
+                        </span>
                       </span>
-                      <div className="flex items-center gap-0.5">
-                        <button
-                          type="button"
-                          onClick={() => duplicateSet(lineIndex, setIndex)}
-                          className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                          aria-label={`Duplicate set ${setIndex + 1}`}
-                          title="Duplicate this set’s weight and reps"
+                      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-zinc-500">
+                        <ChevronDown
+                          className="size-4 transition-transform group-open:rotate-180"
+                          aria-hidden
+                        />
+                        <span className="sr-only">
+                          Expand {line.nameSnapshot}
+                        </span>
+                      </span>
+                    </summary>
+
+                    <div className="space-y-3 border-t border-zinc-100 px-3 pb-3 pt-3 dark:border-zinc-800">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label
+                            htmlFor={`name-${line.lineId}`}
+                            className="text-xs text-zinc-500"
+                          >
+                            Exercise
+                          </Label>
+                          <button
+                            type="button"
+                            onClick={() => removeExercise(lineIndex)}
+                            className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-400 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+                            aria-label={`Remove ${line.nameSnapshot}`}
+                          >
+                            <Trash2 className="size-3.5" />
+                            Remove
+                          </button>
+                        </div>
+                        <Input
+                          id={`name-${line.lineId}`}
+                          value={line.nameSnapshot}
+                          onChange={(e) => {
+                            const nameSnapshot = e.target.value.slice(0, 200);
+                            setLines((prev) =>
+                              prev.map((l, i) =>
+                                i === lineIndex ? { ...l, nameSnapshot } : l,
+                              ),
+                            );
+                          }}
+                          className="h-10 rounded-lg font-medium"
+                        />
+                        <Label
+                          htmlFor={`ex-note-${line.lineId}`}
+                          className="text-xs text-zinc-500"
                         >
-                          <CopyPlus className="size-3.5" />
-                          Duplicate
-                        </button>
-                        <button
+                          Exercise note
+                        </Label>
+                        <Textarea
+                          id={`ex-note-${line.lineId}`}
+                          value={exerciseNotes[line.lineId] ?? ""}
+                          onChange={(e) =>
+                            setExerciseNotes((prev) => ({
+                              ...prev,
+                              [line.lineId]: e.target.value,
+                            }))
+                          }
+                          maxLength={NOTE_LIMITS.exerciseNote}
+                          rows={2}
+                          placeholder="Optional"
+                          className="rounded-lg"
+                        />
+                      </div>
+
+                      <ul className="space-y-2">
+                        {line.sets.map((set, setIndex) => {
+                          const isEmptySet = !setLogHasValues(set);
+                          return (
+                            <li
+                              key={`${line.lineId}-${setIndex}`}
+                              className="rounded-lg border border-zinc-100 p-2 dark:border-zinc-800"
+                            >
+                              <div className="mb-1.5 flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-zinc-400">
+                                  Set {setIndex + 1}
+                                </span>
+                                <div className="flex items-center gap-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      duplicateSet(lineIndex, setIndex)
+                                    }
+                                    className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                                    aria-label={`Duplicate set ${setIndex + 1}`}
+                                    title="Duplicate this set’s weight and reps"
+                                  >
+                                    <CopyPlus className="size-3.5" />
+                                    Duplicate
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      removeSet(lineIndex, setIndex)
+                                    }
+                                    disabled={line.sets.length <= 1}
+                                    className={`inline-flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
+                                      isEmptySet
+                                        ? "h-8 gap-1 px-2 text-xs font-medium"
+                                        : "h-8 w-8"
+                                    }`}
+                                    aria-label={
+                                      isEmptySet
+                                        ? `Clear empty set ${setIndex + 1}`
+                                        : `Remove set ${setIndex + 1}`
+                                    }
+                                    title={
+                                      isEmptySet
+                                        ? "Clear this empty set"
+                                        : "Remove this set"
+                                    }
+                                  >
+                                    <Trash2 className="size-3.5" />
+                                    {isEmptySet ? "Clear" : null}
+                                  </button>
+                                </div>
+                              </div>
+                              <SetEditors
+                                metric={line.metric}
+                                set={set}
+                                lineIndex={lineIndex}
+                                setIndex={setIndex}
+                                onChange={updateSetField}
+                              />
+                              <Label
+                                htmlFor={`set-note-${line.lineId}-${setIndex}`}
+                                className="mt-2 block text-xs text-zinc-500"
+                              >
+                                Set note
+                              </Label>
+                              <Input
+                                id={`set-note-${line.lineId}-${setIndex}`}
+                                value={set.note ?? ""}
+                                onChange={(e) =>
+                                  updateSetField(
+                                    lineIndex,
+                                    setIndex,
+                                    line.metric,
+                                    "note",
+                                    e.target.value,
+                                  )
+                                }
+                                maxLength={NOTE_LIMITS.setNote}
+                                placeholder="Optional"
+                                className="mt-1 h-9"
+                              />
+                            </li>
+                          );
+                        })}
+                      </ul>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
                           type="button"
-                          onClick={() => removeSet(lineIndex, setIndex)}
-                          disabled={line.sets.length <= 1}
-                          className={`inline-flex items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200 ${
-                            isEmptySet
-                              ? "h-8 gap-1 px-2 text-xs font-medium"
-                              : "h-8 w-8"
-                          }`}
-                          aria-label={
-                            isEmptySet
-                              ? `Clear empty set ${setIndex + 1}`
-                              : `Remove set ${setIndex + 1}`
-                          }
-                          title={
-                            isEmptySet
-                              ? "Clear this empty set"
-                              : "Remove this set"
-                          }
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => addSet(lineIndex)}
                         >
-                          <Trash2 className="size-3.5" />
-                          {isEmptySet ? "Clear" : null}
-                        </button>
+                          <Plus className="size-3.5" />
+                          Add set
+                        </Button>
+                        {canPruneEmptySetLogs(line.sets) ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeEmptySets(lineIndex)}
+                            aria-label={`Clear empty sets from ${line.nameSnapshot}`}
+                          >
+                            Clear empty
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
-                    <SetEditors
-                      metric={line.metric}
-                      set={set}
-                      lineIndex={lineIndex}
-                      setIndex={setIndex}
-                      onChange={updateSetField}
-                    />
-                    <Label
-                      htmlFor={`set-note-${line.lineId}-${setIndex}`}
-                      className="mt-2 block text-xs text-zinc-500"
-                    >
-                      Set note
-                    </Label>
-                    <Input
-                      id={`set-note-${line.lineId}-${setIndex}`}
-                      value={set.note ?? ""}
-                      onChange={(e) =>
-                        updateSetField(
-                          lineIndex,
-                          setIndex,
-                          line.metric,
-                          "note",
-                          e.target.value,
-                        )
-                      }
-                      maxLength={NOTE_LIMITS.setNote}
-                      placeholder="Optional"
-                      className="mt-1 h-9"
-                    />
-                  </li>
-                  );
-                })}
-              </ul>
-
-              <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                onClick={() => addSet(lineIndex)}
-              >
-                <Plus className="size-3.5" />
-                Add set
-              </Button>
-              {canPruneEmptySetLogs(line.sets) ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => removeEmptySets(lineIndex)}
-                  aria-label={`Clear empty sets from ${line.nameSnapshot}`}
-                >
-                  Clear empty
-                </Button>
-              ) : null}
-              </div>
-                </div>
-              </details>
-            </li>
-            );
-          })}
-          {muscleFilter ? (
-            <HiddenExercisesClearRow
-              hidden={muscleFilterStats.hidden}
-              onClear={() => setMuscleFilter(null)}
-            />
-          ) : null}
-        </ul>
+                  </details>
+                </li>
+              );
+            })}
+            {muscleFilter ? (
+              <HiddenExercisesClearRow
+                hidden={muscleFilterStats.hidden}
+                onClear={() => setMuscleFilter(null)}
+              />
+            ) : null}
+          </ul>
         )}
       </section>
 
@@ -1069,10 +1084,7 @@ function SetEditors({
               }
               const n = parseInt(raw, 10);
               if (!Number.isFinite(n)) return;
-              setDuration(
-                parts.minutes,
-                String(Math.min(59, Math.max(0, n))),
-              );
+              setDuration(parts.minutes, String(Math.min(59, Math.max(0, n))));
             }}
             placeholder="0"
             className={numberFieldClassName}

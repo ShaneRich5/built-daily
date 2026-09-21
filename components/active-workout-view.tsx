@@ -62,10 +62,7 @@ import {
   workoutJournalFilename,
 } from "@/lib/workout-journal-export";
 import type { SetLog } from "@/lib/workout-types";
-import {
-  combineToTotalSeconds,
-  splitTotalSeconds,
-} from "@/lib/duration-input";
+import { combineToTotalSeconds, splitTotalSeconds } from "@/lib/duration-input";
 import {
   exerciseHitsMuscleGroup,
   sessionMuscleFilterStats,
@@ -134,14 +131,14 @@ function historySetToRow(set: SetLog): SetRow {
 function setRowHasValues(row: SetRow): boolean {
   return Boolean(
     row.weight.trim() ||
-      row.reps.trim() ||
-      row.seconds.trim() ||
-      row.timedSetSec.trim() ||
-      row.paceMph.trim() ||
-      row.inclinePercent.trim() ||
-      row.resistanceLevel.trim() ||
-      row.distanceMiles.trim() ||
-      row.note.trim(),
+    row.reps.trim() ||
+    row.seconds.trim() ||
+    row.timedSetSec.trim() ||
+    row.paceMph.trim() ||
+    row.inclinePercent.trim() ||
+    row.resistanceLevel.trim() ||
+    row.distanceMiles.trim() ||
+    row.note.trim(),
   );
 }
 
@@ -157,10 +154,7 @@ function canPruneEmptySets(sets: SetRow[]): boolean {
 }
 
 /** Compact one-line summary of logged sets for collapsed exercise cards. */
-function summarizeExerciseSets(
-  sets: SetRow[],
-  metric: ExerciseMetric,
-): string {
+function summarizeExerciseSets(sets: SetRow[], metric: ExerciseMetric): string {
   const filled = sets.filter(setRowHasValues);
   if (filled.length === 0) {
     return sets.length === 0
@@ -290,9 +284,7 @@ function runExerciseListMotion(
 ): boolean {
   const doc = document as Document & {
     startViewTransition?: (
-      cb:
-        | (() => void)
-        | { update: () => void; types?: string[] },
+      cb: (() => void) | { update: () => void; types?: string[] },
     ) => unknown;
   };
   const usedViewTransition =
@@ -353,14 +345,12 @@ export function ActiveWorkoutView({
     () => sessionStartedAtMsProp ?? Date.now(),
   );
 
-  const [title, setTitle] = useState(() =>
-    titleIsCustom ? titleProp : "",
-  );
-  const [workoutDate, setWorkoutDate] = useState(
-    () =>
-      initialWorkoutDate === null
-        ? ""
-        : (initialWorkoutDate ?? localDateKeyFromMs(sessionStartedAtMsProp ?? Date.now())),
+  const [title, setTitle] = useState(() => (titleIsCustom ? titleProp : ""));
+  const [workoutDate, setWorkoutDate] = useState(() =>
+    initialWorkoutDate === null
+      ? ""
+      : (initialWorkoutDate ??
+        localDateKeyFromMs(sessionStartedAtMsProp ?? Date.now())),
   );
   const [workoutTime, setWorkoutTime] = useState(
     () => initialWorkoutTime ?? "",
@@ -376,8 +366,7 @@ export function ActiveWorkoutView({
   );
 
   const [setsByExercise, setSetsByExercise] = useState<SetRow[][]>(() =>
-    initialSetsByExercise &&
-    initialSetsByExercise.length === exercises.length
+    initialSetsByExercise && initialSetsByExercise.length === exercises.length
       ? initialSetsByExercise
       : exercises.map(() => [emptySetRow()]),
   );
@@ -388,9 +377,7 @@ export function ActiveWorkoutView({
   const [replacingExerciseIndex, setReplacingExerciseIndex] = useState<
     number | null
   >(null);
-  const [listMotion, setListMotion] = useState<ExerciseListMotion | null>(
-    null,
-  );
+  const [listMotion, setListMotion] = useState<ExerciseListMotion | null>(null);
   const motionNonceRef = useRef(0);
   const lineIdsRef = useRef(lineIds);
   lineIdsRef.current = lineIds;
@@ -540,9 +527,12 @@ export function ActiveWorkoutView({
     Record<string, string>
   >(() => initialExerciseNotesById ?? {});
 
-  const updateExerciseNote = useCallback((exerciseId: string, value: string) => {
-    setExerciseNotesById((prev) => ({ ...prev, [exerciseId]: value }));
-  }, []);
+  const updateExerciseNote = useCallback(
+    (exerciseId: string, value: string) => {
+      setExerciseNotesById((prev) => ({ ...prev, [exerciseId]: value }));
+    },
+    [],
+  );
 
   /** `idle` = timer not started; `running` = counting; `paused` = stopped mid-session */
   const [timerPhase, setTimerPhase] = useState<"idle" | "running" | "paused">(
@@ -620,8 +610,7 @@ export function ActiveWorkoutView({
   }, []);
 
   const setCountLabel = useMemo(
-    () =>
-      setsByExercise.reduce((acc, sets) => acc + sets.length, 0).toString(),
+    () => setsByExercise.reduce((acc, sets) => acc + sets.length, 0).toString(),
     [setsByExercise],
   );
 
@@ -698,9 +687,7 @@ export function ActiveWorkoutView({
         const exerciseName =
           activeExercises[exerciseIndex]?.name ?? "this exercise";
         if (
-          !window.confirm(
-            `Remove set ${setIndex + 1} from ${exerciseName}?`,
-          )
+          !window.confirm(`Remove set ${setIndex + 1} from ${exerciseName}?`)
         ) {
           return;
         }
@@ -724,28 +711,31 @@ export function ActiveWorkoutView({
     [activeExercises, setsByExercise],
   );
 
-  const removeEmptySets = useCallback((exerciseIndex: number) => {
-    setSetsByExercise((prev) => {
-      const current = prev[exerciseIndex];
-      if (!current || !canPruneEmptySets(current)) return prev;
-      const next = prev.map((row) => [...row]);
-      next[exerciseIndex] = pruneEmptySetRows(current);
-      return next;
-    });
-    setSetTimerActive((active) => {
-      if (!active || active.exerciseIndex !== exerciseIndex) return active;
-      const current = setsByExercise[exerciseIndex];
-      if (!current) return active;
-      const keptIndices = current
-        .map((row, i) => (setRowHasValues(row) ? i : -1))
-        .filter((i) => i >= 0);
-      const remaining =
-        keptIndices.length > 0 ? keptIndices : current.length > 0 ? [0] : [];
-      const nextIndex = remaining.indexOf(active.setIndex);
-      if (nextIndex < 0) return null;
-      return { ...active, setIndex: nextIndex };
-    });
-  }, [setsByExercise]);
+  const removeEmptySets = useCallback(
+    (exerciseIndex: number) => {
+      setSetsByExercise((prev) => {
+        const current = prev[exerciseIndex];
+        if (!current || !canPruneEmptySets(current)) return prev;
+        const next = prev.map((row) => [...row]);
+        next[exerciseIndex] = pruneEmptySetRows(current);
+        return next;
+      });
+      setSetTimerActive((active) => {
+        if (!active || active.exerciseIndex !== exerciseIndex) return active;
+        const current = setsByExercise[exerciseIndex];
+        if (!current) return active;
+        const keptIndices = current
+          .map((row, i) => (setRowHasValues(row) ? i : -1))
+          .filter((i) => i >= 0);
+        const remaining =
+          keptIndices.length > 0 ? keptIndices : current.length > 0 ? [0] : [];
+        const nextIndex = remaining.indexOf(active.setIndex);
+        if (nextIndex < 0) return null;
+        return { ...active, setIndex: nextIndex };
+      });
+    },
+    [setsByExercise],
+  );
 
   const applyHistoricalSets = useCallback(
     (
@@ -857,45 +847,50 @@ export function ActiveWorkoutView({
     });
   }, []);
 
-  const removeExercise = useCallback((exerciseIndex: number) => {
-    const removed = activeExercises[exerciseIndex];
-    const lineId = lineIds[exerciseIndex];
-    if (!removed || !lineId) return;
-    if (
-      !window.confirm(
-        `Remove “${removed.name}” and all of its sets from this workout?`,
-      )
-    ) {
-      return;
-    }
-    if (exitTimeoutRef.current != null) {
-      window.clearTimeout(exitTimeoutRef.current);
-    }
+  const removeExercise = useCallback(
+    (exerciseIndex: number) => {
+      const removed = activeExercises[exerciseIndex];
+      const lineId = lineIds[exerciseIndex];
+      if (!removed || !lineId) return;
+      if (
+        !window.confirm(
+          `Remove “${removed.name}” and all of its sets from this workout?`,
+        )
+      ) {
+        return;
+      }
+      if (exitTimeoutRef.current != null) {
+        window.clearTimeout(exitTimeoutRef.current);
+      }
 
-    const reduced = prefersReducedMotion();
-    setListMotion({
-      lineId,
-      kind: "exit",
-      nonce: ++motionNonceRef.current,
-      usedViewTransition: false,
-    });
-
-    const finish = () => {
-      exitTimeoutRef.current = null;
-      runExerciseListMotion(() => {
-        commitRemoveByLineId(lineId);
+      const reduced = prefersReducedMotion();
+      setListMotion({
+        lineId,
+        kind: "exit",
+        nonce: ++motionNonceRef.current,
+        usedViewTransition: false,
       });
-      setListMotion((current) =>
-        current?.lineId === lineId && current.kind === "exit" ? null : current,
-      );
-    };
 
-    if (reduced) {
-      finish();
-      return;
-    }
-    exitTimeoutRef.current = window.setTimeout(finish, EXERCISE_EXIT_MS);
-  }, [activeExercises, commitRemoveByLineId, lineIds]);
+      const finish = () => {
+        exitTimeoutRef.current = null;
+        runExerciseListMotion(() => {
+          commitRemoveByLineId(lineId);
+        });
+        setListMotion((current) =>
+          current?.lineId === lineId && current.kind === "exit"
+            ? null
+            : current,
+        );
+      };
+
+      if (reduced) {
+        finish();
+        return;
+      }
+      exitTimeoutRef.current = window.setTimeout(finish, EXERCISE_EXIT_MS);
+    },
+    [activeExercises, commitRemoveByLineId, lineIds],
+  );
 
   const changeExercise = useCallback(
     (exerciseIndex: number, next: CatalogExercise) => {
@@ -1097,10 +1092,7 @@ export function ActiveWorkoutView({
       <header className="flex shrink-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 dark:border-amber-900/60 dark:bg-amber-950/40">
-            <span
-              className="relative flex size-2 shrink-0"
-              aria-hidden
-            >
+            <span className="relative flex size-2 shrink-0" aria-hidden>
               <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-400 opacity-60" />
               <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
             </span>
@@ -1242,32 +1234,32 @@ export function ActiveWorkoutView({
             role="group"
             aria-label="Exercise list density"
           >
-          <button
-            type="button"
-            onClick={() => setExerciseDensity("comfortable")}
-            aria-pressed={exerciseDensity === "comfortable"}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
-              exerciseDensity === "comfortable"
-                ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-            }`}
-          >
-            <List className="size-3.5" aria-hidden />
-            Comfortable
-          </button>
-          <button
-            type="button"
-            onClick={() => setExerciseDensity("compact")}
-            aria-pressed={exerciseDensity === "compact"}
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
-              exerciseDensity === "compact"
-                ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
-                : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-            }`}
-          >
-            <Rows3 className="size-3.5" aria-hidden />
-            Compact
-          </button>
+            <button
+              type="button"
+              onClick={() => setExerciseDensity("comfortable")}
+              aria-pressed={exerciseDensity === "comfortable"}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                exerciseDensity === "comfortable"
+                  ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              <List className="size-3.5" aria-hidden />
+              Comfortable
+            </button>
+            <button
+              type="button"
+              onClick={() => setExerciseDensity("compact")}
+              aria-pressed={exerciseDensity === "compact"}
+              className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors ${
+                exerciseDensity === "compact"
+                  ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+                  : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              <Rows3 className="size-3.5" aria-hidden />
+              Compact
+            </button>
           </div>
         </div>
         {muscleFilter ? (
@@ -1292,8 +1284,8 @@ export function ActiveWorkoutView({
             </p>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
               Open Add Exercise above to search the catalog or add a custom
-              name. You can still finish without details if you just want to
-              log that you showed up.
+              name. You can still finish without details if you just want to log
+              that you showed up.
             </p>
           </li>
         ) : null}
@@ -1305,7 +1297,8 @@ export function ActiveWorkoutView({
             return null;
           }
           const sets = setsByExercise[exerciseIndex] ?? [];
-          const lineId = lineIds[exerciseIndex] ?? `${exerciseIndex}-${exercise.id}`;
+          const lineId =
+            lineIds[exerciseIndex] ?? `${exerciseIndex}-${exercise.id}`;
           const expanded = expandedExerciseIndex === exerciseIndex;
           const summary = summarizeExerciseSets(sets, exercise.metric);
           const targetingHit = targetingForExercise(exercise);
@@ -1477,24 +1470,24 @@ export function ActiveWorkoutView({
                     role="group"
                     aria-label={`Reorder ${exercise.name}`}
                   >
-                  <button
-                    type="button"
-                    onClick={() => moveExercise(exerciseIndex, -1)}
-                    disabled={exerciseIndex === 0}
-                    className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                    aria-label={`Move ${exercise.name} up`}
-                  >
-                    <ArrowUp className="size-3.5" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveExercise(exerciseIndex, 1)}
-                    disabled={exerciseIndex >= activeExercises.length - 1}
-                    className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                    aria-label={`Move ${exercise.name} down`}
-                  >
-                    <ArrowDown className="size-3.5" aria-hidden />
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => moveExercise(exerciseIndex, -1)}
+                      disabled={exerciseIndex === 0}
+                      className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                      aria-label={`Move ${exercise.name} up`}
+                    >
+                      <ArrowUp className="size-3.5" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveExercise(exerciseIndex, 1)}
+                      disabled={exerciseIndex >= activeExercises.length - 1}
+                      className="inline-flex size-8 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:pointer-events-none disabled:opacity-30 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                      aria-label={`Move ${exercise.name} down`}
+                    >
+                      <ArrowDown className="size-3.5" aria-hidden />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1547,83 +1540,85 @@ export function ActiveWorkoutView({
                     />
                   ) : (
                     <>
-                  {!compact ? (
-                    <>
-                      <CollapsibleNote
-                        id={`exercise-note-${exercise.id}`}
-                        summary="Exercise note"
-                        value={exerciseNotesById[exercise.id] ?? ""}
-                        onChange={(v) => updateExerciseNote(exercise.id, v)}
-                        maxLength={400}
-                        placeholder="Equipment swaps, pain/limitations, cues for this lift…"
-                      />
-                      <ExerciseHistoryControls
-                        exerciseName={exercise.name}
-                        entries={exerciseHistory[exercise.id] ?? []}
-                        loading={historyLoading}
-                        hasCurrentValues={sets.some(setRowHasValues)}
-                        onUseSets={(historicalSets, mode) =>
-                          applyHistoricalSets(
-                            exerciseIndex,
-                            historicalSets,
-                            mode,
-                          )
-                        }
-                      />
-                    </>
-                  ) : (
-                    <details className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-2 py-1 dark:border-zinc-800 dark:bg-zinc-900/40">
-                      <summary className="cursor-pointer list-none text-xs font-medium text-zinc-500 marker:content-none [&::-webkit-details-marker]:hidden">
-                        <span className="underline-offset-2 hover:underline">
-                          Note & history
-                        </span>
-                      </summary>
-                      <div className="mt-2 space-y-2">
-                        <CollapsibleNote
-                          id={`exercise-note-${exercise.id}`}
-                          summary="Exercise note"
-                          value={exerciseNotesById[exercise.id] ?? ""}
-                          onChange={(v) => updateExerciseNote(exercise.id, v)}
-                          maxLength={400}
-                          placeholder="Equipment swaps, pain/limitations, cues for this lift…"
-                        />
-                        <ExerciseHistoryControls
-                          exerciseName={exercise.name}
-                          entries={exerciseHistory[exercise.id] ?? []}
-                          loading={historyLoading}
-                          hasCurrentValues={sets.some(setRowHasValues)}
-                          onUseSets={(historicalSets, mode) =>
-                            applyHistoricalSets(
-                              exerciseIndex,
-                              historicalSets,
-                              mode,
-                            )
-                          }
-                        />
+                      {!compact ? (
+                        <>
+                          <CollapsibleNote
+                            id={`exercise-note-${exercise.id}`}
+                            summary="Exercise note"
+                            value={exerciseNotesById[exercise.id] ?? ""}
+                            onChange={(v) => updateExerciseNote(exercise.id, v)}
+                            maxLength={400}
+                            placeholder="Equipment swaps, pain/limitations, cues for this lift…"
+                          />
+                          <ExerciseHistoryControls
+                            exerciseName={exercise.name}
+                            entries={exerciseHistory[exercise.id] ?? []}
+                            loading={historyLoading}
+                            hasCurrentValues={sets.some(setRowHasValues)}
+                            onUseSets={(historicalSets, mode) =>
+                              applyHistoricalSets(
+                                exerciseIndex,
+                                historicalSets,
+                                mode,
+                              )
+                            }
+                          />
+                        </>
+                      ) : (
+                        <details className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-2 py-1 dark:border-zinc-800 dark:bg-zinc-900/40">
+                          <summary className="cursor-pointer list-none text-xs font-medium text-zinc-500 marker:content-none [&::-webkit-details-marker]:hidden">
+                            <span className="underline-offset-2 hover:underline">
+                              Note & history
+                            </span>
+                          </summary>
+                          <div className="mt-2 space-y-2">
+                            <CollapsibleNote
+                              id={`exercise-note-${exercise.id}`}
+                              summary="Exercise note"
+                              value={exerciseNotesById[exercise.id] ?? ""}
+                              onChange={(v) =>
+                                updateExerciseNote(exercise.id, v)
+                              }
+                              maxLength={400}
+                              placeholder="Equipment swaps, pain/limitations, cues for this lift…"
+                            />
+                            <ExerciseHistoryControls
+                              exerciseName={exercise.name}
+                              entries={exerciseHistory[exercise.id] ?? []}
+                              loading={historyLoading}
+                              hasCurrentValues={sets.some(setRowHasValues)}
+                              onUseSets={(historicalSets, mode) =>
+                                applyHistoricalSets(
+                                  exerciseIndex,
+                                  historicalSets,
+                                  mode,
+                                )
+                              }
+                            />
+                          </div>
+                        </details>
+                      )}
+                      <div className={compact ? "space-y-1.5" : "space-y-2"}>
+                        {sets.map((set, setIndex) => (
+                          <SetRowFields
+                            key={`${exerciseIndex}-${exercise.id}-${setIndex}`}
+                            exercise={exercise}
+                            exerciseIndex={exerciseIndex}
+                            setIndex={setIndex}
+                            set={set}
+                            compact={compact}
+                            updateSet={updateSet}
+                            onDuplicateSet={duplicateSet}
+                            onRemoveSet={removeSet}
+                            canRemoveSet={sets.length > 1}
+                            setTimerActive={setTimerActive}
+                            setTimerLiveMs={setTimerLiveMs}
+                            onStartSetTimer={startSetTimer}
+                            onSaveSetTimer={saveSetTimer}
+                            onCancelSetTimer={cancelSetTimer}
+                          />
+                        ))}
                       </div>
-                    </details>
-                  )}
-                  <div className={compact ? "space-y-1.5" : "space-y-2"}>
-                    {sets.map((set, setIndex) => (
-                      <SetRowFields
-                        key={`${exerciseIndex}-${exercise.id}-${setIndex}`}
-                        exercise={exercise}
-                        exerciseIndex={exerciseIndex}
-                        setIndex={setIndex}
-                        set={set}
-                        compact={compact}
-                        updateSet={updateSet}
-                        onDuplicateSet={duplicateSet}
-                        onRemoveSet={removeSet}
-                        canRemoveSet={sets.length > 1}
-                        setTimerActive={setTimerActive}
-                        setTimerLiveMs={setTimerLiveMs}
-                        onStartSetTimer={startSetTimer}
-                        onSaveSetTimer={saveSetTimer}
-                        onCancelSetTimer={cancelSetTimer}
-                      />
-                    ))}
-                  </div>
                     </>
                   )}
                 </div>
@@ -2014,7 +2009,10 @@ function SetRowFields({
                 }
                 const n = parseInt(raw, 10);
                 if (!Number.isFinite(n)) return;
-                setDuration(parts.minutes, String(Math.min(59, Math.max(0, n))));
+                setDuration(
+                  parts.minutes,
+                  String(Math.min(59, Math.max(0, n))),
+                );
               }}
               placeholder="0"
               className={numberFieldClassName}

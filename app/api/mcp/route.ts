@@ -46,7 +46,9 @@ async function handleMcp(request: Request): Promise<Response> {
   if (!isFirebaseAdminConfigured()) {
     return withCors(
       new Response(
-        JSON.stringify({ error: "Firebase Admin credentials are not configured" }),
+        JSON.stringify({
+          error: "Firebase Admin credentials are not configured",
+        }),
         {
           status: 503,
           headers: { "Content-Type": "application/json" },

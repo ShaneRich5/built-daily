@@ -101,7 +101,9 @@ export function WorkoutAddExerciseCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground">{title}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {description}
+            </p>
           </div>
           {onCancelReplace ? (
             <button
@@ -119,7 +121,9 @@ export function WorkoutAddExerciseCard({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search (leg press, lat pulldown, cable…)"
-        aria-label={isReplace ? "Search replacement exercise" : "Search exercises"}
+        aria-label={
+          isReplace ? "Search replacement exercise" : "Search exercises"
+        }
         autoFocus={embedded && isReplace}
       />
       <div

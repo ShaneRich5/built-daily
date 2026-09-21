@@ -11,12 +11,7 @@ import { todayDateKeyLocal } from "@/lib/calendar-month";
 import type { CompletedSessionSummary } from "@/lib/workout-session-repository";
 
 export type PlannerKindFilter =
-  | "all"
-  | "workouts"
-  | "activities"
-  | "planned"
-  | "reminders"
-  | "missed";
+  "all" | "workouts" | "activities" | "planned" | "reminders" | "missed";
 
 export type PlannerDatePreset =
   | "this_month"
