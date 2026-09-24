@@ -28,7 +28,11 @@ export type GroupMemberDoc = {
   /** Local calendar day of last completed workout (`YYYY-MM-DD`). */
   lastWorkoutDateKey: string | null;
   lastWorkoutAt: Date | null;
-  /** Consecutive local calendar days with a completed workout. */
+  /**
+   * Consecutive local weeks (Mon–Sun) the member met their own `weeklyGoal`.
+   * Not a stored decay — see `isGroupStreakStale` in group-mapper.ts for why
+   * the UI must re-check staleness against `lastWorkoutDateKey` at read time.
+   */
   currentStreak: number;
   /**
    * Copy of the member's private `settings/progress.weeklyGoal` so the roster

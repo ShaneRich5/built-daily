@@ -32,6 +32,8 @@ import {
 } from "@/lib/group-types";
 import { firestoreToProgressSettings } from "@/lib/progress-mapper";
 import type { WeeklyGoalTarget } from "@/lib/progress-types";
+import { goalWeekStreak } from "@/lib/progress-insights";
+import { localDateKeyFromMs } from "@/lib/workout-date";
 import { computeUserWorkoutSignals } from "@/lib/workout-signals-client";
 
 export type SavedGroupMembership = {
@@ -476,6 +478,12 @@ export async function deleteAccountabilityGroup(
  * them onto every group membership. Always recomputes from source (never
  * increments a stored value), so a deleted, moved, reopened, or backdated
  * session self-heals the roster instead of leaving stale drift behind.
+ *
+ * The roster streak counts consecutive **weeks** meeting the member's own
+ * weekly goal, not consecutive days — someone who works out 3x/week on
+ * schedule should show a real streak, not reset to 1 every time a day is
+ * skipped. See `goalWeekStreak`.
+ *
  * Failures are swallowed so workout save is never blocked.
  */
 export async function bumpGroupWorkoutSignals(): Promise<void> {
@@ -492,6 +500,8 @@ export async function bumpGroupWorkoutSignals(): Promise<void> {
     computeUserWorkoutSignals(user.uid),
     currentWeeklyGoal(user.uid),
   ]);
+  const todayKey = localDateKeyFromMs(Date.now());
+  const rosterStreak = goalWeekStreak(signals.activityByDay, weeklyGoal, todayKey).current;
 
   await Promise.all(
     membershipsSnap.docs.map(async (membershipDoc) => {
@@ -500,7 +510,7 @@ export async function bumpGroupWorkoutSignals(): Promise<void> {
         await updateDoc(memberRef, {
           lastWorkoutDateKey: signals.lastWorkoutDateKey,
           lastWorkoutAt: signals.lastWorkoutAt,
-          currentStreak: signals.currentStreak,
+          currentStreak: rosterStreak,
           displayName: displayNameFromAuth(user),
           weeklyGoal,
         });

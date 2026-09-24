@@ -308,12 +308,14 @@ Partners only see show-up signals (today / last date / streak)—never workout d
 | `joinedAt` | `Timestamp` | |
 | `lastWorkoutDateKey` | `string \| null` | Local `YYYY-MM-DD` |
 | `lastWorkoutAt` | `Timestamp \| null` | |
-| `currentStreak` | `number` | Consecutive local days with a completed workout |
+| `currentStreak` | `number` | Consecutive local **weeks** (Mon–Sun) the member met their own `weeklyGoal` — not consecutive days |
 | `weeklyGoal` | `2 \| 3 \| 4 \| 5 \| 6 \| 7` | Copy of the member's private `settings/progress.weeklyGoal` so the roster can show progress without reading another user's private data |
 
 `weeklyGoal` is kept in sync by `syncWeeklyGoalToGroups` when the setting changes, and re-written on each workout finish by `bumpGroupWorkoutSignals`.
 
-`lastWorkoutDateKey`, `lastWorkoutAt`, and `currentStreak` are **recomputed from the user's sessions**, not incremented — see [Show-up signals](#show-up-signals-shared-computation) below. Rules still let the owner write these fields directly (`validMemberSelfSignalUpdate`), so a stale client write is possible; nothing server-side rejects it yet (tracked in #6, deferred pending a Cloud Function trigger).
+`lastWorkoutDateKey`, `lastWorkoutAt`, and `currentStreak` are **recomputed from the user's sessions**, not incremented — see [Show-up signals](#show-up-signals-shared-computation) below. Rules still let the owner write these fields directly (`validMemberSelfSignalUpdate`), so a stale client write is possible; nothing server-side rejects it yet (tracked in #6/#12, deferred pending a Cloud Function trigger).
+
+**Staleness**: `currentStreak` only updates when the member's own sessions sync (finish/edit/reopen/delete) — if they simply stop working out, nothing re-triggers a recompute, so the stored value would sit there forever. Rather than a scheduled job to expire it (which would need Cloud Functions — see #12), the UI calls `effectiveGroupMemberStreak` (`lib/group-mapper.ts`) at render time, which treats the streak as 0 once a full week has passed since `lastWorkoutDateKey` with zero activity, without needing to store or update anything.
 
 ### `InviteCodeDoc` (`inviteCodes/{code}`)
 

@@ -7,7 +7,10 @@
  */
 import { Timestamp } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
+import { goalWeekStreak } from "@/lib/progress-insights";
+import type { WeeklyGoalTarget } from "@/lib/progress-types";
 import { activityMapToRecord } from "@/lib/workout-activity";
+import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
   computeWorkoutSignals,
   type CompletedSessionSummary,
@@ -65,10 +68,10 @@ function displayNameFrom(data: Record<string, unknown> | undefined): string | nu
   return typeof name === "string" && name.trim() ? name.trim().slice(0, 80) : null;
 }
 
-function weeklyGoalFrom(data: Record<string, unknown> | undefined): number {
+function weeklyGoalFrom(data: Record<string, unknown> | undefined): WeeklyGoalTarget {
   const goal = data?.weeklyGoal;
   return typeof goal === "number" && [2, 3, 4, 5, 6, 7].includes(Math.round(goal))
-    ? Math.round(goal)
+    ? (Math.round(goal) as WeeklyGoalTarget)
     : 3;
 }
 
@@ -99,6 +102,13 @@ export async function syncWorkoutSignalsForUser(uid: string): Promise<void> {
       ]);
       const displayName = displayNameFrom(profileSnap.data());
       const weeklyGoal = weeklyGoalFrom(settingsSnap.data());
+      // Roster streak counts consecutive weeks meeting the goal, not days —
+      // see goalWeekStreak and lib/group-repository.ts's client counterpart.
+      const rosterStreak = goalWeekStreak(
+        signals.activityByDay,
+        weeklyGoal,
+        localDateKeyFromMs(Date.now()),
+      ).current;
 
       await Promise.all(
         membershipsSnap.docs.map(async (membership) => {
@@ -109,7 +119,7 @@ export async function syncWorkoutSignalsForUser(uid: string): Promise<void> {
             const patch: Record<string, unknown> = {
               lastWorkoutDateKey: signals.lastWorkoutDateKey,
               lastWorkoutAt,
-              currentStreak: signals.currentStreak,
+              currentStreak: rosterStreak,
               weeklyGoal,
             };
             if (displayName) patch.displayName = displayName;

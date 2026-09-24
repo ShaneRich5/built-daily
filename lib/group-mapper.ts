@@ -12,6 +12,8 @@ import {
   WEEKLY_GOAL_OPTIONS,
   type WeeklyGoalTarget,
 } from "@/lib/progress-types";
+import { weekStartMondayKey } from "@/lib/progress-insights";
+import { shiftLocalDateKey } from "@/lib/workout-activity";
 
 function asTimestamp(v: unknown): Date | null {
   if (v instanceof Timestamp) return v.toDate();
@@ -210,5 +212,32 @@ export function firestoreToMembershipIndex(
   const joinedAt = asTimestamp(data.joinedAt);
   if (!groupId || !nameSnapshot || !role || !joinedAt) return null;
   return { groupId, nameSnapshot, role, joinedAt };
+}
+
+/**
+ * A stored roster streak only updates when the member's own sessions sync
+ * (finish, edit, reopen, delete). If they simply stop working out, nothing
+ * triggers a recompute, so the last value would otherwise sit there forever.
+ * Treat it as stale — and show 0 — once a full week has passed with no
+ * activity at all, rather than storing an expiring value.
+ */
+export function isGroupStreakStale(
+  lastWorkoutDateKey: string | null,
+  todayKey: string,
+): boolean {
+  if (!lastWorkoutDateKey) return true;
+  const lastWeekStart = weekStartMondayKey(lastWorkoutDateKey);
+  const currentWeekStart = weekStartMondayKey(todayKey);
+  const priorWeekStart = shiftLocalDateKey(currentWeekStart, -7);
+  return lastWeekStart !== currentWeekStart && lastWeekStart !== priorWeekStart;
+}
+
+export function effectiveGroupMemberStreak(
+  member: Pick<GroupMemberDoc, "currentStreak" | "lastWorkoutDateKey">,
+  todayKey: string,
+): number {
+  return isGroupStreakStale(member.lastWorkoutDateKey, todayKey)
+    ? 0
+    : member.currentStreak;
 }
 
