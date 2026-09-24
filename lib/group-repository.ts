@@ -31,6 +31,8 @@ import {
   type GroupMemberDoc,
   type GroupMembershipIndexDoc,
 } from "@/lib/group-types";
+import { firestoreToProgressSettings } from "@/lib/progress-mapper";
+import type { WeeklyGoalTarget } from "@/lib/progress-types";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 
 export type SavedGroupMembership = {
@@ -53,6 +55,16 @@ function membershipsCollectionRef() {
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid) return null;
   return collection(db, "users", uid, "groupMemberships");
+}
+
+/** Member docs carry a copy of the owner's weekly goal so rosters can show progress. */
+async function currentWeeklyGoal(uid: string): Promise<WeeklyGoalTarget> {
+  const db = getFirestoreDb();
+  if (!db) return firestoreToProgressSettings(undefined).weeklyGoal;
+  const snap = await getDoc(doc(db, "users", uid, "settings", "progress"));
+  return firestoreToProgressSettings(
+    snap.exists() ? (snap.data() as Record<string, unknown>) : undefined,
+  ).weeklyGoal;
 }
 
 async function allocateInviteCode(): Promise<string | null> {
@@ -213,6 +225,7 @@ export async function createAccountabilityGroup(
     lastWorkoutDateKey: null,
     lastWorkoutAt: null,
     currentStreak: 0,
+    weeklyGoal: await currentWeeklyGoal(user.uid),
   };
 
   try {
@@ -305,6 +318,7 @@ export async function joinAccountabilityGroupByCode(
     lastWorkoutDateKey: null,
     lastWorkoutAt: null,
     currentStreak: 0,
+    weeklyGoal: await currentWeeklyGoal(user.uid),
   };
 
   await runTransaction(db, async (tx) => {
@@ -478,6 +492,7 @@ export async function bumpGroupWorkoutSignals(options: {
   const workoutAt = new Date(options.workoutAtMs);
   const dateKey =
     options.workoutDateKey || localDateKeyFromMs(options.workoutAtMs);
+  const weeklyGoal = await currentWeeklyGoal(user.uid);
 
   await Promise.all(
     membershipsSnap.docs.map(async (membershipDoc) => {
@@ -502,7 +517,37 @@ export async function bumpGroupWorkoutSignals(options: {
           lastWorkoutAt: workoutAt,
           currentStreak,
           displayName: displayNameFromAuth(user),
+          weeklyGoal,
         });
+      } catch {
+        /* best-effort per group */
+      }
+    }),
+  );
+}
+
+/**
+ * Push a changed weekly goal onto the user's member doc in every group, so
+ * rosters show progress against the goal the user actually set.
+ */
+export async function syncWeeklyGoalToGroups(
+  weeklyGoal: WeeklyGoalTarget,
+): Promise<void> {
+  const db = getFirestoreDb();
+  const user = getFirebaseAuth()?.currentUser;
+  if (!db || !user) return;
+
+  const membershipsSnap = await getDocs(
+    collection(db, "users", user.uid, "groupMemberships"),
+  );
+
+  await Promise.all(
+    membershipsSnap.docs.map(async (membershipDoc) => {
+      try {
+        await updateDoc(
+          doc(db, "groups", membershipDoc.id, "members", user.uid),
+          { weeklyGoal },
+        );
       } catch {
         /* best-effort per group */
       }

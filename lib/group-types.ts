@@ -1,5 +1,7 @@
 /** Accountability group domain types (Firestore top-level + membership index). */
 
+import type { WeeklyGoalTarget } from "@/lib/progress-types";
+
 export const GROUP_LIMITS = {
   name: 100,
   displayName: 80,
@@ -28,6 +30,11 @@ export type GroupMemberDoc = {
   lastWorkoutAt: Date | null;
   /** Consecutive local calendar days with a completed workout. */
   currentStreak: number;
+  /**
+   * Copy of the member's private `settings/progress.weeklyGoal` so the roster
+   * can show progress toward it without reading another user's private data.
+   */
+  weeklyGoal: WeeklyGoalTarget;
 };
 
 export type InviteCodeDoc = {

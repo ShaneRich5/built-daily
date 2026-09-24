@@ -6,6 +6,7 @@ This document describes the domain and Firestore shapes used in the app.
 
 | Area | Types | Persistence |
 |------|--------|-------------|
+| User profile | [`lib/user-profile-types.ts`](../lib/user-profile-types.ts) | [`lib/user-profile-mapper.ts`](../lib/user-profile-mapper.ts), [`lib/user-profile-repository.ts`](../lib/user-profile-repository.ts) |
 | Sessions + plans | [`lib/workout-types.ts`](../lib/workout-types.ts) | [`lib/workout-session-mapper.ts`](../lib/workout-session-mapper.ts), [`lib/workout-session-repository.ts`](../lib/workout-session-repository.ts), [`lib/plan-mapper.ts`](../lib/plan-mapper.ts), [`lib/workout-plan-repository.ts`](../lib/workout-plan-repository.ts) |
 | Planner | [`lib/planner-types.ts`](../lib/planner-types.ts) | [`lib/planner-repository.ts`](../lib/planner-repository.ts) |
 | Activities | [`lib/activity-types.ts`](../lib/activity-types.ts) | [`lib/activity-mapper.ts`](../lib/activity-mapper.ts), [`lib/activity-repository.ts`](../lib/activity-repository.ts) |
@@ -25,6 +26,7 @@ All mutable **personal** user data lives under:
 
 | Path | Purpose |
 |------|---------|
+| `users/{userId}` | Profile: display name, timezone, units, onboarding gate |
 | `users/{userId}/sessions/{sessionId}` | Workout session (`in_progress` autosave or `completed` on finish) |
 | `users/{userId}/plans/{planId}` | Reusable workout templates |
 | `users/{userId}/scheduledWorkouts/{entryId}` | Planner calendar rows: a **day** (`dateKey`), optional exercise list + `planId` for `/workout`, or reminder-only (`exerciseIds` empty) |
@@ -47,7 +49,7 @@ All mutable **personal** user data lives under:
 |------|---------|
 | `publicProfiles/{uid}` | Display name + light consistency when `profilePublic` is true |
 
-There is no `users/{userId}` document payload the app depends on — only subcollections.
+`users/{userId}` holds a profile document created on first sign-in (see below); everything else about a user lives in its subcollections.
 
 Security rules: see [`firestore.rules`](../firestore.rules).
 
@@ -77,6 +79,26 @@ flowchart LR
   sessions -.->|opt-in sync| publicProfiles
   sessions -.->|show-up signal| members
 ```
+
+---
+
+## User profile
+
+Types: [`lib/user-profile-types.ts`](../lib/user-profile-types.ts). Persistence: [`lib/user-profile-repository.ts`](../lib/user-profile-repository.ts).
+
+### `UserProfileDoc` (`users/{userId}`)
+
+Created on first sign-in by `ensureUserProfile`, called from [`components/auth-provider.tsx`](../components/auth-provider.tsx). The same call refreshes `displayName` and `timezone` when the account or device changes.
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `displayName` | `string` | Auth snapshot, max 80 |
+| `timezone` | `string` | IANA zone from the device, max 64; falls back to `UTC` |
+| `units` | `"imperial" \| "metric"` | Preference only — all logged values are imperial today and no screen reads this yet |
+| `onboardingCompletedAt` | `Date \| null` | Null until onboarding finishes; no writer yet (Phase 2) |
+| `createdAt`, `updatedAt` | `Date` / `Timestamp` | |
+
+Onboarding answers that already have a home stay there — the weekly workout goal lives in `settings/progress`, not here.
 
 ---
 
@@ -189,19 +211,21 @@ Custom exercises use `exerciseId` values prefixed with `custom-` and rely on `na
 
 ## Planner
 
-Types: [`lib/planner-types.ts`](../lib/planner-types.ts). **Create-only** in rules (no updates); delete allowed.
+Types: [`lib/planner-types.ts`](../lib/planner-types.ts). Owners may create, update (reschedule / mark done), and delete.
 
 ### `ScheduledWorkoutDoc` (`users/{userId}/scheduledWorkouts/{entryId}`)
 
 | Field | Type | Notes |
 |-------|------|--------|
-| `dateKey` | `string` | Local calendar `YYYY-MM-DD` |
+| `dateKey` | `string` | Local calendar `YYYY-MM-DD`; changing it reschedules the entry |
 | `label` | `string` | Non-empty, max 200 |
 | `planId` | `string \| null` | Firestore plan id, starter id (`starter-*`), or null for reminder-only |
 | `exerciseIds` | `string[]` | For `/workout` `e` param; empty array when note-only (max 40) |
-| `createdAt` | `Timestamp` | `serverTimestamp()` on create |
+| `status` | `"planned" \| "completed" \| "skipped"` | Docs written before this field read as `planned` |
+| `sessionId` | `string \| null` | Session that completed the entry; rules only allow non-null when `status` is `completed` |
+| `createdAt` | `Timestamp` | `serverTimestamp()` on create; immutable on update |
 
-`ScheduledWorkoutEntry` is the same shape plus Firestore `id`.
+`ScheduledWorkoutEntry` is the same shape plus Firestore `id`. Updates go through `updateScheduledWorkout`, which always writes `status` and `sessionId` together so the pair stays consistent.
 
 ---
 
@@ -285,6 +309,9 @@ Partners only see show-up signals (today / last date / streak)—never workout d
 | `lastWorkoutDateKey` | `string \| null` | Local `YYYY-MM-DD` |
 | `lastWorkoutAt` | `Timestamp \| null` | |
 | `currentStreak` | `number` | Consecutive local days with a completed workout |
+| `weeklyGoal` | `2 \| 3 \| 4 \| 5 \| 6 \| 7` | Copy of the member's private `settings/progress.weeklyGoal` so the roster can show progress without reading another user's private data |
+
+`weeklyGoal` is kept in sync by `syncWeeklyGoalToGroups` when the setting changes, and re-written on each workout finish by `bumpGroupWorkoutSignals`.
 
 ### `InviteCodeDoc` (`inviteCodes/{code}`)
 
@@ -440,13 +467,16 @@ Composite indexes: [`firestore.indexes.json`](../firestore.indexes.json)
 
 | File | Role |
 |------|------|
+| [`lib/user-profile-types.ts`](../lib/user-profile-types.ts) | `UserProfileDoc` + limits |
+| [`lib/user-profile-mapper.ts`](../lib/user-profile-mapper.ts) | Profile Firestore mapping + device timezone |
+| [`lib/user-profile-repository.ts`](../lib/user-profile-repository.ts) | `ensureUserProfile` on sign-in |
 | [`lib/workout-types.ts`](../lib/workout-types.ts) | Session / plan domain types + `NOTE_LIMITS` |
 | [`lib/workout-session-mapper.ts`](../lib/workout-session-mapper.ts) | `buildWorkoutSessionDoc`, `sessionDocToFirestore`, `ActiveWorkoutFinishSnapshot` |
 | [`lib/workout-session-repository.ts`](../lib/workout-session-repository.ts) | Session subscribe / create / update / delete |
 | [`lib/plan-mapper.ts`](../lib/plan-mapper.ts) | `workoutPlanDocToFirestore` / `firestoreToWorkoutPlanDoc` |
 | [`lib/workout-plan-repository.ts`](../lib/workout-plan-repository.ts) | Plan `onSnapshot`, create / update / delete |
 | [`lib/planner-types.ts`](../lib/planner-types.ts) | `ScheduledWorkoutDoc` / `ScheduledWorkoutEntry` |
-| [`lib/planner-repository.ts`](../lib/planner-repository.ts) | Subscribe, add, and delete `scheduledWorkouts` |
+| [`lib/planner-repository.ts`](../lib/planner-repository.ts) | Subscribe, add, update, and delete `scheduledWorkouts` |
 | [`lib/activity-types.ts`](../lib/activity-types.ts) | `ActivityDoc`, log input, activity string limits |
 | [`lib/activity-mapper.ts`](../lib/activity-mapper.ts) | Activity Firestore mapping + `buildActivityDoc` |
 | [`lib/activity-repository.ts`](../lib/activity-repository.ts) | Activity subscribe / log / update / delete |
@@ -468,6 +498,8 @@ Composite indexes: [`firestore.indexes.json`](../firestore.indexes.json)
 | [`firestore.rules`](../firestore.rules) | Owner rules + create/update validation |
 | [`firestore.indexes.json`](../firestore.indexes.json) | Composite indexes |
 | [`firebase.json`](../firebase.json) | Rules + indexes paths for CLI |
+| [`scripts/export-all-data.ts`](../scripts/export-all-data.ts) | Admin-SDK backup of every user's data before a migration |
+| [`scripts/backfill-phase-1.ts`](../scripts/backfill-phase-1.ts) | Migrates existing docs to the profile / planner status / `weeklyGoal` shapes |
 | [`.firebaserc`](../.firebaserc) | Default Firebase project id for `firebase deploy` |
 
 ---
@@ -511,7 +543,15 @@ TableGroup client_catalogs [note: 'Not stored in Firestore'] {
 }
 
 Table users {
-  userId string [pk, note: 'Firebase Auth uid. No user document — subcollections only.']
+  userId string [pk, note: 'Firebase Auth uid']
+  displayName string [not null, note: 'max 80']
+  timezone string [not null, note: 'IANA zone, max 64']
+  units string [not null, note: 'imperial | metric (preference only)']
+  onboardingCompletedAt timestamp [note: 'null until onboarding finishes']
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Note: 'users/{userId} — created on first sign-in'
 }
 
 Table sessions {
@@ -595,9 +635,11 @@ Table scheduled_workouts {
   label string [not null, note: 'max 200']
   planId string [note: 'plan id, starter-*, or null']
   exerciseIds json [not null, note: 'string[], empty if reminder-only']
-  createdAt timestamp [not null]
+  status string [not null, note: 'planned | completed | skipped']
+  sessionId string [note: 'set only when status is completed']
+  createdAt timestamp [not null, note: 'immutable on update']
 
-  Note: 'users/{userId}/scheduledWorkouts/{entryId} — create/delete only'
+  Note: 'users/{userId}/scheduledWorkouts/{entryId}'
 }
 
 Table activities {
@@ -674,6 +716,7 @@ Table group_members {
   lastWorkoutDateKey string [note: 'YYYY-MM-DD']
   lastWorkoutAt timestamp
   currentStreak int [not null]
+  weeklyGoal int [not null, note: '2–7; copy of the member settings/progress goal']
 
   Note: 'groups/{groupId}/members/{uid} — show-up signals only'
 }

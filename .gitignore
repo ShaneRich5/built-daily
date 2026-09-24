@@ -37,6 +37,13 @@ yarn-error.log*
 # Firebase Admin service accounts (local MCP)
 *firebase-adminsdk*.json
 
+# personal data backups (scripts/export-user-data.ts)
+/backups/
+
+# firebase emulator
+firestore-debug.log
+firebase-debug.log
+
 # vercel
 .vercel
 

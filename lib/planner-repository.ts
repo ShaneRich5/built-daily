@@ -7,14 +7,20 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 import type {
   ScheduledWorkoutDoc,
   ScheduledWorkoutEntry,
+  ScheduledWorkoutStatus,
 } from "@/lib/planner-types";
 import { NOTE_LIMITS } from "@/lib/workout-types";
+
+function asStatus(v: unknown): ScheduledWorkoutStatus {
+  return v === "completed" || v === "skipped" ? v : "planned";
+}
 
 function scheduledCollectionRef() {
   const db = getFirestoreDb();
@@ -46,12 +52,19 @@ function parseScheduledEntry(
   if (ids.length !== exerciseIds.length) return null;
   const created =
     createdAt instanceof Timestamp ? createdAt.toDate() : new Date(0);
+  const status = asStatus(raw.status);
+  const sessionIdRaw = raw.sessionId;
   return {
     id,
     dateKey,
     label: label.slice(0, NOTE_LIMITS.title),
     planId: planId == null || planId === "" ? null : planId,
     exerciseIds: ids.slice(0, 40),
+    status,
+    sessionId:
+      status === "completed" && typeof sessionIdRaw === "string" && sessionIdRaw
+        ? sessionIdRaw
+        : null,
     createdAt: created,
   };
 }
@@ -142,9 +155,59 @@ export async function addScheduledWorkout(
     label,
     planId,
     exerciseIds,
+    status: "planned",
+    sessionId: null,
     createdAt: serverTimestamp(),
   });
   return ref.id;
+}
+
+export type ScheduledWorkoutPatch = {
+  /** Reschedule to another local day. */
+  dateKey?: string;
+  label?: string;
+  status?: ScheduledWorkoutStatus;
+  /** Session that completed the entry; ignored unless status is `completed`. */
+  sessionId?: string | null;
+};
+
+/**
+ * Update a planner entry (reschedule, mark done, skip). Always writes `status`
+ * and `sessionId` so entries created before those fields gain them on first edit.
+ */
+export async function updateScheduledWorkout(
+  entryId: string,
+  patch: ScheduledWorkoutPatch,
+): Promise<boolean> {
+  const col = scheduledCollectionRef();
+  if (!col || !entryId) return false;
+
+  const next: Record<string, unknown> = {};
+
+  if (patch.dateKey !== undefined) {
+    const dateKey = patch.dateKey.trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return false;
+    next.dateKey = dateKey;
+  }
+
+  if (patch.label !== undefined) {
+    const label = patch.label.trim().slice(0, NOTE_LIMITS.title);
+    if (!label) return false;
+    next.label = label;
+  }
+
+  if (patch.status !== undefined) {
+    next.status = patch.status;
+    next.sessionId =
+      patch.status === "completed" && patch.sessionId
+        ? patch.sessionId.slice(0, 128)
+        : null;
+  }
+
+  if (Object.keys(next).length === 0) return false;
+
+  await updateDoc(doc(col, entryId), next);
+  return true;
 }
 
 export async function deleteScheduledWorkout(entryId: string): Promise<boolean> {
