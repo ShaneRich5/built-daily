@@ -6,6 +6,7 @@ import {
   resolveWorkoutTitle,
 } from "@/lib/workout-date";
 import { NOTE_LIMITS } from "@/lib/workout-types";
+import { syncWorkoutSignalsForUser } from "@/lib/workout-signals-admin";
 import {
   buildSessionLines,
   deriveSessionCounts,
@@ -256,6 +257,10 @@ export async function createWorkoutSession(
       previewExerciseNames,
     });
 
+  if (status === "completed") {
+    await syncWorkoutSignalsForUser(uid);
+  }
+
   const session = await getSessionById(uid, ref.id);
   return { kind: "ok", id: ref.id, session: session! };
 }
@@ -361,6 +366,13 @@ export async function updateWorkoutSession(
     setCount,
     previewExerciseNames,
   });
+
+  // Recompute whenever a completed session was touched, either direction:
+  // finishing it, editing it, or reopening it back to in_progress all change
+  // what the completed-session set looks like.
+  if (status === "completed" || prevStatus === "completed") {
+    await syncWorkoutSignalsForUser(uid);
+  }
 
   const session = await getSessionById(uid, sessionId);
   return { kind: "ok", id: sessionId, session: session! };

@@ -15,6 +15,7 @@ import {
   type SavedGroup,
   type SavedGroupMember,
 } from "@/lib/group-repository";
+import { effectiveGroupMemberStreak } from "@/lib/group-mapper";
 import { GROUP_LIMITS } from "@/lib/group-types";
 import {
   formatLocalDateKey,
@@ -302,6 +303,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                 {members.map(({ id, member }) => {
                   const workedToday =
                     member.lastWorkoutDateKey === todayKey;
+                  const streak = effectiveGroupMemberStreak(member, todayKey);
                   return (
                     <li
                       key={id}
@@ -320,8 +322,8 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                           {member.lastWorkoutDateKey
                             ? `Last: ${formatLocalDateKey(member.lastWorkoutDateKey)}`
                             : "No workout yet"}
-                          {member.currentStreak > 0
-                            ? ` · ${member.currentStreak}-day streak`
+                          {streak > 0
+                            ? ` · ${streak}-week streak`
                             : ""}
                         </p>
                       </div>

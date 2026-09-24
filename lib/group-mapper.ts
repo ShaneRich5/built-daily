@@ -12,6 +12,8 @@ import {
   WEEKLY_GOAL_OPTIONS,
   type WeeklyGoalTarget,
 } from "@/lib/progress-types";
+import { weekStartMondayKey } from "@/lib/progress-insights";
+import { shiftLocalDateKey } from "@/lib/workout-activity";
 
 function asTimestamp(v: unknown): Date | null {
   if (v instanceof Timestamp) return v.toDate();
@@ -212,28 +214,30 @@ export function firestoreToMembershipIndex(
   return { groupId, nameSnapshot, role, joinedAt };
 }
 
-/** Compute next streak given previous last date and the workout day being logged. */
-export function nextStreakAfterWorkout(
-  previousDateKey: string | null,
-  previousStreak: number,
-  workoutDateKey: string,
-): number {
-  if (previousDateKey === workoutDateKey) {
-    return Math.max(1, previousStreak);
-  }
-  if (previousDateKey) {
-    const prev = dateKeyToUtcMs(previousDateKey);
-    const cur = dateKeyToUtcMs(workoutDateKey);
-    if (prev != null && cur != null && cur - prev === 86_400_000) {
-      return Math.max(1, previousStreak) + 1;
-    }
-  }
-  return 1;
+/**
+ * A stored roster streak only updates when the member's own sessions sync
+ * (finish, edit, reopen, delete). If they simply stop working out, nothing
+ * triggers a recompute, so the last value would otherwise sit there forever.
+ * Treat it as stale — and show 0 — once a full week has passed with no
+ * activity at all, rather than storing an expiring value.
+ */
+export function isGroupStreakStale(
+  lastWorkoutDateKey: string | null,
+  todayKey: string,
+): boolean {
+  if (!lastWorkoutDateKey) return true;
+  const lastWeekStart = weekStartMondayKey(lastWorkoutDateKey);
+  const currentWeekStart = weekStartMondayKey(todayKey);
+  const priorWeekStart = shiftLocalDateKey(currentWeekStart, -7);
+  return lastWeekStart !== currentWeekStart && lastWeekStart !== priorWeekStart;
 }
 
-function dateKeyToUtcMs(dateKey: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
-  const [y, m, d] = dateKey.split("-").map((x) => Number(x));
-  if (!y || !m || !d) return null;
-  return Date.UTC(y, m - 1, d);
+export function effectiveGroupMemberStreak(
+  member: Pick<GroupMemberDoc, "currentStreak" | "lastWorkoutDateKey">,
+  todayKey: string,
+): number {
+  return isGroupStreakStale(member.lastWorkoutDateKey, todayKey)
+    ? 0
+    : member.currentStreak;
 }
+

@@ -308,10 +308,14 @@ Partners only see show-up signals (today / last date / streak)—never workout d
 | `joinedAt` | `Timestamp` | |
 | `lastWorkoutDateKey` | `string \| null` | Local `YYYY-MM-DD` |
 | `lastWorkoutAt` | `Timestamp \| null` | |
-| `currentStreak` | `number` | Consecutive local days with a completed workout |
+| `currentStreak` | `number` | Consecutive local **weeks** (Mon–Sun) the member met their own `weeklyGoal` — not consecutive days |
 | `weeklyGoal` | `2 \| 3 \| 4 \| 5 \| 6 \| 7` | Copy of the member's private `settings/progress.weeklyGoal` so the roster can show progress without reading another user's private data |
 
 `weeklyGoal` is kept in sync by `syncWeeklyGoalToGroups` when the setting changes, and re-written on each workout finish by `bumpGroupWorkoutSignals`.
+
+`lastWorkoutDateKey`, `lastWorkoutAt`, and `currentStreak` are **recomputed from the user's sessions**, not incremented — see [Show-up signals](#show-up-signals-shared-computation) below. Rules still let the owner write these fields directly (`validMemberSelfSignalUpdate`), so a stale client write is possible; nothing server-side rejects it yet (tracked in #6/#12, deferred pending a Cloud Function trigger).
+
+**Staleness**: `currentStreak` only updates when the member's own sessions sync (finish/edit/reopen/delete) — if they simply stop working out, nothing re-triggers a recompute, so the stored value would sit there forever. Rather than a scheduled job to expire it (which would need Cloud Functions — see #12), the UI calls `effectiveGroupMemberStreak` (`lib/group-mapper.ts`) at render time, which treats the streak as 0 once a full week has passed since `lastWorkoutDateKey` with zero activity, without needing to store or update anything.
 
 ### `InviteCodeDoc` (`inviteCodes/{code}`)
 
@@ -354,6 +358,21 @@ Opt-in shareable slice. Default is private (`profilePublic: false` or missing do
 | `updatedAt` | `Timestamp` | |
 
 Public page: `/u/[userId]`. Owner toggles in Settings. Chart shows workout days only—no session titles, PRs, activities, or body weight.
+
+---
+
+## Show-up signals (shared computation)
+
+`currentStreak`, `workoutsThisWeek`, `lastWorkoutDateKey`, `lastWorkoutAt`, and `activityByDay` — on both `GroupMemberDoc` and `PublicProfileDoc` — are **recomputed from the user's completed sessions on every write**, not incremented. Recomputing means a deleted, moved, reopened, or backdated session self-heals the next time signals are synced, instead of leaving stale drift behind (the old increment-based approach could not do this).
+
+The compute logic is a single pure function, [`lib/workout-signals.ts`](../lib/workout-signals.ts) (`computeWorkoutSignals`), fed by two thin fetch wrappers so both the browser and server-side code stay correct the same way:
+
+| Caller | Fetch wrapper | Writes to |
+|--------|---------------|-----------|
+| Web app (finish, edit, reopen, delete a session) | [`lib/workout-signals-client.ts`](../lib/workout-signals-client.ts) (client SDK) | `lib/group-repository.ts` (`bumpGroupWorkoutSignals`), `lib/public-profile-repository.ts` (`syncPublicProfileConsistency`) |
+| MCP server (create/update a completed session) | [`lib/workout-signals-admin.ts`](../lib/workout-signals-admin.ts) (Admin SDK) | `syncWorkoutSignalsForUser`, which writes both group members and the public profile itself |
+
+This is the **shared server function** approach (not a Cloud Function trigger — see #6/#10 on GitHub and the Notion Onboarding Readiness page for the tradeoff): no new infra, stays on the Firebase Spark (free) plan, but every write path that can complete/uncomplete a session still has to remember to call the sync. Known call sites are listed above; a Cloud Function trigger that can't be forgotten is tracked as a follow-up once usage grows past a couple of testers.
 
 ---
 
@@ -488,8 +507,12 @@ Composite indexes: [`firestore.indexes.json`](../firestore.indexes.json)
 | [`lib/group-mapper.ts`](../lib/group-mapper.ts) | Group Firestore mapping + invite codes |
 | [`lib/group-repository.ts`](../lib/group-repository.ts) | Group CRUD, join/leave, show-up signals |
 | [`lib/public-profile-types.ts`](../lib/public-profile-types.ts) | Opt-in public profile |
-| [`lib/public-profile-mapper.ts`](../lib/public-profile-mapper.ts) | Public profile mapping + `activityByDay` prune |
+| [`lib/public-profile-mapper.ts`](../lib/public-profile-mapper.ts) | Public profile Firestore mapping |
 | [`lib/public-profile-repository.ts`](../lib/public-profile-repository.ts) | Public profile read / write / consistency sync |
+| [`lib/workout-signals.ts`](../lib/workout-signals.ts) | Pure show-up signal computation, shared by group + public profile |
+| [`lib/workout-signals-client.ts`](../lib/workout-signals-client.ts) | Client-SDK fetch wrapper (web app) |
+| [`lib/workout-signals-admin.ts`](../lib/workout-signals-admin.ts) | Admin-SDK fetch + write wrapper (MCP server) |
+| [`lib/workout-activity.ts`](../lib/workout-activity.ts) | `WorkoutActivityByDay`, streak/heatmap helpers, `activityByDay` Map↔Record + prune |
 | [`lib/exercise-catalog.ts`](../lib/exercise-catalog.ts) | Static exercises + metrics |
 | [`lib/exercise-muscle.ts`](../lib/exercise-muscle.ts) | Muscle group resolution + focus picker |
 | [`lib/starter-templates.ts`](../lib/starter-templates.ts) | Client starter plan ids |

@@ -6,6 +6,45 @@ import {
 /** Completed workouts per local calendar day (`YYYY-MM-DD` → count). */
 export type WorkoutActivityByDay = Map<string, number>;
 
+/** Sparse `YYYY-MM-DD` → count, the wire shape stored on documents. */
+export type ActivityByDayRecord = Record<string, number>;
+
+/** Keep only days within the last ~26 weeks (chart window), capped to `maxEntries`. */
+export function pruneActivityByDay(
+  record: ActivityByDayRecord,
+  todayKey: string = localDateKeyFromMs(Date.now()),
+  maxEntries = 200,
+): ActivityByDayRecord {
+  const cutoff = shiftLocalDateKey(todayKey, -(26 * 7));
+  const entries = Object.entries(record)
+    .filter(([key, count]) => count > 0 && key >= cutoff && key <= todayKey)
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+
+  if (entries.length > maxEntries) {
+    entries.splice(0, entries.length - maxEntries);
+  }
+
+  const out: ActivityByDayRecord = {};
+  for (const [key, count] of entries) {
+    out[key] = count;
+  }
+  return out;
+}
+
+export function activityMapToRecord(
+  activity: WorkoutActivityByDay,
+  todayKey?: string,
+  maxEntries?: number,
+): ActivityByDayRecord {
+  const out: ActivityByDayRecord = {};
+  for (const [key, count] of activity) {
+    if (count > 0 && /^\d{4}-\d{2}-\d{2}$/.test(key)) {
+      out[key] = Math.max(0, Math.round(count));
+    }
+  }
+  return pruneActivityByDay(out, todayKey, maxEntries);
+}
+
 export function shiftLocalDateKey(dateKey: string, dayDelta: number): string {
   const d = dateFromLocalDateKey(dateKey);
   if (!d) return dateKey;
