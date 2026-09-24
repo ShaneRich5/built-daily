@@ -20,6 +20,7 @@ import {
   useState,
 } from "react";
 import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
+import { ensureUserProfile } from "@/lib/user-profile-repository";
 
 const googleAuthProvider = new GoogleAuthProvider();
 googleAuthProvider.setCustomParameters({ prompt: "select_account" });
@@ -49,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+      if (u) void ensureUserProfile(u);
     });
     return () => unsub();
   }, []);

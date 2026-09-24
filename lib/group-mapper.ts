@@ -7,6 +7,11 @@ import {
   type GroupMembershipIndexDoc,
   type InviteCodeDoc,
 } from "@/lib/group-types";
+import {
+  DEFAULT_PROGRESS_SETTINGS,
+  WEEKLY_GOAL_OPTIONS,
+  type WeeklyGoalTarget,
+} from "@/lib/progress-types";
 
 function asTimestamp(v: unknown): Date | null {
   if (v instanceof Timestamp) return v.toDate();
@@ -30,6 +35,16 @@ function asTimestamp(v: unknown): Date | null {
 function asRole(v: unknown): GroupMemberRole | null {
   if (v === "owner" || v === "member") return v;
   return null;
+}
+
+function asWeeklyGoal(v: unknown): WeeklyGoalTarget {
+  if (
+    typeof v === "number" &&
+    WEEKLY_GOAL_OPTIONS.includes(v as WeeklyGoalTarget)
+  ) {
+    return v as WeeklyGoalTarget;
+  }
+  return DEFAULT_PROGRESS_SETTINGS.weeklyGoal;
 }
 
 function asDateKey(v: unknown): string | null {
@@ -111,6 +126,7 @@ export function memberDocToFirestore(
       ? Timestamp.fromDate(doc.lastWorkoutAt)
       : null,
     currentStreak: doc.currentStreak,
+    weeklyGoal: doc.weeklyGoal,
   };
 }
 
@@ -140,6 +156,7 @@ export function firestoreToMemberDoc(
     lastWorkoutDateKey: asDateKey(data.lastWorkoutDateKey),
     lastWorkoutAt,
     currentStreak,
+    weeklyGoal: asWeeklyGoal(data.weeklyGoal),
   };
 }
 

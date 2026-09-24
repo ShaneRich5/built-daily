@@ -10,6 +10,7 @@ import {
   limit,
 } from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
+import { syncWeeklyGoalToGroups } from "@/lib/group-repository";
 import {
   bodyWeightEntryToFirestore,
   firestoreToBodyWeightEntry,
@@ -81,6 +82,10 @@ export async function saveProgressSettings(
     updatedAt: new Date(),
   };
   await setDoc(ref, progressSettingsToFirestore(next), { merge: true });
+
+  if (next.weeklyGoal !== prev.weeklyGoal) {
+    await syncWeeklyGoalToGroups(next.weeklyGoal);
+  }
   return true;
 }
 

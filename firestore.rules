@@ -82,10 +82,27 @@ service cloud.firestore {
         );
     }
 
-    function validScheduledWorkoutCreate() {
+    function validUserProfileWrite() {
       let d = request.resource.data;
       return d.keys().hasAll([
-            'dateKey', 'label', 'planId', 'exerciseIds', 'createdAt'
+            'displayName', 'timezone', 'units',
+            'onboardingCompletedAt', 'createdAt', 'updatedAt'
+          ])
+        && nonEmptyString(d.displayName, 80)
+        && nonEmptyString(d.timezone, 64)
+        && d.units in ['imperial', 'metric']
+        && (d.onboardingCompletedAt == null
+            || d.onboardingCompletedAt is timestamp)
+        && d.createdAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
+    /** `sessionId` links a completed entry to the workout that finished it. */
+    function validScheduledWorkoutFields() {
+      let d = request.resource.data;
+      return d.keys().hasAll([
+            'dateKey', 'label', 'planId', 'exerciseIds',
+            'status', 'sessionId', 'createdAt'
           ])
         && d.dateKey is string
         && d.dateKey.size() == 10
@@ -94,7 +111,21 @@ service cloud.firestore {
         && (d.planId == null || (d.planId is string && d.planId.size() <= 128))
         && d.exerciseIds is list
         && d.exerciseIds.size() <= 40
-        && d.createdAt is timestamp;
+        && d.status in ['planned', 'completed', 'skipped']
+        && (
+          d.sessionId == null
+          || (d.status == 'completed' && nonEmptyString(d.sessionId, 128))
+        );
+    }
+
+    function validScheduledWorkoutCreate() {
+      return validScheduledWorkoutFields()
+        && request.resource.data.createdAt is timestamp;
+    }
+
+    function validScheduledWorkoutUpdate() {
+      return validScheduledWorkoutFields()
+        && request.resource.data.createdAt == resource.data.createdAt;
     }
 
     function validGroupCreate() {
@@ -110,11 +141,15 @@ service cloud.firestore {
         && d.memberCount == 1;
     }
 
+    function validWeeklyGoal(v) {
+      return isIntLike(v) && v in [2, 3, 4, 5, 6, 7];
+    }
+
     function validMemberCreate(groupId) {
       let d = request.resource.data;
       return d.keys().hasAll([
             'uid', 'displayName', 'role', 'joinedAt',
-            'lastWorkoutDateKey', 'lastWorkoutAt', 'currentStreak'
+            'lastWorkoutDateKey', 'lastWorkoutAt', 'currentStreak', 'weeklyGoal'
           ])
         && d.uid == request.auth.uid
         && nonEmptyString(d.displayName, 80)
@@ -124,6 +159,7 @@ service cloud.firestore {
         && (d.lastWorkoutAt == null || d.lastWorkoutAt is timestamp)
         && isIntLike(d.currentStreak)
         && d.currentStreak >= 0
+        && validWeeklyGoal(d.weeklyGoal)
         && (
           (d.role == 'owner'
             && get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy
@@ -143,11 +179,14 @@ service cloud.firestore {
         && validDateKey(d.lastWorkoutDateKey)
         && (d.lastWorkoutAt == null || d.lastWorkoutAt is timestamp)
         && isIntLike(d.currentStreak)
-        && d.currentStreak >= 0;
+        && d.currentStreak >= 0
+        && validWeeklyGoal(d.weeklyGoal);
     }
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && validUserProfileWrite();
+      allow delete: if isOwner(userId);
 
       match /sessions/{sessionId} {
         allow read: if isOwner(userId);
@@ -178,8 +217,8 @@ service cloud.firestore {
       match /scheduledWorkouts/{entryId} {
         allow read: if isOwner(userId);
         allow create: if isOwner(userId) && validScheduledWorkoutCreate();
+        allow update: if isOwner(userId) && validScheduledWorkoutUpdate();
         allow delete: if isOwner(userId);
-        allow update: if false;
       }
 
       match /groupMemberships/{groupId} {

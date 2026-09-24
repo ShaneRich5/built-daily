@@ -1,3 +1,6 @@
+/** Lifecycle of a planned day. Docs written before this field default to `planned`. */
+export type ScheduledWorkoutStatus = "planned" | "completed" | "skipped";
+
 /** One scheduled workout idea under `users/{uid}/scheduledWorkouts`. */
 export type ScheduledWorkoutDoc = {
   /** Local calendar day `YYYY-MM-DD`. */
@@ -8,6 +11,9 @@ export type ScheduledWorkoutDoc = {
   planId: string | null;
   /** Exercise ids for `/workout` URL `e` param; empty when note-only. */
   exerciseIds: string[];
+  status: ScheduledWorkoutStatus;
+  /** Session that completed this entry; only set when `status` is `completed`. */
+  sessionId: string | null;
   createdAt: Date;
 };
 
