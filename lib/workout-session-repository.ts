@@ -28,7 +28,7 @@ import type {
   WorkoutSessionStatus,
 } from "@/lib/workout-types";
 import type { CatalogExercise } from "@/lib/exercise-catalog";
-import { localDateKeyFromMs, resolveWorkoutTitle } from "@/lib/workout-date";
+import { resolveWorkoutTitle } from "@/lib/workout-date";
 
 /** Slim row for home / history lists. */
 export type SessionSummary = {
@@ -433,22 +433,7 @@ export async function saveCompletedWorkoutSession(
   }
 
   // Best-effort accountability + public profile signals — never block finish.
-  try {
-    const workoutDateKey =
-      saved.doc.workoutDate ??
-      localDateKeyFromMs(saved.doc.endedAt?.getTime() ?? Date.now());
-    const workoutAtMs = saved.doc.endedAt?.getTime() ?? Date.now();
-    await bumpGroupWorkoutSignals({
-      workoutDateKey,
-      workoutAtMs,
-    });
-    await syncPublicProfileConsistency({
-      workoutDateKey,
-      workoutAtMs,
-    });
-  } catch {
-    /* ignore */
-  }
+  await resyncWorkoutSignals();
 
   return saved;
 }
@@ -496,6 +481,16 @@ export async function getWorkoutSessions(
 /** @deprecated Use getWorkoutSession */
 export const getCompletedWorkoutSession = getWorkoutSession;
 
+/** Best-effort recompute — a session edit, reopen, or delete can change signals too. */
+async function resyncWorkoutSignals(): Promise<void> {
+  try {
+    await bumpGroupWorkoutSignals();
+    await syncPublicProfileConsistency();
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
  * Overwrites a session (typically completed edits). Recomputes denormalized counts.
  */
@@ -503,7 +498,7 @@ export async function updateCompletedWorkoutSession(
   sessionId: string,
   draft: WorkoutSessionDoc,
 ): Promise<WorkoutSessionDoc | null> {
-  return upsertWorkoutSession(sessionId, {
+  const saved = await upsertWorkoutSession(sessionId, {
     ...draft,
     status: draft.status === "in_progress" ? "in_progress" : "completed",
     endedAt:
@@ -511,6 +506,8 @@ export async function updateCompletedWorkoutSession(
         ? null
         : (draft.endedAt ?? new Date()),
   });
+  if (saved) await resyncWorkoutSignals();
+  return saved;
 }
 
 /** Move a completed session back to in progress so it can be resumed. */
@@ -527,6 +524,7 @@ export async function reopenSessionAsInProgress(
   };
   const saved = await upsertWorkoutSession(sessionId, reopened);
   if (!saved) return null;
+  await resyncWorkoutSignals();
   return { id: sessionId, session: saved };
 }
 
@@ -538,5 +536,6 @@ export async function deleteWorkoutSession(
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid || !sessionId) return false;
   await deleteDoc(doc(db, "users", uid, "sessions", sessionId));
+  await resyncWorkoutSignals();
   return true;
 }

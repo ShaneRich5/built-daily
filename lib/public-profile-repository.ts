@@ -1,39 +1,13 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  setDoc,
-  where,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
-import {
-  displayNameFromAuth,
-  nextStreakAfterWorkout,
-} from "@/lib/group-mapper";
-import {
-  currentWorkoutStreak,
-  activityByDayFromSessions,
-} from "@/lib/workout-activity";
-import {
-  weekStartMondayKey,
-  workoutsInWeek,
-} from "@/lib/progress-insights";
+import { displayNameFromAuth } from "@/lib/group-mapper";
 import {
   activityMapToRecord,
   firestoreToPublicProfileDoc,
-  pruneActivityByDay,
   publicProfileDocToFirestore,
 } from "@/lib/public-profile-mapper";
-import type {
-  PublicActivityByDay,
-  PublicProfileDoc,
-} from "@/lib/public-profile-types";
-import { localDateKeyFromMs } from "@/lib/workout-date";
-import { firestoreToWorkoutSessionDoc } from "@/lib/workout-session-mapper";
+import type { PublicProfileDoc } from "@/lib/public-profile-types";
+import { computeUserWorkoutSignals } from "@/lib/workout-signals-client";
 
 export type SavedPublicProfile = {
   id: string;
@@ -100,62 +74,6 @@ export async function getOwnPublicProfile(): Promise<SavedPublicProfile | null> 
   }
 }
 
-async function computeConsistencyFromSessions(uid: string): Promise<{
-  currentStreak: number;
-  workoutsThisWeek: number;
-  lastWorkoutDateKey: string | null;
-  activityByDay: PublicActivityByDay;
-}> {
-  const db = getFirestoreDb();
-  const empty = {
-    currentStreak: 0,
-    workoutsThisWeek: 0,
-    lastWorkoutDateKey: null as string | null,
-    activityByDay: {} as PublicActivityByDay,
-  };
-  if (!db) return empty;
-
-  const q = query(
-    collection(db, "users", uid, "sessions"),
-    where("status", "==", "completed"),
-    orderBy("endedAt", "desc"),
-    limit(400),
-  );
-  const snap = await getDocs(q);
-  const sessions = [];
-  for (const d of snap.docs) {
-    const session = firestoreToWorkoutSessionDoc(
-      d.data() as Record<string, unknown>,
-    );
-    if (session && session.status === "completed") sessions.push(session);
-  }
-
-  const todayKey = localDateKeyFromMs(Date.now());
-  const activity = activityByDayFromSessions(sessions);
-  const currentStreak = currentWorkoutStreak(activity, todayKey);
-  const workoutsThisWeek = workoutsInWeek(
-    activity,
-    weekStartMondayKey(todayKey),
-  );
-
-  let lastWorkoutDateKey: string | null = null;
-  for (const s of sessions) {
-    const key =
-      s.workoutDate ??
-      localDateKeyFromMs((s.endedAt ?? s.startedAt).getTime());
-    if (!lastWorkoutDateKey || key > lastWorkoutDateKey) {
-      lastWorkoutDateKey = key;
-    }
-  }
-
-  return {
-    currentStreak,
-    workoutsThisWeek,
-    lastWorkoutDateKey,
-    activityByDay: activityMapToRecord(activity),
-  };
-}
-
 /**
  * Opt in/out of a public profile. When enabling, seeds consistency from
  * the owner's completed sessions.
@@ -190,14 +108,14 @@ export async function setProfilePublic(enabled: boolean): Promise<boolean> {
     return true;
   }
 
-  const consistency = await computeConsistencyFromSessions(user.uid);
+  const signals = await computeUserWorkoutSignals(user.uid);
   const docData: PublicProfileDoc = {
     displayName,
     profilePublic: true,
-    currentStreak: consistency.currentStreak,
-    workoutsThisWeek: consistency.workoutsThisWeek,
-    lastWorkoutDateKey: consistency.lastWorkoutDateKey,
-    activityByDay: consistency.activityByDay,
+    currentStreak: signals.currentStreak,
+    workoutsThisWeek: signals.workoutsThisWeek,
+    lastWorkoutDateKey: signals.lastWorkoutDateKey,
+    activityByDay: activityMapToRecord(signals.activityByDay),
     updatedAt: now,
   };
   await setDoc(ref, publicProfileDocToFirestore(docData));
@@ -205,13 +123,12 @@ export async function setProfilePublic(enabled: boolean): Promise<boolean> {
 }
 
 /**
- * Best-effort update after a completed workout. No-op when profile is
- * missing or not public.
+ * Best-effort: recompute the public profile's consistency signals from the
+ * owner's sessions and write them. No-op when the profile is missing or not
+ * public. Always recomputes from source so drift (deleted/moved/backdated
+ * sessions) self-heals instead of accumulating.
  */
-export async function syncPublicProfileConsistency(options: {
-  workoutDateKey: string;
-  workoutAtMs: number;
-}): Promise<void> {
+export async function syncPublicProfileConsistency(): Promise<void> {
   const user = getFirebaseAuth()?.currentUser;
   if (!user) return;
 
@@ -225,45 +142,15 @@ export async function syncPublicProfileConsistency(options: {
   );
   if (!existing || !existing.profilePublic) return;
 
-  const dateKey = options.workoutDateKey;
-  const todayKey = localDateKeyFromMs(options.workoutAtMs);
-
-  // Backfill chart history if an older public profile lacked activityByDay.
-  let activityByDay = existing.activityByDay;
-  if (Object.keys(activityByDay).length === 0) {
-    const seeded = await computeConsistencyFromSessions(user.uid);
-    activityByDay = seeded.activityByDay;
-  } else {
-    activityByDay = pruneActivityByDay(
-      {
-        ...activityByDay,
-        [dateKey]: (activityByDay[dateKey] ?? 0) + 1,
-      },
-      todayKey,
-    );
-  }
-
-  const currentStreak = nextStreakAfterWorkout(
-    existing.lastWorkoutDateKey,
-    existing.currentStreak,
-    dateKey,
-  );
-
-  const thisWeekStart = weekStartMondayKey(dateKey);
-  const prevWeekStart = existing.lastWorkoutDateKey
-    ? weekStartMondayKey(existing.lastWorkoutDateKey)
-    : null;
-  const workoutsThisWeek =
-    prevWeekStart === thisWeekStart ? existing.workoutsThisWeek + 1 : 1;
-
+  const signals = await computeUserWorkoutSignals(user.uid);
   const docData: PublicProfileDoc = {
     displayName: displayNameFromAuth(user),
     profilePublic: true,
-    currentStreak,
-    workoutsThisWeek,
-    lastWorkoutDateKey: dateKey,
-    activityByDay,
-    updatedAt: new Date(options.workoutAtMs),
+    currentStreak: signals.currentStreak,
+    workoutsThisWeek: signals.workoutsThisWeek,
+    lastWorkoutDateKey: signals.lastWorkoutDateKey,
+    activityByDay: activityMapToRecord(signals.activityByDay),
+    updatedAt: new Date(),
   };
   await setDoc(ref, publicProfileDocToFirestore(docData));
 }

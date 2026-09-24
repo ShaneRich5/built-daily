@@ -22,7 +22,6 @@ import {
   inviteCodeDocToFirestore,
   memberDocToFirestore,
   membershipIndexToFirestore,
-  nextStreakAfterWorkout,
   normalizeInviteCode,
 } from "@/lib/group-mapper";
 import {
@@ -33,7 +32,7 @@ import {
 } from "@/lib/group-types";
 import { firestoreToProgressSettings } from "@/lib/progress-mapper";
 import type { WeeklyGoalTarget } from "@/lib/progress-types";
-import { localDateKeyFromMs } from "@/lib/workout-date";
+import { computeUserWorkoutSignals } from "@/lib/workout-signals-client";
 
 export type SavedGroupMembership = {
   id: string;
@@ -473,13 +472,13 @@ export async function deleteAccountabilityGroup(
 }
 
 /**
- * Best-effort: bump last-workout + streak on every group membership after a finish.
+ * Best-effort: recompute show-up signals from the user's sessions and push
+ * them onto every group membership. Always recomputes from source (never
+ * increments a stored value), so a deleted, moved, reopened, or backdated
+ * session self-heals the roster instead of leaving stale drift behind.
  * Failures are swallowed so workout save is never blocked.
  */
-export async function bumpGroupWorkoutSignals(options: {
-  workoutDateKey: string;
-  workoutAtMs: number;
-}): Promise<void> {
+export async function bumpGroupWorkoutSignals(): Promise<void> {
   const db = getFirestoreDb();
   const user = getFirebaseAuth()?.currentUser;
   if (!db || !user) return;
@@ -489,33 +488,19 @@ export async function bumpGroupWorkoutSignals(options: {
   );
   if (membershipsSnap.empty) return;
 
-  const workoutAt = new Date(options.workoutAtMs);
-  const dateKey =
-    options.workoutDateKey || localDateKeyFromMs(options.workoutAtMs);
-  const weeklyGoal = await currentWeeklyGoal(user.uid);
+  const [signals, weeklyGoal] = await Promise.all([
+    computeUserWorkoutSignals(user.uid),
+    currentWeeklyGoal(user.uid),
+  ]);
 
   await Promise.all(
     membershipsSnap.docs.map(async (membershipDoc) => {
       try {
-        const groupId = membershipDoc.id;
-        const memberRef = doc(db, "groups", groupId, "members", user.uid);
-        const memberSnap = await getDoc(memberRef);
-        if (!memberSnap.exists()) return;
-        const member = firestoreToMemberDoc(
-          memberSnap.data() as Record<string, unknown>,
-        );
-        if (!member) return;
-
-        const currentStreak = nextStreakAfterWorkout(
-          member.lastWorkoutDateKey,
-          member.currentStreak,
-          dateKey,
-        );
-
+        const memberRef = doc(db, "groups", membershipDoc.id, "members", user.uid);
         await updateDoc(memberRef, {
-          lastWorkoutDateKey: dateKey,
-          lastWorkoutAt: workoutAt,
-          currentStreak,
+          lastWorkoutDateKey: signals.lastWorkoutDateKey,
+          lastWorkoutAt: signals.lastWorkoutAt,
+          currentStreak: signals.currentStreak,
           displayName: displayNameFromAuth(user),
           weeklyGoal,
         });

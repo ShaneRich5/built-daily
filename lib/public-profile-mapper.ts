@@ -6,10 +6,12 @@ import {
 } from "@/lib/public-profile-types";
 import { weekStartMondayKey } from "@/lib/progress-insights";
 import {
-  shiftLocalDateKey,
+  activityMapToRecord,
+  pruneActivityByDay,
   type WorkoutActivityByDay,
 } from "@/lib/workout-activity";
-import { localDateKeyFromMs } from "@/lib/workout-date";
+
+export { activityMapToRecord, pruneActivityByDay };
 
 function asTimestamp(v: unknown): Date | null {
   if (v instanceof Timestamp) return v.toDate();
@@ -43,18 +45,6 @@ function asNonNegInt(v: unknown): number {
   return 0;
 }
 
-export function activityMapToRecord(
-  activity: WorkoutActivityByDay,
-): PublicActivityByDay {
-  const out: PublicActivityByDay = {};
-  for (const [key, count] of activity) {
-    if (count > 0 && /^\d{4}-\d{2}-\d{2}$/.test(key)) {
-      out[key] = Math.max(0, Math.round(count));
-    }
-  }
-  return pruneActivityByDay(out);
-}
-
 export function activityRecordToMap(
   record: PublicActivityByDay,
 ): WorkoutActivityByDay {
@@ -63,27 +53,6 @@ export function activityRecordToMap(
     if (count > 0) map.set(key, count);
   }
   return map;
-}
-
-/** Keep only days within the last ~26 weeks (chart window). */
-export function pruneActivityByDay(
-  record: PublicActivityByDay,
-  todayKey: string = localDateKeyFromMs(Date.now()),
-): PublicActivityByDay {
-  const cutoff = shiftLocalDateKey(todayKey, -(26 * 7));
-  const entries = Object.entries(record)
-    .filter(([key, count]) => count > 0 && key >= cutoff && key <= todayKey)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-
-  if (entries.length > PUBLIC_PROFILE_LIMITS.activityByDayEntries) {
-    entries.splice(0, entries.length - PUBLIC_PROFILE_LIMITS.activityByDayEntries);
-  }
-
-  const out: PublicActivityByDay = {};
-  for (const [key, count] of entries) {
-    out[key] = count;
-  }
-  return out;
 }
 
 function asActivityByDay(v: unknown): PublicActivityByDay {
