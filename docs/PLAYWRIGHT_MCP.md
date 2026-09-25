@@ -29,15 +29,16 @@ new project MCP server the first time it loads this repo.
 
 ## Test account credentials
 
-Add `PLAYWRIGHT_TEST_EMAIL` / `PLAYWRIGHT_TEST_PASSWORD` to your `.env.local`
-(see `.env.example`) with the test account's login. `.env.local` is already
-gitignored, so nothing new to remember there.
+Add `PLAYWRIGHT_TEST_EMAIL` / `PLAYWRIGHT_TEST_PASSWORD` to your `.env`
+(copy from `.env.example`, same as the other local secrets in this repo)
+with the test account's login. `.env` is already gitignored, so nothing new
+to remember there.
 
 Claude reads these only when it's about to drive the browser through a
 login, and doesn't copy the values into its persistent memory — the
-credentials live only in `.env.local` and in that session's working
-context. Because it's a throwaway test account with no real data, the
-exposure if this file ever leaked is low, but keep it out of screenshots,
-logs, or anywhere else it could end up pasted.
+credentials live only in `.env` and in that session's working context.
+Because it's a throwaway test account with no real data, the exposure if
+this file ever leaked is low, but keep it out of screenshots, logs, or
+anywhere else it could end up pasted.
 
 Ref: #17.
