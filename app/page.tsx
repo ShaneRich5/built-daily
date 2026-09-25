@@ -45,9 +45,9 @@ export default function HomePage() {
         </div>
       </header>
 
-      <HomeWeekStrip />
-
       <HomeStartWorkout />
+
+      <HomeWeekStrip />
 
       <HomeWorkoutActivity />
 
