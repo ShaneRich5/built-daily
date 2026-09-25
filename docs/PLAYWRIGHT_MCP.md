@@ -29,15 +29,15 @@ new project MCP server the first time it loads this repo.
 
 ## Test account credentials
 
-Copy [`playwright-test.local.example.json`](../playwright-test.local.example.json)
-to `playwright-test.local.json` (repo root) and fill in the test account's
-email/password. That filename is gitignored, so it never gets committed.
+Add `PLAYWRIGHT_TEST_EMAIL` / `PLAYWRIGHT_TEST_PASSWORD` to your `.env.local`
+(see `.env.example`) with the test account's login. `.env.local` is already
+gitignored, so nothing new to remember there.
 
-Claude reads this file only when it's about to drive the browser through a
+Claude reads these only when it's about to drive the browser through a
 login, and doesn't copy the values into its persistent memory — the
-credentials live only in this file and in that session's working context.
-Because it's a throwaway test account with no real data, the exposure if
-this file ever leaked is low, but keep it out of screenshots, logs, or
-anywhere else it could end up pasted.
+credentials live only in `.env.local` and in that session's working
+context. Because it's a throwaway test account with no real data, the
+exposure if this file ever leaked is low, but keep it out of screenshots,
+logs, or anywhere else it could end up pasted.
 
 Ref: #17.
