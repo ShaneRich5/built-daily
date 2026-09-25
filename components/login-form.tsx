@@ -177,7 +177,7 @@ export function LoginForm() {
           />
           {mode === "signup" && (
             <p className="mt-1 text-xs text-zinc-500">
-              At least 6 characters (Firebase minimum).
+              At least 6 characters.
             </p>
           )}
         </div>
