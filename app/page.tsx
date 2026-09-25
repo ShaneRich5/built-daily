@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GroupsHomeTeaser } from "@/components/groups-home-teaser";
 import { HomeStartWorkout } from "@/components/home-start-workout";
 import { HomeTimeline } from "@/components/home-timeline";
+import { HomeWeekStrip } from "@/components/home-week-strip";
 import { HomeWorkoutActivity } from "@/components/home-workout-activity";
 
 export default function HomePage() {
@@ -43,6 +44,8 @@ export default function HomePage() {
           </div>
         </div>
       </header>
+
+      <HomeWeekStrip />
 
       <HomeStartWorkout />
 
