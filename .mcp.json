@@ -6,6 +6,13 @@
     "playwright": {
       "command": "npx",
       "args": ["@playwright/mcp@latest"]
+    },
+    "built-daily-test": {
+      "command": "npx",
+      "args": ["tsx", "mcp/server.ts"],
+      "env": {
+        "MCP_USER_UID": "BiiovpLSyiW4Msb177l6wCOBZ0G3"
+      }
     }
   }
 }
