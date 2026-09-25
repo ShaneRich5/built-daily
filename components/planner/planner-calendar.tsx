@@ -76,7 +76,7 @@ function DayMarkers({ markers }: { markers: PlannerDayMarkers | undefined }) {
   );
 }
 
-function DayCellButton({
+export function DayCellButton({
   cell,
   selected,
   inRange,
@@ -119,7 +119,7 @@ function DayCellButton({
   );
 }
 
-function WeekdayHeader({ compact }: { compact?: boolean }) {
+export function WeekdayHeader({ compact }: { compact?: boolean }) {
   return (
     <div
       className={`grid grid-cols-7 gap-0.5 text-center font-semibold uppercase tracking-wide text-zinc-500 ${
