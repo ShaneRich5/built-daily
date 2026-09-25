@@ -98,7 +98,7 @@ export function ExerciseCatalogBrowser() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search (bench, lunge, cable…)"
-          className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
+          className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base sm:text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:focus:border-zinc-600"
           aria-label="Search exercises"
         />
 
