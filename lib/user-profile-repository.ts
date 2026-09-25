@@ -1,5 +1,5 @@
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { getFirestoreDb } from "@/lib/firebase";
+import { doc, getDoc, onSnapshot, setDoc, Timestamp } from "firebase/firestore";
+import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 import { displayNameFromAuth } from "@/lib/group-mapper";
 import {
   firestoreToUserProfile,
@@ -66,4 +66,41 @@ export async function ensureUserProfile(
   } catch {
     return null;
   }
+}
+
+/** Live `users/{uid}` doc for the signed-in user, or `null` if signed out / not created yet. */
+export function subscribeUserProfile(
+  onProfile: (profile: UserProfileDoc | null) => void,
+): () => void {
+  const db = getFirestoreDb();
+  const uid = getFirebaseAuth()?.currentUser?.uid;
+  if (!db || !uid) {
+    onProfile(null);
+    return () => {};
+  }
+  return onSnapshot(
+    doc(db, "users", uid),
+    (snap) => {
+      onProfile(
+        snap.exists()
+          ? firestoreToUserProfile(snap.data() as Record<string, unknown>)
+          : null,
+      );
+    },
+    () => onProfile(null),
+  );
+}
+
+/** Marks onboarding done (finished or skipped) so the gate stops redirecting. */
+export async function setOnboardingCompleted(): Promise<boolean> {
+  const db = getFirestoreDb();
+  const uid = getFirebaseAuth()?.currentUser?.uid;
+  if (!db || !uid) return false;
+  const now = Timestamp.fromDate(new Date());
+  await setDoc(
+    doc(db, "users", uid),
+    { onboardingCompletedAt: now, updatedAt: now },
+    { merge: true },
+  );
+  return true;
 }
