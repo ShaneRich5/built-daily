@@ -27,4 +27,17 @@ new project MCP server the first time it loads this repo.
   pasted one when Claude actually looks at them — this setup removes the
   manual hand-off step, not the token cost of viewing an image.
 
+## Test account credentials
+
+Copy [`playwright-test.local.example.json`](../playwright-test.local.example.json)
+to `playwright-test.local.json` (repo root) and fill in the test account's
+email/password. That filename is gitignored, so it never gets committed.
+
+Claude reads this file only when it's about to drive the browser through a
+login, and doesn't copy the values into its persistent memory — the
+credentials live only in this file and in that session's working context.
+Because it's a throwaway test account with no real data, the exposure if
+this file ever leaked is low, but keep it out of screenshots, logs, or
+anywhere else it could end up pasted.
+
 Ref: #17.

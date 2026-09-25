@@ -44,6 +44,9 @@ yarn-error.log*
 firestore-debug.log
 firebase-debug.log
 
+# local test-account credentials for Playwright MCP UI review (never commit)
+playwright-test.local.json
+
 # vercel
 .vercel
 
