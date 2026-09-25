@@ -1764,7 +1764,7 @@ function CollapsibleNote({
           placeholder={placeholder}
           rows={2}
           maxLength={maxLength}
-          className="w-full resize-y rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-sm text-zinc-900 outline-none ring-zinc-900/10 placeholder:text-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10"
+          className="w-full resize-y rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-base sm:text-sm text-zinc-900 outline-none ring-zinc-900/10 placeholder:text-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10"
         />
         <p className="mt-1 text-right text-[10px] text-zinc-400">
           {value.length}/{maxLength}
@@ -1947,8 +1947,10 @@ function SetRowFields({
     />
   );
 
+  // text-base (not text-sm) below sm: on iOS, any focused input under 16px
+  // forces the page to zoom in on focus and never zoom back out.
   const numberFieldClassName = compact
-    ? "h-9 w-full rounded-md border border-zinc-200 bg-zinc-50 px-2.5 font-mono text-sm text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+    ? "h-9 w-full rounded-md border border-zinc-200 bg-zinc-50 px-2.5 font-mono text-base sm:text-sm text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
     : "h-11 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 font-mono text-zinc-800 tabular-nums outline-none placeholder:font-sans placeholder:text-zinc-400 [appearance:textfield] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
 
   const setShellClassName = compact

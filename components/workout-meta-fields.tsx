@@ -50,9 +50,11 @@ export function WorkoutMetaFields({
   }
   const metaLine = metaBits.join(" · ");
 
+  // text-base (not text-sm) below sm: on iOS, any focused input under 16px
+  // forces the page to zoom in on focus and never zoom back out.
   const inputClass = compact
-    ? "h-9 w-full rounded-lg border border-zinc-200 bg-white px-2.5 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
-    : "h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
+    ? "h-9 w-full rounded-lg border border-zinc-200 bg-white px-2.5 text-base sm:text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100"
+    : "h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-base sm:text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100";
 
   const fields = (
     <div className={collapsible || compact ? "space-y-2" : "space-y-3"}>
@@ -73,7 +75,7 @@ export function WorkoutMetaFields({
           placeholder={placeholder}
           className={
             compact || collapsible
-              ? "h-10 w-full rounded-lg border border-zinc-200 bg-white px-2.5 text-sm font-semibold text-zinc-900 outline-none placeholder:font-normal placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
+              ? "h-10 w-full rounded-lg border border-zinc-200 bg-white px-2.5 text-base sm:text-sm font-semibold text-zinc-900 outline-none placeholder:font-normal placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
               : "h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-xl font-semibold text-zinc-900 outline-none placeholder:font-normal placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
           }
         />
