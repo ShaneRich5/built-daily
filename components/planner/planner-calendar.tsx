@@ -95,7 +95,7 @@ export function DayCellButton({
     <button
       type="button"
       onClick={() => onSelect(cell.dateKey)}
-      className={`flex flex-col items-center justify-start rounded-lg border px-0.5 py-1 text-xs transition ${
+      className={`flex w-full flex-col items-center justify-start rounded-lg border px-0.5 py-1 text-xs transition ${
         compact ? "min-h-[36px]" : "min-h-[44px] sm:min-h-[52px]"
       } ${
         selected
