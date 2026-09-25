@@ -197,6 +197,18 @@ When making changes:
 - Keep files reasonably small
 - Document important architectural decisions
 
+## Branching
+
+For any non-trivial change (a new feature, a bug fix touching more than a
+one-line tweak, anything worth its own commit message), create a branch and
+open a PR rather than committing directly to `main`. Small, purely
+cosmetic tweaks (copy, a class name) can go straight to a branch too, but
+use judgment — the point is `main` stays merge-only, not that every keystroke
+needs its own branch.
+
+Skip this only when the user explicitly says to work on `main` directly for
+that change.
+
 ---
 
 # Product Identity
