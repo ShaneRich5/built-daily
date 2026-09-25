@@ -308,14 +308,9 @@ export async function getExerciseHistories(
 }
 
 function normalizeSessionForWrite(draft: WorkoutSessionDoc): WorkoutSessionDoc | null {
+  // Completed sessions with no exercises, or exercises with no sets logged,
+  // are allowed ("logged without details").
   const normalizedLines = draft.lines;
-  // Empty completed sessions are allowed ("logged without details").
-  if (
-    draft.status === "completed" &&
-    normalizedLines.some((l) => l.sets.length === 0)
-  ) {
-    return null;
-  }
 
   const setCount = normalizedLines.reduce((acc, l) => acc + l.sets.length, 0);
 
