@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AccountBar } from "@/components/account-bar";
 import { AuthProvider } from "@/components/auth-provider";
+import { OnboardingGate } from "@/components/onboarding-gate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,6 +61,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
+          <OnboardingGate />
           <div className="mx-auto flex min-h-full w-full max-w-2xl flex-col px-4 py-6 sm:px-5 sm:py-8">
             <AccountBar />
             {children}
