@@ -39,6 +39,8 @@ export type GroupMemberDoc = {
    * can show progress toward it without reading another user's private data.
    */
   weeklyGoal: WeeklyGoalTarget;
+  /** Completed workouts (+ activities, since #29) in the current local week. */
+  workoutsThisWeek: number;
 };
 
 export type InviteCodeDoc = {

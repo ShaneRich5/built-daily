@@ -226,6 +226,7 @@ export async function createAccountabilityGroup(
     lastWorkoutDateKey: null,
     lastWorkoutAt: null,
     currentStreak: 0,
+    workoutsThisWeek: 0,
     weeklyGoal: await currentWeeklyGoal(user.uid),
   };
 
@@ -319,6 +320,7 @@ export async function joinAccountabilityGroupByCode(
     lastWorkoutDateKey: null,
     lastWorkoutAt: null,
     currentStreak: 0,
+    workoutsThisWeek: 0,
     weeklyGoal: await currentWeeklyGoal(user.uid),
   };
 
@@ -511,6 +513,7 @@ export async function bumpGroupWorkoutSignals(): Promise<void> {
           lastWorkoutDateKey: signals.lastWorkoutDateKey,
           lastWorkoutAt: signals.lastWorkoutAt,
           currentStreak: rosterStreak,
+          workoutsThisWeek: signals.workoutsThisWeek,
           displayName: displayNameFromAuth(user),
           weeklyGoal,
         });

@@ -319,6 +319,8 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                           ) : null}
                         </p>
                         <p className="text-xs text-zinc-500">
+                          {`${member.workoutsThisWeek}/${member.weeklyGoal} this week`}
+                          {" · "}
                           {member.lastWorkoutDateKey
                             ? `Last: ${formatLocalDateKey(member.lastWorkoutDateKey)}`
                             : "No workout yet"}
