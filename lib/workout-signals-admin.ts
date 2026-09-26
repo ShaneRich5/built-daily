@@ -13,10 +13,12 @@ import { activityMapToRecord } from "@/lib/workout-activity";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
   computeWorkoutSignals,
+  type ActivityDaySummary,
   type CompletedSessionSummary,
 } from "@/lib/workout-signals";
 
 const SESSION_LOOKBACK = 400;
+const ACTIVITY_LOOKBACK = 400;
 
 function toDate(value: unknown): Date | null {
   if (value == null) return null;
@@ -39,17 +41,26 @@ function toDate(value: unknown): Date | null {
 
 async function fetchUserWorkoutSignals(uid: string) {
   const firestore = getAdminFirestore();
-  const snap = await firestore
-    .collection("users")
-    .doc(uid)
-    .collection("sessions")
-    .where("status", "==", "completed")
-    .orderBy("endedAt", "desc")
-    .limit(SESSION_LOOKBACK)
-    .get();
+  const [sessionsSnap, activitiesSnap] = await Promise.all([
+    firestore
+      .collection("users")
+      .doc(uid)
+      .collection("sessions")
+      .where("status", "==", "completed")
+      .orderBy("endedAt", "desc")
+      .limit(SESSION_LOOKBACK)
+      .get(),
+    firestore
+      .collection("users")
+      .doc(uid)
+      .collection("activities")
+      .orderBy("activityDate", "desc")
+      .limit(ACTIVITY_LOOKBACK)
+      .get(),
+  ]);
 
   const sessions: CompletedSessionSummary[] = [];
-  for (const sessionDoc of snap.docs) {
+  for (const sessionDoc of sessionsSnap.docs) {
     const data = sessionDoc.data();
     const startedAt = toDate(data.startedAt);
     if (!startedAt) continue;
@@ -60,7 +71,20 @@ async function fetchUserWorkoutSignals(uid: string) {
       startedAt,
     });
   }
-  return computeWorkoutSignals(sessions);
+
+  const activities: ActivityDaySummary[] = [];
+  for (const activityDoc of activitiesSnap.docs) {
+    const data = activityDoc.data();
+    const activityDate =
+      typeof data.activityDate === "string" ? data.activityDate : null;
+    if (!activityDate) continue;
+    const at =
+      toDate(data.endedAt) ?? toDate(data.startedAt) ?? toDate(data.createdAt);
+    if (!at) continue;
+    activities.push({ activityDate, at });
+  }
+
+  return computeWorkoutSignals(sessions, activities);
 }
 
 function displayNameFrom(data: Record<string, unknown> | undefined): string | null {
