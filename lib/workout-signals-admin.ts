@@ -144,6 +144,7 @@ export async function syncWorkoutSignalsForUser(uid: string): Promise<void> {
               lastWorkoutDateKey: signals.lastWorkoutDateKey,
               lastWorkoutAt,
               currentStreak: rosterStreak,
+              workoutsThisWeek: signals.workoutsThisWeek,
               weeklyGoal,
             };
             if (displayName) patch.displayName = displayName;
