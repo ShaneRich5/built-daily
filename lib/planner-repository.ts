@@ -4,12 +4,14 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
   updateDoc,
   where,
 } from "firebase/firestore";
+import { addDaysToDateKey } from "@/lib/calendar-views";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 import type {
   ScheduledWorkoutDoc,
@@ -215,4 +217,82 @@ export async function deleteScheduledWorkout(entryId: string): Promise<boolean> 
   if (!col) return false;
   await deleteDoc(doc(col, entryId));
   return true;
+}
+
+export type CopyLastWeekResult = {
+  /** New entries created for the current week. */
+  added: number;
+  /** Last week's entries whose target day this week was already planned. */
+  skippedExisting: number;
+};
+
+/**
+ * Copies last week's scheduled workouts (label/planId/exerciseIds, each
+ * dateKey shifted +7 days) into the week starting at `currentWeekStartKey`.
+ * Note-only reminders (no exercises) aren't recurring plans, so they're left
+ * alone. A day already planned this week is left untouched rather than
+ * overwritten.
+ */
+export async function copyLastWeekPlan(
+  currentWeekStartKey: string,
+): Promise<CopyLastWeekResult | null> {
+  const col = scheduledCollectionRef();
+  if (!col || !/^\d{4}-\d{2}-\d{2}$/.test(currentWeekStartKey)) return null;
+
+  const lastWeekStartKey = addDaysToDateKey(currentWeekStartKey, -7);
+  const lastWeekEndKey = addDaysToDateKey(currentWeekStartKey, -1);
+  const currentWeekEndKey = addDaysToDateKey(currentWeekStartKey, 6);
+
+  const parseDocs = (docs: { id: string; data: () => unknown }[]) =>
+    docs
+      .map((d) => parseScheduledEntry(d.id, d.data() as Record<string, unknown>))
+      .filter((e): e is ScheduledWorkoutEntry => e !== null);
+
+  const [lastWeekSnap, currentWeekSnap] = await Promise.all([
+    getDocs(
+      query(
+        col,
+        where("dateKey", ">=", lastWeekStartKey),
+        where("dateKey", "<=", lastWeekEndKey),
+      ),
+    ),
+    getDocs(
+      query(
+        col,
+        where("dateKey", ">=", currentWeekStartKey),
+        where("dateKey", "<=", currentWeekEndKey),
+      ),
+    ),
+  ]);
+
+  const plannedDateKeysThisWeek = new Set(
+    parseDocs(currentWeekSnap.docs).map((e) => e.dateKey),
+  );
+
+  let added = 0;
+  let skippedExisting = 0;
+
+  for (const entry of parseDocs(lastWeekSnap.docs)) {
+    if (entry.exerciseIds.length === 0) continue;
+
+    const targetDateKey = addDaysToDateKey(entry.dateKey, 7);
+    if (plannedDateKeysThisWeek.has(targetDateKey)) {
+      skippedExisting++;
+      continue;
+    }
+
+    await addDoc(col, {
+      dateKey: targetDateKey,
+      label: entry.label,
+      planId: entry.planId,
+      exerciseIds: entry.exerciseIds,
+      status: "planned",
+      sessionId: null,
+      createdAt: serverTimestamp(),
+    });
+    plannedDateKeysThisWeek.add(targetDateKey);
+    added++;
+  }
+
+  return { added, skippedExisting };
 }
