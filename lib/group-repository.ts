@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   onSnapshot,
   orderBy,
   query,
@@ -275,6 +276,15 @@ function isPermissionDenied(err: unknown): boolean {
   return code === "permission-denied" || code.includes("permission-denied");
 }
 
+/**
+ * Joins by code without ever reading `groups/{groupId}` first — a prospective
+ * joiner isn't a member yet, so `firestore.rules` denies that read (member-
+ * only). Uses `increment()` so the security rule (`groupCoreUnchanged`'s
+ * `memberCount <= 12`) enforces the capacity cap atomically instead of us
+ * needing to read the current count to check it client-side. The group name
+ * on the membership index is best-effort backfilled right after, once the
+ * new member doc makes `isGroupMember` (and so the read) true.
+ */
 export async function joinAccountabilityGroupByCode(
   codeRaw: string,
 ): Promise<{ groupId: string } | null> {
@@ -298,18 +308,9 @@ export async function joinAccountabilityGroupByCode(
   if (!invite || !invite.active) return null;
 
   const groupId = invite.groupId;
-  const existingMember = await getDoc(
-    doc(db, "groups", groupId, "members", user.uid),
-  );
+  const memberRef = doc(db, "groups", groupId, "members", user.uid);
+  const existingMember = await getDoc(memberRef);
   if (existingMember.exists()) return { groupId };
-
-  const groupSnap = await getDoc(doc(db, "groups", groupId));
-  if (!groupSnap.exists()) return null;
-  const group = firestoreToGroupDoc(
-    groupSnap.data() as Record<string, unknown>,
-  );
-  if (!group) return null;
-  if (group.memberCount >= GROUP_LIMITS.maxMembers) return null;
 
   const now = new Date();
   const member: GroupMemberDoc = {
@@ -324,37 +325,40 @@ export async function joinAccountabilityGroupByCode(
     weeklyGoal: await currentWeeklyGoal(user.uid),
   };
 
-  await runTransaction(db, async (tx) => {
-    const gRef = doc(db, "groups", groupId);
-    const gSnap = await tx.get(gRef);
-    if (!gSnap.exists()) throw new Error("Group missing");
-    const g = firestoreToGroupDoc(gSnap.data() as Record<string, unknown>);
-    if (!g) throw new Error("Invalid group");
-    if (g.memberCount >= GROUP_LIMITS.maxMembers) {
-      throw new Error("Group full");
-    }
-    const inviteFresh = await tx.get(doc(db, "inviteCodes", code));
-    if (!inviteFresh.exists()) throw new Error("Invite missing");
-    const inviteDoc = firestoreToInviteCodeDoc(
-      inviteFresh.data() as Record<string, unknown>,
-    );
-    if (!inviteDoc?.active) throw new Error("Invite inactive");
+  const gRef = doc(db, "groups", groupId);
+  const membershipRef = doc(db, "users", user.uid, "groupMemberships", groupId);
 
-    tx.set(
-      doc(db, "groups", groupId, "members", user.uid),
-      memberDocToFirestore(member),
-    );
-    tx.set(
-      doc(db, "users", user.uid, "groupMemberships", groupId),
-      membershipIndexToFirestore({
-        groupId,
-        nameSnapshot: g.name,
-        role: "member",
-        joinedAt: now,
-      }),
-    );
-    tx.update(gRef, { memberCount: g.memberCount + 1 });
-  });
+  try {
+    await runTransaction(db, async (tx) => {
+      tx.set(memberRef, memberDocToFirestore(member));
+      tx.set(
+        membershipRef,
+        membershipIndexToFirestore({
+          groupId,
+          // Placeholder — firestore.rules requires a non-empty string here.
+          // Backfilled with the real name right after (see below).
+          nameSnapshot: "Group",
+          role: "member",
+          joinedAt: now,
+        }),
+      );
+      tx.update(gRef, { memberCount: increment(1) });
+    });
+  } catch {
+    return null;
+  }
+
+  try {
+    const groupSnap = await getDoc(gRef);
+    const group = groupSnap.exists()
+      ? firestoreToGroupDoc(groupSnap.data() as Record<string, unknown>)
+      : null;
+    if (group) {
+      await updateDoc(membershipRef, { nameSnapshot: group.name });
+    }
+  } catch {
+    /* best-effort — the group page itself always reads the live name */
+  }
 
   return { groupId };
 }
