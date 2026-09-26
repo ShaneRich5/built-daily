@@ -367,6 +367,25 @@ service cloud.firestore {
         allow delete: if isSignedIn()
           && (memberId == request.auth.uid || isGroupOwner(groupId));
       }
+
+      // One tiny doc per cheer; the doc id itself encodes identity
+      // (`{dateKey}_{toUid}_{fromUid}`), so a member can only ever create or
+      // delete their own cheer and rules stay a plain field-equality check —
+      // no workout details are stored or exposed here, just a show-up nudge.
+      match /cheers/{cheerId} {
+        allow read: if isGroupMember(groupId);
+        allow create: if isGroupMember(groupId)
+          && request.resource.data.groupId == groupId
+          && request.resource.data.fromUid == request.auth.uid
+          && request.resource.data.toUid is string
+          && request.resource.data.toUid != request.auth.uid
+          && request.resource.data.dateKey is string
+          && request.resource.data.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && cheerId == request.resource.data.dateKey
+            + '_' + request.resource.data.toUid
+            + '_' + request.resource.data.fromUid;
+        allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;
+      }
     }
 
     match /inviteCodes/{code} {

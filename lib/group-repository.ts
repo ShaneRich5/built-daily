@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -7,12 +8,17 @@ import {
   orderBy,
   query,
   runTransaction,
+  setDoc,
   updateDoc,
+  where,
   writeBatch,
 } from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 import {
+  cheerDocId,
+  cheerDocToFirestore,
   displayNameFromAuth,
+  firestoreToCheerDoc,
   firestoreToGroupDoc,
   firestoreToInviteCodeDoc,
   firestoreToMemberDoc,
@@ -27,6 +33,7 @@ import {
 import {
   GROUP_LIMITS,
   type AccountabilityGroupDoc,
+  type CheerDoc,
   type GroupMemberDoc,
   type GroupMembershipIndexDoc,
 } from "@/lib/group-types";
@@ -585,4 +592,71 @@ export async function renameAccountabilityGroup(
     }),
   );
   return true;
+}
+
+export type SavedCheer = {
+  id: string;
+  cheer: CheerDoc;
+};
+
+/** Live cheers for a single local day, so the roster can show who's been cheered without a workout-detail read. */
+export function subscribeGroupCheersForDay(
+  groupId: string,
+  dateKey: string,
+  onCheers: (rows: SavedCheer[]) => void,
+): () => void {
+  const db = getFirestoreDb();
+  if (!db || !groupId || !dateKey) {
+    onCheers([]);
+    return () => {};
+  }
+
+  const q = query(
+    collection(db, "groups", groupId, "cheers"),
+    where("dateKey", "==", dateKey),
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      const out: SavedCheer[] = [];
+      for (const d of snap.docs) {
+        const cheer = firestoreToCheerDoc(d.data() as Record<string, unknown>);
+        if (cheer) out.push({ id: d.id, cheer });
+      }
+      onCheers(out);
+    },
+    () => onCheers([]),
+  );
+}
+
+/** Toggles today's cheer from the signed-in user to a groupmate. */
+export async function toggleGroupCheer(
+  groupId: string,
+  toUid: string,
+  dateKey: string,
+): Promise<boolean> {
+  const db = getFirestoreDb();
+  const user = getFirebaseAuth()?.currentUser;
+  if (!db || !user || !groupId || !toUid || toUid === user.uid) return false;
+
+  const id = cheerDocId({ dateKey, toUid, fromUid: user.uid });
+  const ref = doc(db, "groups", groupId, "cheers", id);
+  try {
+    const existing = await getDoc(ref);
+    if (existing.exists()) {
+      await deleteDoc(ref);
+      return false;
+    }
+    const cheer: CheerDoc = {
+      groupId,
+      toUid,
+      fromUid: user.uid,
+      dateKey,
+      createdAt: new Date(),
+    };
+    await setDoc(ref, cheerDocToFirestore(cheer));
+    return true;
+  } catch {
+    return false;
+  }
 }
