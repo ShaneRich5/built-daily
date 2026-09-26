@@ -18,11 +18,11 @@ export default function HomePage() {
 
       <HomeWeekStrip />
 
+      <GroupsHomeTeaser />
+
       <HomeWorkoutActivity />
 
       <HomeTimeline />
-
-      <GroupsHomeTeaser />
     </div>
   );
 }

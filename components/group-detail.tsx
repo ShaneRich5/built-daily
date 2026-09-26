@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, PartyPopper } from "lucide-react";
+import { Check, Copy, PartyPopper, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -62,6 +62,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
   const [cheers, setCheers] = useState<SavedCheer[]>([]);
   const [cheerBusyUid, setCheerBusyUid] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [todayKey] = useState(() => localDateKeyFromMs(Date.now()));
@@ -121,6 +122,31 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
       await toggleGroupCheer(groupId, toUid, todayKey);
     } finally {
       setCheerBusyUid(null);
+    }
+  }
+
+  async function onShareInvite() {
+    if (!inviteCode) return;
+    const url = `${window.location.origin}/join/${inviteCode}`;
+    const groupName = group?.group.name ?? "my group";
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Built Daily",
+          text: `Join ${groupName} on Built Daily`,
+          url,
+        });
+        return;
+      } catch {
+        // Cancelled or unsupported mid-call — fall back to copy-link below.
+      }
+    }
+
+    const ok = await copyText(url);
+    if (ok) {
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 2000);
     }
   }
 
@@ -275,6 +301,19 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
               {inviteCode}
             </p>
             <div className="flex flex-wrap gap-2">
+              <Button type="button" size="lg" onClick={() => void onShareInvite()}>
+                {linkCopied ? (
+                  <>
+                    <Check />
+                    Link copied
+                  </>
+                ) : (
+                  <>
+                    <Share2 />
+                    Share invite
+                  </>
+                )}
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -306,8 +345,8 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
               ) : null}
             </div>
             <p className="text-xs text-zinc-500">
-              Share this code so partners can join. Rotating invalidates the old
-              code.
+              Send the link, or share the code for someone to type in. Rotating
+              invalidates both.
             </p>
           </section>
 
@@ -350,6 +389,8 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                           ) : null}
                         </p>
                         <p className="text-xs text-zinc-500">
+                          {`${member.workoutsThisWeek}/${member.weeklyGoal} this week`}
+                          {" · "}
                           {member.lastWorkoutDateKey
                             ? `Last: ${formatLocalDateKey(member.lastWorkoutDateKey)}`
                             : "No workout yet"}

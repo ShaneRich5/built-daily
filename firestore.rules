@@ -356,7 +356,11 @@ service cloud.firestore {
       allow delete: if isGroupOwner(groupId);
 
       match /members/{memberId} {
-        allow read: if isGroupMember(groupId);
+        // A user can always read their own row (even before it exists) so a
+        // prospective joiner can check "am I already a member?" without
+        // needing group membership first. Other members' rows stay
+        // member-only.
+        allow read: if isGroupMember(groupId) || memberId == request.auth.uid;
         allow create: if isSignedIn()
           && memberId == request.auth.uid
           && validMemberCreate(groupId)

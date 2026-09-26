@@ -130,6 +130,7 @@ export function memberDocToFirestore(
       : null,
     currentStreak: doc.currentStreak,
     weeklyGoal: doc.weeklyGoal,
+    workoutsThisWeek: doc.workoutsThisWeek,
   };
 }
 
@@ -151,6 +152,11 @@ export function firestoreToMemberDoc(
     typeof data.currentStreak === "number" && Number.isFinite(data.currentStreak)
       ? Math.max(0, Math.round(data.currentStreak))
       : 0;
+  const workoutsThisWeek =
+    typeof data.workoutsThisWeek === "number" &&
+    Number.isFinite(data.workoutsThisWeek)
+      ? Math.max(0, Math.round(data.workoutsThisWeek))
+      : 0;
   return {
     uid,
     displayName,
@@ -160,6 +166,7 @@ export function firestoreToMemberDoc(
     lastWorkoutAt,
     currentStreak,
     weeklyGoal: asWeeklyGoal(data.weeklyGoal),
+    workoutsThisWeek,
   };
 }
 

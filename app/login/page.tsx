@@ -6,7 +6,15 @@ export const metadata: Metadata = {
   description: "Sign in or create a Built Daily account.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  const redirectTo =
+    next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <header className="space-y-1">
@@ -18,7 +26,7 @@ export default function LoginPage() {
           Sign in with email or create a new account.
         </p>
       </header>
-      <LoginForm />
+      <LoginForm redirectTo={redirectTo} />
     </div>
   );
 }
