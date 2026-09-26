@@ -1,8 +1,10 @@
 "use client";
 
-import { Check, Copy, Download } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Check, Copy, Download, Users } from "lucide-react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { getUserGroupMemberships, type SavedGroupMembership } from "@/lib/group-repository";
 import {
   formatWorkoutJournalEntry,
   workoutJournalFilename,
@@ -62,6 +64,18 @@ export function WorkoutSavedExport({
   const journalText = formatWorkoutJournalEntry(session);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const [memberships, setMemberships] = useState<SavedGroupMembership[]>([]);
+
+  useEffect(() => {
+    if (!persisted) return;
+    let cancelled = false;
+    void getUserGroupMemberships().then((rows) => {
+      if (!cancelled) setMemberships(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [persisted]);
 
   const handleCopy = useCallback(async () => {
     const ok = await copyText(journalText);
@@ -99,6 +113,21 @@ export function WorkoutSavedExport({
             : "Sign in before finishing next time so it appears under Recent workouts. You can still copy this log now."}
         </p>
       </header>
+
+      {memberships.length > 0 ? (
+        <Link
+          href={
+            memberships.length === 1
+              ? `/groups/${memberships[0]!.id}`
+              : "/groups"
+          }
+          className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+        >
+          <Users className="size-4 shrink-0 text-zinc-400 dark:text-zinc-500" />
+          Nice — your group{memberships.length > 1 ? "s can" : " can"} see you
+          showed up today.
+        </Link>
+      ) : null}
 
       <pre
         className="max-h-[min(52vh,28rem)] overflow-auto rounded-xl border border-zinc-200 bg-white p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"

@@ -83,6 +83,21 @@ async function allocateInviteCode(): Promise<string | null> {
   return null;
 }
 
+/** One-shot read of the signed-in user's group memberships (no live updates). */
+export async function getUserGroupMemberships(): Promise<SavedGroupMembership[]> {
+  const col = membershipsCollectionRef();
+  if (!col) return [];
+  const snap = await getDocs(col);
+  const out: SavedGroupMembership[] = [];
+  for (const d of snap.docs) {
+    const membership = firestoreToMembershipIndex(
+      d.data() as Record<string, unknown>,
+    );
+    if (membership) out.push({ id: d.id, membership });
+  }
+  return out;
+}
+
 /** Live list of the signed-in user's group memberships. */
 export function subscribeUserGroupMemberships(
   onMemberships: (rows: SavedGroupMembership[]) => void,
