@@ -2,6 +2,7 @@ import { Timestamp } from "firebase/firestore";
 import {
   GROUP_LIMITS,
   type AccountabilityGroupDoc,
+  type CheerDoc,
   type GroupMemberDoc,
   type GroupMemberRole,
   type GroupMembershipIndexDoc,
@@ -228,6 +229,32 @@ export function firestoreToMembershipIndex(
  * Treat it as stale — and show 0 — once a full week has passed with no
  * activity at all, rather than storing an expiring value.
  */
+export function cheerDocId(cheer: Pick<CheerDoc, "dateKey" | "toUid" | "fromUid">): string {
+  return `${cheer.dateKey}_${cheer.toUid}_${cheer.fromUid}`;
+}
+
+export function cheerDocToFirestore(doc: CheerDoc): Record<string, unknown> {
+  return {
+    groupId: doc.groupId,
+    toUid: doc.toUid,
+    fromUid: doc.fromUid,
+    dateKey: doc.dateKey,
+    createdAt: Timestamp.fromDate(doc.createdAt),
+  };
+}
+
+export function firestoreToCheerDoc(
+  data: Record<string, unknown>,
+): CheerDoc | null {
+  const groupId = typeof data.groupId === "string" ? data.groupId : "";
+  const toUid = typeof data.toUid === "string" ? data.toUid : "";
+  const fromUid = typeof data.fromUid === "string" ? data.fromUid : "";
+  const dateKey = asDateKey(data.dateKey);
+  const createdAt = asTimestamp(data.createdAt);
+  if (!groupId || !toUid || !fromUid || !dateKey || !createdAt) return null;
+  return { groupId, toUid, fromUid, dateKey, createdAt };
+}
+
 export function isGroupStreakStale(
   lastWorkoutDateKey: string | null,
   todayKey: string,

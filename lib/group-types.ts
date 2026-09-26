@@ -56,3 +56,17 @@ export type GroupMembershipIndexDoc = {
   role: GroupMemberRole;
   joinedAt: Date;
 };
+
+/**
+ * A single lightweight "cheer" from one member to another for a given local
+ * day. The doc id (`{dateKey}_{toUid}_{fromUid}`) encodes identity, so at
+ * most one cheer can exist per sender/recipient/day and firestore.rules can
+ * enforce ownership with a plain equality check.
+ */
+export type CheerDoc = {
+  groupId: string;
+  toUid: string;
+  fromUid: string;
+  dateKey: string;
+  createdAt: Date;
+};

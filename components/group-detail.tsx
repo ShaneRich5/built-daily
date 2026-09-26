@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Share2 } from "lucide-react";
+import { Check, Copy, PartyPopper, Share2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,7 +11,10 @@ import {
   getAccountabilityGroup,
   leaveAccountabilityGroup,
   rotateGroupInviteCode,
+  subscribeGroupCheersForDay,
   subscribeGroupMembers,
+  toggleGroupCheer,
+  type SavedCheer,
   type SavedGroup,
   type SavedGroupMember,
 } from "@/lib/group-repository";
@@ -56,6 +59,8 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
   const { user, loading, firebaseReady } = useAuth();
   const [group, setGroup] = useState<SavedGroup | null | undefined>(undefined);
   const [members, setMembers] = useState<SavedGroupMember[] | null>(null);
+  const [cheers, setCheers] = useState<SavedCheer[]>([]);
+  const [cheerBusyUid, setCheerBusyUid] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,6 +92,15 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
     return subscribeGroupMembers(groupId, setMembers);
   }, [user, firebaseReady, groupId]);
 
+  useEffect(() => {
+    if (!user || !firebaseReady || !groupId) {
+      return () => {
+        setCheers([]);
+      };
+    }
+    return subscribeGroupCheersForDay(groupId, todayKey, setCheers);
+  }, [user, firebaseReady, groupId, todayKey]);
+
   const isOwner = Boolean(
     user && group && group.group.createdBy === user.uid,
   );
@@ -98,6 +112,16 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
     if (ok) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  async function onCheer(toUid: string) {
+    if (cheerBusyUid) return;
+    setCheerBusyUid(toUid);
+    try {
+      await toggleGroupCheer(groupId, toUid, todayKey);
+    } finally {
+      setCheerBusyUid(null);
     }
   }
 
@@ -343,6 +367,13 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                   const workedToday =
                     member.lastWorkoutDateKey === todayKey;
                   const streak = effectiveGroupMemberStreak(member, todayKey);
+                  const isSelf = user.uid === member.uid;
+                  const cheeredByMe = cheers.some(
+                    (c) => c.cheer.toUid === member.uid && c.cheer.fromUid === user.uid,
+                  );
+                  const cheerCount = cheers.filter(
+                    (c) => c.cheer.toUid === member.uid,
+                  ).length;
                   return (
                     <li
                       key={id}
@@ -351,7 +382,7 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                       <div className="min-w-0 space-y-0.5">
                         <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">
                           {member.displayName}
-                          {user.uid === member.uid ? (
+                          {isSelf ? (
                             <span className="ml-1.5 text-xs font-normal text-zinc-500">
                               (you)
                             </span>
@@ -366,17 +397,41 @@ export function GroupDetail({ groupId }: GroupDetailProps) {
                           {streak > 0
                             ? ` · ${streak}-week streak`
                             : ""}
+                          {cheerCount > 0
+                            ? ` · ${cheerCount} cheer${cheerCount === 1 ? "" : "s"}`
+                            : ""}
                         </p>
                       </div>
-                      <span
-                        className={
-                          workedToday
-                            ? "shrink-0 rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
-                            : "shrink-0 rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400"
-                        }
-                      >
-                        {workedToday ? "Today" : "Not yet"}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {!isSelf ? (
+                          <button
+                            type="button"
+                            aria-label={
+                              cheeredByMe
+                                ? `Remove cheer for ${member.displayName}`
+                                : `Cheer ${member.displayName}`
+                            }
+                            disabled={cheerBusyUid === member.uid}
+                            onClick={() => void onCheer(member.uid)}
+                            className={
+                              cheeredByMe
+                                ? "rounded-md bg-amber-50 p-1.5 text-amber-600 transition active:scale-95 disabled:opacity-50 dark:bg-amber-950/40 dark:text-amber-400"
+                                : "rounded-md p-1.5 text-zinc-400 transition active:scale-95 hover:text-amber-600 disabled:opacity-50 dark:text-zinc-500 dark:hover:text-amber-400"
+                            }
+                          >
+                            <PartyPopper className="size-4" />
+                          </button>
+                        ) : null}
+                        <span
+                          className={
+                            workedToday
+                              ? "rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                              : "rounded-md bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400"
+                          }
+                        >
+                          {workedToday ? "Today" : "Not yet"}
+                        </span>
+                      </div>
                     </li>
                   );
                 })}
