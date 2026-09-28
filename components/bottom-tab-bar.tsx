@@ -3,6 +3,7 @@
 import { Calendar, Home, LineChart, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useAuth } from "@/components/auth-provider";
 
 const TABS = [
@@ -40,11 +41,35 @@ export function useShowBottomTabBar(): boolean {
 export function BottomTabBar() {
   const pathname = usePathname();
   const show = useShowBottomTabBar();
+  const navRef = useRef<HTMLElement>(null);
+
+  // Anything that docks above the bar reads --bottom-nav-height, so it has to be
+  // the measured height: safe-area padding makes it device-dependent.
+  useEffect(() => {
+    const root = document.documentElement;
+    const nav = navRef.current;
+    if (!nav) {
+      root.style.setProperty("--bottom-nav-height", "0px");
+      return;
+    }
+    const observer = new ResizeObserver(() => {
+      root.style.setProperty(
+        "--bottom-nav-height",
+        `${nav.getBoundingClientRect().height}px`,
+      );
+    });
+    observer.observe(nav);
+    return () => {
+      observer.disconnect();
+      root.style.setProperty("--bottom-nav-height", "0px");
+    };
+  }, [show]);
 
   if (!show) return null;
 
   return (
     <nav
+      ref={navRef}
       aria-label="Primary"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:border-zinc-800 dark:bg-zinc-950/95 dark:supports-[backdrop-filter]:bg-zinc-950/80"
       style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
