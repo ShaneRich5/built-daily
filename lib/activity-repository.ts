@@ -22,6 +22,8 @@ import type {
   SavedActivity,
 } from "@/lib/activity-types";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
+import { bumpGroupWorkoutSignals } from "@/lib/group-repository";
+import { syncPublicProfileConsistency } from "@/lib/public-profile-repository";
 
 function activitiesCollectionRef() {
   const db = getFirestoreDb();
@@ -118,6 +120,16 @@ export async function getActivity(
   return { id: snap.id, activity };
 }
 
+/** Best-effort: a logged activity counts as "showing up" for groups/public profile too. */
+async function resyncWorkoutSignals(): Promise<void> {
+  try {
+    await bumpGroupWorkoutSignals();
+    await syncPublicProfileConsistency();
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function logActivity(
   input: LogActivityInput,
 ): Promise<string | null> {
@@ -126,6 +138,7 @@ export async function logActivity(
   const docData = buildActivityDoc(input);
   if (!docData) return null;
   const ref = await addDoc(col, activityDocToFirestore(docData));
+  await resyncWorkoutSignals();
   return ref.id;
 }
 
@@ -159,6 +172,7 @@ export async function updateActivity(
     updatedAt: new Date(),
   };
   await setDoc(ref, activityDocToFirestore(saved));
+  await resyncWorkoutSignals();
   return saved;
 }
 
@@ -167,5 +181,6 @@ export async function deleteActivity(activityId: string): Promise<boolean> {
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid || !activityId) return false;
   await deleteDoc(doc(db, "users", uid, "activities", activityId));
+  await resyncWorkoutSignals();
   return true;
 }

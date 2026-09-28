@@ -8,7 +8,12 @@ import { mapAuthError } from "@/lib/auth-errors";
 
 type Mode = "signin" | "signup";
 
-export function LoginForm() {
+type LoginFormProps = {
+  /** Where to send the user after a successful sign-in or account creation. */
+  redirectTo?: string;
+};
+
+export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
   const router = useRouter();
   const { signIn, signUp, signInWithGoogle, firebaseReady } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
@@ -26,14 +31,14 @@ export function LoginForm() {
     setPending(true);
     try {
       await signInWithGoogle();
-      router.push("/");
+      router.push(redirectTo);
       router.refresh();
     } catch (err) {
       setError(mapAuthError(err));
     } finally {
       setPending(false);
     }
-  }, [firebaseReady, router, signInWithGoogle]);
+  }, [firebaseReady, redirectTo, router, signInWithGoogle]);
 
   const onSubmit = useCallback(
     async (e: FormEvent) => {
@@ -50,7 +55,7 @@ export function LoginForm() {
         } else {
           await signUp(email, password);
         }
-        router.push("/");
+        router.push(redirectTo);
         router.refresh();
       } catch (err) {
         setError(mapAuthError(err));
@@ -58,7 +63,7 @@ export function LoginForm() {
         setPending(false);
       }
     },
-    [email, password, mode, signIn, signUp, firebaseReady, router],
+    [email, password, mode, signIn, signUp, firebaseReady, redirectTo, router],
   );
 
   if (!firebaseReady) {

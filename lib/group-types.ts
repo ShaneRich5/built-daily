@@ -39,6 +39,8 @@ export type GroupMemberDoc = {
    * can show progress toward it without reading another user's private data.
    */
   weeklyGoal: WeeklyGoalTarget;
+  /** Completed workouts (+ activities, since #29) in the current local week. */
+  workoutsThisWeek: number;
 };
 
 export type InviteCodeDoc = {
@@ -53,4 +55,18 @@ export type GroupMembershipIndexDoc = {
   nameSnapshot: string;
   role: GroupMemberRole;
   joinedAt: Date;
+};
+
+/**
+ * A single lightweight "cheer" from one member to another for a given local
+ * day. The doc id (`{dateKey}_{toUid}_{fromUid}`) encodes identity, so at
+ * most one cheer can exist per sender/recipient/day and firestore.rules can
+ * enforce ownership with a plain equality check.
+ */
+export type CheerDoc = {
+  groupId: string;
+  toUid: string;
+  fromUid: string;
+  dateKey: string;
+  createdAt: Date;
 };

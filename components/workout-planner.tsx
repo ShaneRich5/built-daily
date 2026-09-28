@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { LogActivitySheet } from "@/components/log-activity-sheet";
 import { PlannerCalendar } from "@/components/planner/planner-calendar";
+import { Button } from "@/components/ui/button";
 import { PlannerFilters } from "@/components/planner/planner-filters";
 import {
   PlannerScheduleForm,
@@ -40,6 +41,7 @@ import {
 } from "@/lib/planner-list-items";
 import {
   addScheduledWorkout,
+  copyLastWeekPlan,
   deleteScheduledWorkout,
   subscribeScheduledWorkoutsInRange,
 } from "@/lib/planner-repository";
@@ -107,6 +109,10 @@ export function WorkoutPlanner() {
   const [reminderLabel, setReminderLabel] = useState("");
   const [adding, setAdding] = useState(false);
   const [logActivityOpen, setLogActivityOpen] = useState(false);
+  const [copyingLastWeek, setCopyingLastWeek] = useState(false);
+  const [copyLastWeekMessage, setCopyLastWeekMessage] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     setCalendarVisible(readStoredVisible());
@@ -424,6 +430,33 @@ export function WorkoutPlanner() {
     await deleteScheduledWorkout(entryId);
   }, []);
 
+  const handleCopyLastWeek = useCallback(async () => {
+    setCopyingLastWeek(true);
+    setCopyLastWeekMessage(null);
+    try {
+      const result = await copyLastWeekPlan(startOfWeekDateKey(todayKey));
+      if (!result) {
+        setCopyLastWeekMessage("Couldn't copy last week's plan.");
+      } else if (result.added === 0 && result.skippedExisting === 0) {
+        setCopyLastWeekMessage("Last week had nothing to copy.");
+      } else if (result.added === 0) {
+        setCopyLastWeekMessage("This week is already fully planned.");
+      } else {
+        const parts = [
+          `Added ${result.added} workout${result.added === 1 ? "" : "s"}`,
+        ];
+        if (result.skippedExisting > 0) {
+          parts.push(
+            `${result.skippedExisting} day${result.skippedExisting === 1 ? "" : "s"} already planned`,
+          );
+        }
+        setCopyLastWeekMessage(parts.join(" · "));
+      }
+    } finally {
+      setCopyingLastWeek(false);
+    }
+  }, [todayKey]);
+
   const signedInReady = Boolean(user && firebaseReady);
   const isFutureOrToday = scheduleDateKey >= todayKey;
 
@@ -490,6 +523,21 @@ export function WorkoutPlanner() {
 
       {signedInReady ? (
         <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={copyingLastWeek}
+              onClick={() => void handleCopyLastWeek()}
+            >
+              {copyingLastWeek ? "Copying…" : "Same as last week"}
+            </Button>
+            {copyLastWeekMessage ? (
+              <p className="text-xs text-zinc-500">{copyLastWeekMessage}</p>
+            ) : null}
+          </div>
+
           <PlannerFilters
             search={search}
             onSearchChange={setSearch}
