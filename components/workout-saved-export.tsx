@@ -2,6 +2,7 @@
 
 import { Check, Copy, Download } from "lucide-react";
 import { useCallback, useState } from "react";
+import { useShowBottomTabBar } from "@/components/bottom-tab-bar";
 import { Button } from "@/components/ui/button";
 import {
   formatWorkoutJournalEntry,
@@ -59,6 +60,7 @@ export function WorkoutSavedExport({
   persisted,
   onDone,
 }: WorkoutSavedExportProps) {
+  const showTabBar = useShowBottomTabBar();
   const journalText = formatWorkoutJournalEntry(session);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -79,7 +81,13 @@ export function WorkoutSavedExport({
   }, [journalText, session]);
 
   return (
-    <div className="flex flex-1 flex-col gap-5 pb-28 pt-2">
+    <div
+      className={`flex flex-1 flex-col gap-5 pt-2 ${
+        showTabBar
+          ? "pb-[calc(7rem+4.5rem+env(safe-area-inset-bottom,0px))]"
+          : "pb-28"
+      }`}
+    >
       <header className="space-y-1">
         <p
           className={
@@ -115,7 +123,14 @@ export function WorkoutSavedExport({
         </p>
       ) : null}
 
-      <div className="fixed bottom-0 left-0 right-0 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+      <div
+        className="fixed left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95"
+        style={{
+          bottom: showTabBar
+            ? "calc(4.5rem + env(safe-area-inset-bottom, 0px))"
+            : 0,
+        }}
+      >
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2 px-4 sm:px-5">
           <Button
             type="button"

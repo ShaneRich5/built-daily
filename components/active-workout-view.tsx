@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { useShowBottomTabBar } from "@/components/bottom-tab-bar";
 import { WorkoutAddExerciseCard } from "@/components/workout-add-exercise-card";
 import { ExerciseHistoryControls } from "@/components/exercise-history-controls";
 import { WorkoutMetaFields } from "@/components/workout-meta-fields";
@@ -349,6 +350,7 @@ export function ActiveWorkoutView({
   onFinish,
   onDiscard,
 }: ActiveWorkoutViewProps) {
+  const showTabBar = useShowBottomTabBar();
   const [sessionStartedAtMs] = useState(
     () => sessionStartedAtMsProp ?? Date.now(),
   );
@@ -1283,7 +1285,11 @@ export function ActiveWorkoutView({
       <ul
         className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${
           compact ? "gap-1.5" : "gap-3"
-        } pb-24 sm:pb-36`}
+        } ${
+          showTabBar
+            ? "pb-[calc(6rem+4.5rem+env(safe-area-inset-bottom,0px))] sm:pb-[calc(9rem+4.5rem+env(safe-area-inset-bottom,0px))]"
+            : "pb-24 sm:pb-36"
+        }`}
       >
         {activeExercises.length === 0 ? (
           <li className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 px-4 py-8 text-center dark:border-zinc-800 dark:bg-zinc-950/40">
@@ -1639,7 +1645,14 @@ export function ActiveWorkoutView({
         ) : null}
       </ul>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95">
+      <div
+        className="fixed left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95"
+        style={{
+          bottom: showTabBar
+            ? "calc(4.5rem + env(safe-area-inset-bottom, 0px))"
+            : 0,
+        }}
+      >
         <div className="mx-auto w-full max-w-2xl sm:px-5">
           <p className="mb-2 hidden text-center text-xs text-zinc-500 sm:block">
             {activeExercises.length === 0

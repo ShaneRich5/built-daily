@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ChevronDown, Copy, CopyPlus, Download, MoreHorizontal, Play, Plus, Save, Trash2 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useShowBottomTabBar } from "@/components/bottom-tab-bar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -262,6 +263,7 @@ export function WorkoutSessionDetail({
   onSaved,
 }: WorkoutSessionDetailProps) {
   const router = useRouter();
+  const showTabBar = useShowBottomTabBar();
   const [base, setBase] = useState(() => cloneSession(session));
   const initialDraft = draftFromSession(session);
   const [title, setTitle] = useState(initialDraft.title);
@@ -570,7 +572,13 @@ export function WorkoutSessionDetail({
   }, [creatingTemplate, previewDoc, router]);
 
   return (
-    <div className="flex flex-1 flex-col gap-6 pb-28">
+    <div
+      className={`flex flex-1 flex-col gap-6 ${
+        showTabBar
+          ? "pb-[calc(7rem+4.5rem+env(safe-area-inset-bottom,0px))]"
+          : "pb-28"
+      }`}
+    >
       <div className="space-y-3">
         <Link
           href={backHref}
@@ -900,7 +908,14 @@ export function WorkoutSessionDetail({
         </p>
       ) : null}
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95">
+      <div
+        className="fixed left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95"
+        style={{
+          bottom: showTabBar
+            ? "calc(4.5rem + env(safe-area-inset-bottom, 0px))"
+            : 0,
+        }}
+      >
         <div className="mx-auto flex w-full max-w-2xl items-center gap-1.5 sm:gap-2 sm:px-5">
           <DropdownMenu>
             <DropdownMenuTrigger

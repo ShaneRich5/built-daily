@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { ActivityTypeIcon } from "@/components/activity-type-icon";
 import { LogActivitySheet } from "@/components/log-activity-sheet";
 import { useAuth } from "@/components/auth-provider";
+import { useShowBottomTabBar } from "@/components/bottom-tab-bar";
 import { Button } from "@/components/ui/button";
 import { WorkoutCard } from "@/components/workout-card";
 import { getActivityTypeById } from "@/lib/activity-catalog";
@@ -187,6 +188,7 @@ function downloadTextFile(filename: string, text: string) {
 
 export function HomeTimeline() {
   const { user, loading, firebaseReady } = useAuth();
+  const showTabBar = useShowBottomTabBar();
   const [sessions, setSessions] = useState<SessionSummary[] | null>(null);
   const [activities, setActivities] = useState<SavedActivity[] | null>(null);
   const [logOpen, setLogOpen] = useState(false);
@@ -335,7 +337,9 @@ export function HomeTimeline() {
   if (sessions === null || activities === null) return <LoadingSkeleton />;
 
   return (
-    <div className={`space-y-4 ${selecting ? "pb-28" : ""}`}>
+    <div
+      className={`space-y-4 ${selecting ? (showTabBar ? "pb-44" : "pb-28") : ""}`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2
           id="timeline-heading"
@@ -472,7 +476,14 @@ export function HomeTimeline() {
       )}
 
       {selecting ? (
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
+        <div
+          className="fixed left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50/95 p-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95"
+          style={{
+            bottom: showTabBar
+              ? "calc(4.5rem + env(safe-area-inset-bottom, 0px))"
+              : 0,
+          }}
+        >
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-2 px-4 sm:px-5">
             {exportError ? (
               <p className="text-center text-xs text-amber-700 dark:text-amber-400">
