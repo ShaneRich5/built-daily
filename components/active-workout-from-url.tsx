@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -167,7 +168,10 @@ export function ActiveWorkoutFromUrl() {
   const [savedSession, setSavedSession] = useState<{
     session: WorkoutSessionDoc;
     persisted: boolean;
+    canRetry?: boolean;
   } | null>(null);
+  const [pendingFinish, setPendingFinish] =
+    useState<ActiveWorkoutFinishSnapshot | null>(null);
   const [celebrateFinish, setCelebrateFinish] = useState(false);
   const createOnceRef = useRef(false);
 
@@ -296,7 +300,11 @@ export function ActiveWorkoutFromUrl() {
         status: "in_progress",
         endedAt: null,
       });
-      await upsertWorkoutSession(liveSessionId, docData);
+      try {
+        await upsertWorkoutSession(liveSessionId, docData);
+      } catch (err) {
+        Sentry.captureException(err, { tags: { flow: "workout-autosave" } });
+      }
     },
     [liveSessionId],
   );
@@ -310,17 +318,41 @@ export function ActiveWorkoutFromUrl() {
         ...snapshot,
         planId: resumePlanId ?? planId ?? snapshot.planId,
       };
-      try {
-        const saved = await saveCompletedWorkoutSession(
-          withPlan,
-          liveSessionId,
-        );
-        if (saved) {
-          setSavedSession({ session: saved.doc, persisted: true });
-          return;
+      setPendingFinish(withPlan);
+
+      // A signed-out user can never persist; that's the only case where the
+      // "not saved to your account" messaging is actually true.
+      if (!user) {
+        setSavedSession({
+          session: buildWorkoutSessionDoc(withPlan, {
+            status: "completed",
+            endedAt: new Date(),
+          }),
+          persisted: false,
+          canRetry: false,
+        });
+        return;
+      }
+
+      // One retry absorbs transient network/auth-token blips so a save
+      // doesn't fail (and leave the session stuck in_progress) on the first
+      // hiccup.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const saved = await saveCompletedWorkoutSession(
+            withPlan,
+            liveSessionId,
+          );
+          if (saved) {
+            setSavedSession({ session: saved.doc, persisted: true });
+            setPendingFinish(null);
+            return;
+          }
+        } catch (err) {
+          Sentry.captureException(err, {
+            tags: { flow: "workout-finish", attempt: String(attempt) },
+          });
         }
-      } catch {
-        /* still offer journal export */
       }
       setSavedSession({
         session: buildWorkoutSessionDoc(withPlan, {
@@ -328,10 +360,17 @@ export function ActiveWorkoutFromUrl() {
           endedAt: new Date(),
         }),
         persisted: false,
+        canRetry: true,
       });
     },
-    [planId, liveSessionId, resume],
+    [planId, liveSessionId, resume, user],
   );
+
+  const handleRetryFinish = useCallback(() => {
+    if (!pendingFinish) return;
+    setSavedSession(null);
+    void handleFinish(pendingFinish);
+  }, [pendingFinish, handleFinish]);
 
   const handleExportDone = useCallback(() => {
     router.push("/");
@@ -355,6 +394,7 @@ export function ActiveWorkoutFromUrl() {
       <WorkoutSavedExport
         session={savedSession.session}
         persisted={savedSession.persisted}
+        onRetry={savedSession.canRetry ? handleRetryFinish : undefined}
         onDone={handleExportDone}
       />
     );
