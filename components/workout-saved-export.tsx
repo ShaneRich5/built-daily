@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Download, Users } from "lucide-react";
+import { Check, Copy, Download, RotateCw, Users } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,10 @@ type WorkoutSavedExportProps = {
   session: WorkoutSessionDoc;
   /** False when Firestore save was skipped or failed (e.g. signed out). */
   persisted: boolean;
+  /** Present only when persisted=false because a signed-in user's save
+   * failed (vs. being signed out), so we can offer a real retry instead of
+   * misleading "sign in next time" copy. */
+  onRetry?: () => void;
   onDone: () => void;
 };
 
@@ -59,6 +63,7 @@ function downloadTextFile(filename: string, text: string) {
 export function WorkoutSavedExport({
   session,
   persisted,
+  onRetry,
   onDone,
 }: WorkoutSavedExportProps) {
   const journalText = formatWorkoutJournalEntry(session);
@@ -102,7 +107,11 @@ export function WorkoutSavedExport({
               : "text-sm font-medium text-amber-700 dark:text-amber-400"
           }
         >
-          {persisted ? "Workout saved" : "Not saved to your account"}
+          {persisted
+            ? "Workout saved"
+            : onRetry
+              ? "Couldn't save"
+              : "Not saved to your account"}
         </p>
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           Add it to your journal
@@ -110,9 +119,24 @@ export function WorkoutSavedExport({
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           {persisted
             ? "Copy this log and paste it into Notes, Day One, Notion, or wherever you keep your training journal."
-            : "Sign in before finishing next time so it appears under Recent workouts. You can still copy this log now."}
+            : onRetry
+              ? "We couldn't save this to your account. Try again, or copy the log below so nothing is lost."
+              : "Sign in before finishing next time so it appears under Recent workouts. You can still copy this log now."}
         </p>
       </header>
+
+      {onRetry ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="h-11 w-full gap-2 rounded-xl"
+          onClick={onRetry}
+        >
+          <RotateCw className="size-4" />
+          Try saving again
+        </Button>
+      ) : null}
 
       {memberships.length > 0 ? (
         <Link
