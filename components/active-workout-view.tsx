@@ -1639,13 +1639,8 @@ export function ActiveWorkoutView({
         ) : null}
       </ul>
 
-      <div className="fixed bottom-[var(--bottom-nav-height,0px)] left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95">
+      <div className="fixed bottom-[var(--bottom-nav-height,0px)] left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-2.5 sm:backdrop-blur sm:dark:bg-zinc-950/95">
         <div className="mx-auto w-full max-w-2xl sm:px-5">
-          <p className="mb-2 hidden text-center text-xs text-zinc-500 sm:block">
-            {activeExercises.length === 0
-              ? "No exercises yet — you can still finish to log that you showed up."
-              : "Progress saves automatically when you’re signed in. You can leave and continue later from Recent workouts."}
-          </p>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -1654,7 +1649,7 @@ export function ActiveWorkoutView({
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="size-11 shrink-0 rounded-lg sm:size-12 sm:rounded-xl"
+                    className="size-11 shrink-0 rounded-lg sm:rounded-xl"
                     aria-label="More actions"
                   />
                 }
@@ -1704,7 +1699,7 @@ export function ActiveWorkoutView({
             <button
               type="button"
               onClick={handleFinish}
-              className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white sm:h-12 sm:rounded-xl sm:text-base dark:bg-emerald-500"
+              className="flex h-11 min-w-0 flex-1 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white sm:rounded-xl dark:bg-emerald-500"
             >
               {activeExercises.length === 0
                 ? "Finish without details"

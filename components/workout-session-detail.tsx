@@ -900,7 +900,7 @@ export function WorkoutSessionDetail({
         </p>
       ) : null}
 
-      <div className="fixed bottom-[var(--bottom-nav-height,0px)] left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-4 sm:backdrop-blur sm:dark:bg-zinc-950/95">
+      <div className="fixed bottom-[var(--bottom-nav-height,0px)] left-0 right-0 z-40 border-t border-zinc-200 bg-zinc-50 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] dark:border-zinc-800 dark:bg-zinc-950 sm:bg-zinc-50/95 sm:px-4 sm:py-2.5 sm:backdrop-blur sm:dark:bg-zinc-950/95">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-1.5 sm:gap-2 sm:px-5">
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -909,7 +909,7 @@ export function WorkoutSessionDetail({
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="size-11 shrink-0 rounded-lg sm:size-12 sm:rounded-xl"
+                  className="size-11 shrink-0 rounded-lg sm:rounded-xl"
                   aria-label="More actions"
                 />
               }
@@ -969,7 +969,7 @@ export function WorkoutSessionDetail({
           <Button
             type="button"
             size="lg"
-            className="h-11 min-w-0 flex-1 gap-2 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-600/90 sm:h-12 sm:rounded-xl sm:text-base dark:bg-emerald-500 dark:hover:bg-emerald-500/90"
+            className="h-11 min-w-0 flex-1 gap-2 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-600/90 sm:rounded-xl dark:bg-emerald-500 dark:hover:bg-emerald-500/90"
             disabled={!canSave || saving}
             onClick={() => void handleSave()}
           >
