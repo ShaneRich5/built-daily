@@ -12,6 +12,7 @@ import { getActivityTypeById } from "@/lib/activity-catalog";
 import { subscribeRecentActivities } from "@/lib/activity-repository";
 import type { SavedActivity } from "@/lib/activity-types";
 import {
+  dateFromLocalDateKey,
   formatSessionJournalMeta,
   formatWorkoutTimeLabel,
   localDateKeyFromMs,
@@ -121,30 +122,76 @@ function buildTimeline(
   return items;
 }
 
-function groupByDay(items: TimelineItem[]): Array<{
-  dateKey: string;
+type TimelinePeriod = {
+  key: string;
   label: string;
+  /** Multi-day buckets need each row to carry its own date; single-day ones don't. */
+  showItemDate: boolean;
   items: TimelineItem[];
-}> {
-  const today = localDateKeyFromMs(Date.now());
-  const groups = new Map<string, TimelineItem[]>();
+};
+
+/** Short "Wed, Sep 24" style label for a row inside a multi-day bucket. */
+function formatShortDayLabel(dateKey: string): string {
+  const d = dateFromLocalDateKey(dateKey);
+  if (!d) return dateKey;
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(d);
+}
+
+/**
+ * Buckets the timeline into Today / Yesterday / This week / Past 30 days,
+ * then by month for anything older — so a long history reads as a handful
+ * of sections instead of one row per day.
+ */
+function groupByPeriod(items: TimelineItem[]): TimelinePeriod[] {
+  const todayKey = localDateKeyFromMs(Date.now());
+  const today = dateFromLocalDateKey(todayKey);
+  const currentYear = new Date().getFullYear();
+
+  const buckets = new Map<string, TimelinePeriod>();
+
   for (const item of items) {
-    const list = groups.get(item.dateKey) ?? [];
-    list.push(item);
-    groups.set(item.dateKey, list);
+    const itemDate = dateFromLocalDateKey(item.dateKey);
+    const diffDays =
+      today && itemDate
+        ? Math.round((today.getTime() - itemDate.getTime()) / 86_400_000)
+        : 0;
+
+    let key: string;
+    let label: string;
+    let showItemDate = true;
+
+    if (diffDays <= 0) {
+      key = "today";
+      label = "Today";
+      showItemDate = false;
+    } else if (diffDays === 1) {
+      key = "yesterday";
+      label = "Yesterday";
+      showItemDate = false;
+    } else if (diffDays <= 6) {
+      key = "week";
+      label = "This week";
+    } else if (diffDays <= 29) {
+      key = "past30";
+      label = "Past 30 days";
+    } else {
+      const monthDate = itemDate ?? today ?? new Date();
+      key = `older-${monthDate.getFullYear()}-${monthDate.getMonth()}`;
+      const opts: Intl.DateTimeFormatOptions = { month: "long" };
+      if (monthDate.getFullYear() !== currentYear) opts.year = "numeric";
+      label = new Intl.DateTimeFormat("en-US", opts).format(monthDate);
+    }
+
+    const bucket = buckets.get(key) ?? { key, label, showItemDate, items: [] };
+    bucket.items.push(item);
+    buckets.set(key, bucket);
   }
-  return [...groups.entries()].map(([dateKey, dayItems]) => ({
-    dateKey,
-    label:
-      dateKey === today
-        ? "Today"
-        : new Intl.DateTimeFormat("en-US", {
-            weekday: "short",
-            month: "short",
-            day: "numeric",
-          }).format(new Date(`${dateKey}T12:00:00`)),
-    items: dayItems,
-  }));
+
+  return [...buckets.values()];
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -215,7 +262,7 @@ export function HomeTimeline() {
 
   const groups = useMemo(() => {
     if (!sessions || !activities) return [];
-    return groupByDay(buildTimeline(sessions, activities));
+    return groupByPeriod(buildTimeline(sessions, activities));
   }, [sessions, activities]);
 
   const workoutIds = useMemo(
@@ -415,7 +462,7 @@ export function HomeTimeline() {
       ) : (
         <div className="space-y-6" aria-labelledby="timeline-heading">
           {groups.map((group) => (
-            <section key={group.dateKey} className="space-y-2">
+            <section key={group.key} className="space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                 {group.label}
               </h3>
@@ -455,9 +502,15 @@ export function HomeTimeline() {
                             <span className="font-semibold text-zinc-900 dark:text-zinc-50">
                               {item.title}
                             </span>
-                            {item.time ? (
+                            {group.showItemDate || item.time ? (
                               <span className="text-xs tabular-nums text-zinc-400">
-                                {formatWorkoutTimeLabel(item.time)}
+                                {group.showItemDate
+                                  ? formatShortDayLabel(item.dateKey)
+                                  : null}
+                                {group.showItemDate && item.time ? " · " : null}
+                                {item.time
+                                  ? formatWorkoutTimeLabel(item.time)
+                                  : null}
                               </span>
                             ) : null}
                           </span>
