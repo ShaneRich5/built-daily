@@ -37,8 +37,13 @@ yarn-error.log*
 .env*
 !.env.example
 
-# Firebase Admin service accounts (local MCP)
+# Firebase Admin service accounts — private keys, never commit.
+# serviceAccount.json is the canonical local filename (see .env.example);
+# the *firebase-adminsdk* pattern also catches keys saved under the name the
+# Firebase console downloads them as.
+serviceAccount.json
 *firebase-adminsdk*.json
+*service-account*.json
 
 # personal data backups (scripts/export-user-data.ts)
 /backups/

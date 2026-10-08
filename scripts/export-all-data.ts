@@ -35,8 +35,7 @@ async function dumpCollection(
 
 async function main() {
   if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    const defaultKey =
-      "built-daily-99633-firebase-adminsdk-fbsvc-82046d99d0.json";
+    const defaultKey = "serviceAccount.json";
     process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(
       process.cwd(),
       defaultKey,
