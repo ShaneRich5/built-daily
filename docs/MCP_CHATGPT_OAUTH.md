@@ -1,12 +1,12 @@
 # Built Daily — ChatGPT MCP connector (OAuth 2.1 + Dynamic Client Registration)
 
 Companion to [`MCP_MULTI_USER.md`](./MCP_MULTI_USER.md), which covers Claude
-(personal access tokens). This document is the plan for adding ChatGPT
-support, which needs a materially different auth mechanism.
+(personal access tokens). This document covers ChatGPT support, which needs a
+materially different auth mechanism.
 
-**Status:** not yet implemented — planning only. No new code from this doc
-has been written; everything below is the design for when you decide to
-build it.
+**Status: implemented.** The sections below are the original design; see
+[What actually shipped](#what-actually-shipped) for the final file list and
+where the build diverged from the plan.
 
 ---
 
@@ -179,12 +179,47 @@ Claude tools: recent sessions, one session by id, exercise catalog search).
 
 ## Implementation checklist
 
-- [ ] `oauthClients`, `oauthCodes`, `oauthRefreshTokens` collections (Admin-SDK-only, same as `mcpTokens`)
-- [ ] Extend `mcpTokens` schema with optional `clientId` / `expiresAt`; update `resolveUidForToken` in `mcp/bearer.ts` to honor expiry
-- [ ] `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata routes
-- [ ] `POST /api/mcp/oauth/register` (DCR)
-- [ ] `/connect/authorize` consent page + approve/deny handling, chained through existing `/login`
-- [ ] `POST /api/mcp/oauth/token` (`authorization_code` + `refresh_token` grants, PKCE verification, rotation)
-- [ ] Confirm/patch `WWW-Authenticate` header on `/api/mcp`'s 401 responses
+- [x] `oauthClients`, `oauthCodes`, `oauthRefreshTokens` collections (Admin-SDK-only, same as `mcpTokens`)
+- [x] Extend `mcpTokens` schema with optional `clientId` / `expiresAt`; honor expiry on lookup
+- [x] `.well-known/oauth-protected-resource` + `.well-known/oauth-authorization-server` metadata routes
+- [x] `POST /api/mcp/oauth/register` (DCR)
+- [x] `/connect/authorize` consent page + approve/deny handling, chained through existing `/login`
+- [x] `POST /api/mcp/oauth/token` (`authorization_code` + `refresh_token` grants, PKCE verification, rotation)
+- [x] Confirm/patch `WWW-Authenticate` header on `/api/mcp`'s 401 responses
 - [ ] Manual end-to-end test against ChatGPT Developer Mode's custom connector flow
-- [ ] Decide token lifetimes (suggested starting point: 1h access / 30d refresh)
+- [x] Decide token lifetimes — 1h access / 30d refresh
+
+---
+
+## What actually shipped
+
+| File | Role |
+|------|------|
+| [`mcp/oauth-metadata.ts`](../mcp/oauth-metadata.ts) | Builds both discovery documents and owns the OAuth path constants. Protected-resource metadata comes from the SDK's `buildOAuthProtectedResourceMetadata` (which also validates the issuer is HTTPS outside loopback); authorization-server metadata is hand-built since the SDK passes it through verbatim. The issuer is the request's own origin, so a vercel.app domain and a custom domain each advertise themselves consistently. |
+| [`app/.well-known/oauth-authorization-server/route.ts`](../app/.well-known/oauth-authorization-server/route.ts), [`app/.well-known/oauth-protected-resource/route.ts`](../app/.well-known/oauth-protected-resource/route.ts), [`…/[...path]/route.ts`](../app/.well-known/oauth-protected-resource/%5B...path%5D/route.ts) | The three discovery routes. The bare protected-resource path is served too, for clients that probe the origin; the `[...path]` variant serves `/api/mcp`'s RFC 9728 path and 404s any other resource. |
+| [`mcp/oauth-clients.ts`](../mcp/oauth-clients.ts) + [`app/api/mcp/oauth/register/route.ts`](../app/api/mcp/oauth/register/route.ts) | DCR. Redirect URIs must be exact `https://` (loopback `http://` allowed for local testing; fragments rejected). Validation is returned as a result rather than thrown, so a bad request (400) can't be confused with a Firestore failure (500). |
+| [`app/connect/authorize/page.tsx`](../app/connect/authorize/page.tsx) + [`components/oauth-consent.tsx`](../components/oauth-consent.tsx) | Consent screen. The server component validates the client, exact redirect URI, `response_type=code` and an S256 challenge before rendering; invalid requests are shown in-page and never redirected. Signed-out visitors bounce through `/login?next=…`, which round-trips only the already-validated parameters. |
+| [`app/api/mcp/oauth/authorize/route.ts`](../app/api/mcp/oauth/authorize/route.ts) | Approve/deny action. Authenticated with the user's Firebase ID token and re-validates every parameter; returns `{ redirectTo }` for the browser to follow, built only on a registered redirect URI. |
+| [`mcp/oauth-codes.ts`](../mcp/oauth-codes.ts) | Authorization codes: 60s TTL, stored hashed, redeemed in a transaction that deletes the doc whether or not redemption succeeds — so a failed attempt burns the code too. |
+| [`app/api/mcp/oauth/token/route.ts`](../app/api/mcp/oauth/token/route.ts) | Token endpoint. Accepts form-encoded or JSON bodies; checks the code's client and redirect URI, then PKCE S256 with a constant-time compare. Responses carry `Cache-Control: no-store`. |
+| [`mcp/oauth-refresh-tokens.ts`](../mcp/oauth-refresh-tokens.ts) | Refresh tokens: hashed, rotated on every use, 30-day expiry. |
+| [`mcp/tokens.ts`](../mcp/tokens.ts), [`mcp/bearer.ts`](../mcp/bearer.ts) | OAuth access tokens live in `mcpTokens` alongside PATs, with a `clientId`, a 1h `expiresAt` and a `bd_oauth_` prefix. `resolveMcpToken` (renamed from `resolveUidForToken`) rejects expired tokens, and the verifier passes the real expiry to the SDK. PATs are unchanged: no expiry, `bd_live_` prefix, and the Settings list filters OAuth tokens out. |
+| [`mcp/crypto.ts`](../mcp/crypto.ts), [`mcp/oauth-http.ts`](../mcp/oauth-http.ts) | Shared hashing/secret generation and CORS JSON helpers. |
+| [`app/api/mcp/route.ts`](../app/api/mcp/route.ts) | The bearer gate is built per request with `resourceMetadataUrl`, so a 401 carries `WWW-Authenticate: Bearer … resource_metadata="…"` — the SDK supports this natively, no hand-rolled header needed. |
+
+### Deviations from the original plan
+
+- **Discovery documents use the SDK** for protected-resource metadata instead of hand-written JSON.
+- **Codes are stored hashed** (`oauthCodes/{sha256(code)}`), not by raw code as sketched above — same reasoning as every other credential here.
+- **The consent screen discloses write access.** The tool set grew to include `create_workout_session` and `update_workout_session` after this doc was written, so "read-only" would no longer be true.
+
+### Verification
+
+Run locally against the dev server with the Playwright test account: 38 scripted checks covering the full code exchange, MCP calls with the issued token, code replay, a burned code, wrong PKCE verifier, mismatched redirect URI and client, refresh rotation and reuse, access- and refresh-token expiry, `Cache-Control`, hash-only storage, and the PAT path end to end. A headless browser also drove the consent screen on a Pixel 7 viewport: signed-out redirect to `/login`, return to consent, **Allow access**, and a callback carrying a code that redeemed successfully.
+
+### Known gaps
+
+- **No rate limiting** on `/register` and `/token`, both of which are reachable unauthenticated.
+- **No revoke UI** for OAuth grants. A connection is removed from ChatGPT's side; there's no Built Daily screen listing connected apps yet.
+- **Expired documents aren't swept.** Expired codes and tokens are rejected on use but stay in Firestore until then; a Firestore TTL policy on `expiresAt` would clean them up.
+- **Not yet tested against ChatGPT itself** — that needs the production deployment.

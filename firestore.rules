@@ -444,5 +444,12 @@ service cloud.firestore {
     // written and read only by the Admin SDK (app/api/mcp/tokens/route.ts,
     // mcp/tokens.ts), so it falls through to Firestore's default deny for
     // client SDK access. Do not add client rules for this collection.
+
+    // Same deal for the OAuth authorization server's collections (see
+    // docs/MCP_CHATGPT_OAUTH.md): `oauthClients/{clientId}`,
+    // `oauthCodes/{codeHash}` and `oauthRefreshTokens/{tokenHash}` are
+    // deliberately unmatched, so they are default-denied to client SDKs and
+    // reachable only by the Admin SDK (mcp/oauth-*.ts). Authorization codes
+    // and refresh tokens are credentials — never expose them to a client.
   }
 }

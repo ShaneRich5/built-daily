@@ -5,7 +5,7 @@ import {
   type AuthInfo,
   type OAuthTokenVerifier,
 } from "@modelcontextprotocol/server";
-import { resolveUidForToken } from "./tokens";
+import { resolveMcpToken } from "./tokens";
 
 const TEN_YEARS_SECONDS = 60 * 60 * 24 * 365 * 10;
 
@@ -19,7 +19,9 @@ function tokensEqual(left: string, right: string): boolean {
 /**
  * Verifies a bearer token against per-user tokens stored in Firestore
  * (`mcpTokens/{hash}`, see docs/MCP_MULTI_USER.md) and returns the owning
- * uid via `AuthInfo.extra.uid`.
+ * uid via `AuthInfo.extra.uid`. Accepts both personal access tokens (Claude)
+ * and OAuth-issued tokens (ChatGPT, see docs/MCP_CHATGPT_OAUTH.md); the
+ * latter carry a real expiry, which is surfaced so the SDK enforces it too.
  *
  * Falls back to a single shared `MCP_BEARER_TOKEN` mapped to `MCP_USER_UID`
  * for the maintainer's own local/admin testing — remove once you no longer
@@ -27,14 +29,16 @@ function tokensEqual(left: string, right: string): boolean {
  */
 export const mcpTokenVerifier: OAuthTokenVerifier = {
   async verifyAccessToken(token: string): Promise<AuthInfo> {
-    const uid = await resolveUidForToken(token);
-    if (uid) {
+    const resolved = await resolveMcpToken(token);
+    if (resolved) {
       return {
         token,
         clientId: "built-daily",
         scopes: ["mcp"],
-        expiresAt: Math.floor(Date.now() / 1000) + TEN_YEARS_SECONDS,
-        extra: { uid },
+        expiresAt: resolved.expiresAt
+          ? Math.floor(resolved.expiresAt.getTime() / 1000)
+          : Math.floor(Date.now() / 1000) + TEN_YEARS_SECONDS,
+        extra: { uid: resolved.uid },
       };
     }
 

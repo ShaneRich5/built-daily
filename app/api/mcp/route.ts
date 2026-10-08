@@ -1,5 +1,6 @@
 import {
   createMcpHandler,
+  getOAuthProtectedResourceMetadataUrl,
   requireBearerAuth,
 } from "@modelcontextprotocol/server";
 import { createBuiltDailyServer } from "@/mcp/create-server";
@@ -8,6 +9,7 @@ import {
   requestWithBearerToken,
   uidFromAuthInfo,
 } from "@/mcp/bearer";
+import { MCP_PATH, MCP_SCOPE } from "@/mcp/oauth-metadata";
 import { isFirebaseAdminConfigured } from "@/lib/firebase-admin";
 
 export const runtime = "nodejs";
@@ -18,10 +20,22 @@ const handler = createMcpHandler((ctx) =>
   createBuiltDailyServer(uidFromAuthInfo(ctx.authInfo)),
 );
 
-const gate = requireBearerAuth({
-  verifier: mcpTokenVerifier,
-  requiredScopes: ["mcp"],
-});
+/**
+ * Built per-request so the `WWW-Authenticate` challenge on a 401 points at
+ * this origin's protected-resource metadata (RFC 9728) — that's how an OAuth
+ * client like ChatGPT discovers the authorization server. Bearer tokens
+ * themselves are unaffected: a valid PAT still passes as before.
+ */
+function bearerGate(request: Request) {
+  const { origin } = new URL(request.url);
+  return requireBearerAuth({
+    verifier: mcpTokenVerifier,
+    requiredScopes: [MCP_SCOPE],
+    resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(
+      new URL(`${origin}${MCP_PATH}`),
+    ),
+  });
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +70,7 @@ async function handleMcp(request: Request): Promise<Response> {
   }
 
   const authedRequest = requestWithMcpAccept(requestWithBearerToken(request));
-  const auth = await gate(authedRequest);
+  const auth = await bearerGate(authedRequest)(authedRequest);
   if (auth instanceof Response) return withCors(auth);
 
   const response = await handler.fetch(authedRequest, { authInfo: auth });
