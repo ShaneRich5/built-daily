@@ -1,13 +1,20 @@
-import { createHash, randomBytes } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
+import { hashSecret, randomSecret, toDateOrNull } from "./crypto";
 
 /**
- * Personal access tokens for the remote MCP endpoint. Doc ID is the token
- * hash, never the raw token — see docs/MCP_MULTI_USER.md.
+ * Access tokens for the remote MCP endpoint. Doc ID is the token hash, never
+ * the raw token — see docs/MCP_MULTI_USER.md.
+ *
+ * Two kinds share this collection:
+ *  - Personal access tokens (Claude): user-labeled, non-expiring, generated
+ *    from Settings.
+ *  - OAuth-issued access tokens (ChatGPT): carry a `clientId` and an
+ *    `expiresAt`, minted by the token endpoint. See docs/MCP_CHATGPT_OAUTH.md.
  */
 const COLLECTION = "mcpTokens";
-const TOKEN_PREFIX = "bd_live_";
+const PAT_PREFIX = "bd_live_";
+const OAUTH_PREFIX = "bd_oauth_";
 
 export type McpTokenSummary = {
   id: string;
@@ -16,38 +23,47 @@ export type McpTokenSummary = {
   lastUsedAt: Date | null;
 };
 
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
-}
+export type ResolvedMcpToken = {
+  uid: string;
+  /** Null for non-expiring personal access tokens. */
+  expiresAt: Date | null;
+};
 
-function toDateOrNull(value: unknown): Date | null {
-  if (
-    value &&
-    typeof value === "object" &&
-    typeof (value as { toDate?: unknown }).toDate === "function"
-  ) {
-    return (value as { toDate: () => Date }).toDate();
-  }
-  return null;
-}
+type CreateTokenOptions = {
+  /** Set for OAuth-issued tokens; identifies the registered client. */
+  clientId?: string;
+  /** Set for OAuth-issued tokens; enforced on every lookup. */
+  expiresAt?: Date;
+};
 
 /** Creates a new token for `uid`, persists its hash, and returns the raw token (shown once). */
 export async function createMcpTokenForUid(
   uid: string,
   label: string | null,
+  options: CreateTokenOptions = {},
 ): Promise<string> {
-  const token = TOKEN_PREFIX + randomBytes(32).toString("base64url");
-  const hash = hashToken(token);
-  await getAdminFirestore().collection(COLLECTION).doc(hash).set({
-    uid,
-    label: label?.trim() || null,
-    createdAt: FieldValue.serverTimestamp(),
-    lastUsedAt: null,
-  });
+  const isOAuth = Boolean(options.clientId);
+  const token = randomSecret(isOAuth ? OAUTH_PREFIX : PAT_PREFIX);
+  await getAdminFirestore()
+    .collection(COLLECTION)
+    .doc(hashSecret(token))
+    .set({
+      uid,
+      label: label?.trim() || null,
+      clientId: options.clientId ?? null,
+      expiresAt: options.expiresAt ?? null,
+      createdAt: FieldValue.serverTimestamp(),
+      lastUsedAt: null,
+    });
   return token;
 }
 
-/** Lists tokens belonging to `uid` (metadata only — raw tokens are never stored). */
+/**
+ * Lists a user's personal access tokens for the Settings UI. OAuth-issued
+ * tokens are excluded — they're short-lived plumbing, not something the user
+ * manages by hand. Filtered in memory so existing PAT docs written before
+ * `clientId` existed still list correctly.
+ */
 export async function listMcpTokensForUid(
   uid: string,
 ): Promise<McpTokenSummary[]> {
@@ -57,6 +73,7 @@ export async function listMcpTokensForUid(
     .get();
 
   return snap.docs
+    .filter((doc) => !doc.data().clientId)
     .map((doc) => {
       const data = doc.data();
       return {
@@ -84,16 +101,23 @@ export async function revokeMcpToken(
 }
 
 /**
- * Resolves a bearer token to its owning uid, or null if unknown/revoked.
- * Best-effort touches `lastUsedAt` without blocking the caller.
+ * Resolves a bearer token to its owner, or null if unknown, revoked, or
+ * expired. Best-effort touches `lastUsedAt` without blocking the caller.
  */
-export async function resolveUidForToken(token: string): Promise<string | null> {
-  const ref = getAdminFirestore().collection(COLLECTION).doc(hashToken(token));
+export async function resolveMcpToken(
+  token: string,
+): Promise<ResolvedMcpToken | null> {
+  const ref = getAdminFirestore().collection(COLLECTION).doc(hashSecret(token));
   const snap = await ref.get();
   if (!snap.exists) return null;
-  const uid = snap.data()?.uid;
+
+  const data = snap.data() ?? {};
+  const uid = data.uid;
   if (typeof uid !== "string" || !uid) return null;
 
+  const expiresAt = toDateOrNull(data.expiresAt);
+  if (expiresAt && expiresAt.getTime() < Date.now()) return null;
+
   void ref.update({ lastUsedAt: FieldValue.serverTimestamp() }).catch(() => {});
-  return uid;
+  return { uid, expiresAt };
 }

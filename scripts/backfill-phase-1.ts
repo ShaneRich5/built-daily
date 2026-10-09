@@ -34,7 +34,7 @@ async function main() {
   if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
     process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(
       process.cwd(),
-      "built-daily-99633-firebase-adminsdk-fbsvc-82046d99d0.json",
+      "serviceAccount.json",
     );
   }
 
