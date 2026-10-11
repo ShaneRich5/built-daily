@@ -13,7 +13,7 @@ import {
   WEEKLY_GOAL_OPTIONS,
   type WeeklyGoalTarget,
 } from "@/lib/progress-types";
-import { weekStartMondayKey } from "@/lib/progress-insights";
+import { startOfWeekDateKey } from "@/lib/calendar-views";
 import { shiftLocalDateKey } from "@/lib/workout-activity";
 
 function asTimestamp(v: unknown): Date | null {
@@ -260,8 +260,8 @@ export function isGroupStreakStale(
   todayKey: string,
 ): boolean {
   if (!lastWorkoutDateKey) return true;
-  const lastWeekStart = weekStartMondayKey(lastWorkoutDateKey);
-  const currentWeekStart = weekStartMondayKey(todayKey);
+  const lastWeekStart = startOfWeekDateKey(lastWorkoutDateKey);
+  const currentWeekStart = startOfWeekDateKey(todayKey);
   const priorWeekStart = shiftLocalDateKey(currentWeekStart, -7);
   return lastWeekStart !== currentWeekStart && lastWeekStart !== priorWeekStart;
 }

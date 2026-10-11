@@ -4,7 +4,7 @@ import {
   type PublicActivityByDay,
   type PublicProfileDoc,
 } from "@/lib/public-profile-types";
-import { weekStartMondayKey } from "@/lib/progress-insights";
+import { startOfWeekDateKey } from "@/lib/calendar-views";
 import {
   activityMapToRecord,
   pruneActivityByDay,
@@ -110,8 +110,8 @@ export function effectiveWorkoutsThisWeek(
 ): number {
   if (!profile.lastWorkoutDateKey) return 0;
   if (
-    weekStartMondayKey(profile.lastWorkoutDateKey) !==
-    weekStartMondayKey(todayKey)
+    startOfWeekDateKey(profile.lastWorkoutDateKey) !==
+    startOfWeekDateKey(todayKey)
   ) {
     return 0;
   }

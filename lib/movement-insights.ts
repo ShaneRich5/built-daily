@@ -1,5 +1,6 @@
 import { activityTypeName } from "@/lib/activity-catalog";
 import type { SavedActivity } from "@/lib/activity-types";
+import { startOfWeekDateKey } from "@/lib/calendar-views";
 import {
   shiftLocalDateKey,
   type WorkoutActivityByDay,
@@ -16,15 +17,6 @@ import type {
 
 /** Activity counts per local calendar day. */
 export type ActivityByDay = Map<string, number>;
-
-function weekStartMondayKey(dateKey: string): string {
-  const d = dateFromLocalDateKey(dateKey);
-  if (!d) return dateKey;
-  const dow = d.getDay();
-  const delta = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + delta);
-  return localDateKeyFromMs(d.getTime());
-}
 
 export function activityByDayFromSaved(
   rows: SavedActivity[],
@@ -75,7 +67,7 @@ export function movementGoalStatus(
   target: MovementGoalTarget,
   todayKey: string = localDateKeyFromMs(Date.now()),
 ): MovementGoalStatus {
-  const weekStartKey = weekStartMondayKey(todayKey);
+  const weekStartKey = startOfWeekDateKey(todayKey);
   const completed = movementDaysInWeek(movementDays, weekStartKey);
   return {
     weekStartKey,

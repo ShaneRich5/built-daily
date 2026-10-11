@@ -1,3 +1,4 @@
+import { startOfWeekDateKey } from "@/lib/calendar-views";
 import {
   activityByDayFromSessions,
   shiftLocalDateKey,
@@ -54,16 +55,6 @@ export function sessionVolumeLbs(session: WorkoutSessionDoc): number {
   return total;
 }
 
-/** Monday of the local week containing dateKey. */
-export function weekStartMondayKey(dateKey: string): string {
-  const d = dateFromLocalDateKey(dateKey);
-  if (!d) return dateKey;
-  const dow = d.getDay(); // 0 Sun … 6 Sat
-  const delta = dow === 0 ? -6 : 1 - dow;
-  d.setDate(d.getDate() + delta);
-  return localDateKeyFromMs(d.getTime());
-}
-
 export function workoutsInWeek(
   activity: WorkoutActivityByDay,
   weekStartKey: string,
@@ -81,7 +72,7 @@ export function weekGoalStatus(
   weeklyGoal: WeeklyGoalTarget,
   todayKey: string,
 ): WeekGoalStatus {
-  const weekStartKey = weekStartMondayKey(todayKey);
+  const weekStartKey = startOfWeekDateKey(todayKey);
   const completed = workoutsInWeek(activity, weekStartKey);
   return {
     weekStartKey,
@@ -91,12 +82,12 @@ export function weekGoalStatus(
   };
 }
 
-/** Days left in the Mon–Sun week, including today. */
+/** Days left in the Sun–Sat week, including today. */
 export function daysLeftInWeekIncludingToday(todayKey: string): number {
   const d = dateFromLocalDateKey(todayKey);
   if (!d) return 0;
   const dow = d.getDay(); // 0 Sun … 6 Sat
-  return dow === 0 ? 1 : 8 - dow;
+  return 7 - dow;
 }
 
 export type WeekMomentumStatus =
@@ -117,7 +108,7 @@ export type WeekMomentum = {
 };
 
 /**
- * Motivational mid-week state so Monday doesn’t feel like a reset.
+ * Motivational mid-week state so Sunday doesn’t feel like a reset.
  * Banked streak stays visible while the current week is still open.
  */
 export function computeWeekMomentum(
@@ -216,7 +207,7 @@ export function goalWeekStreak(
   weeklyGoal: WeeklyGoalTarget,
   todayKey: string,
 ): { current: number; longest: number } {
-  const thisWeekStart = weekStartMondayKey(todayKey);
+  const thisWeekStart = startOfWeekDateKey(todayKey);
   let cursor = thisWeekStart;
   const thisWeekCount = workoutsInWeek(activity, thisWeekStart);
   const thisWeekMet = thisWeekCount >= weeklyGoal;
@@ -248,7 +239,7 @@ export function goalWeekStreak(
   // Scan all weeks from first activity for longest
   const firstKey = earliestActivityKey(activity);
   if (firstKey) {
-    let w = weekStartMondayKey(firstKey);
+    let w = startOfWeekDateKey(firstKey);
     const end = thisWeekStart;
     let run = 0;
     while (w <= end) {
