@@ -11,6 +11,7 @@ import { WorkoutCard } from "@/components/workout-card";
 import { getActivityTypeById } from "@/lib/activity-catalog";
 import { subscribeRecentActivities } from "@/lib/activity-repository";
 import type { SavedActivity } from "@/lib/activity-types";
+import { startOfWeekDateKey } from "@/lib/calendar-views";
 import {
   dateFromLocalDateKey,
   formatSessionJournalMeta,
@@ -142,13 +143,14 @@ function formatShortDayLabel(dateKey: string): string {
 }
 
 /**
- * Buckets the timeline into Today / Yesterday / This week / Past 30 days,
- * then by month for anything older — so a long history reads as a handful
- * of sections instead of one row per day.
+ * Buckets the timeline into Today / Yesterday / This week (Sun–Sat) /
+ * Past 30 days, then by month for anything older — so a long history reads
+ * as a handful of sections instead of one row per day.
  */
 function groupByPeriod(items: TimelineItem[]): TimelinePeriod[] {
   const todayKey = localDateKeyFromMs(Date.now());
   const today = dateFromLocalDateKey(todayKey);
+  const weekStartKey = startOfWeekDateKey(todayKey);
   const currentYear = new Date().getFullYear();
 
   const buckets = new Map<string, TimelinePeriod>();
@@ -172,7 +174,7 @@ function groupByPeriod(items: TimelineItem[]): TimelinePeriod[] {
       key = "yesterday";
       label = "Yesterday";
       showItemDate = false;
-    } else if (diffDays <= 6) {
+    } else if (item.dateKey >= weekStartKey) {
       key = "week";
       label = "This week";
     } else if (diffDays <= 29) {
