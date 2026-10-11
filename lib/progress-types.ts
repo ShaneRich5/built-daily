@@ -83,7 +83,7 @@ export type DayActivityDetail = {
 };
 
 export type WeekGoalStatus = {
-  /** Monday date key of the week (local). */
+  /** Sunday date key of the week (local). */
   weekStartKey: string;
   target: WeeklyGoalTarget;
   completed: number;

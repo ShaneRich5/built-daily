@@ -265,7 +265,7 @@ Single document id `progress`. Defaults if missing: weekly goal **3**, movement 
 
 | Field | Type | Notes |
 |-------|------|--------|
-| `weeklyGoal` | `2 \| 3 \| 4 \| 5 \| 6 \| 7` | Completed **workouts** per Mon–Sun week |
+| `weeklyGoal` | `2 \| 3 \| 4 \| 5 \| 6 \| 7` | Completed **workouts** per Sun–Sat week |
 | `movementGoalDays` | `3 \| 4 \| 5 \| 6 \| 7` | Active **days** (workout or activity counts). Optional on older docs; client defaults to 5 |
 | `goalWeightLbs` | `number \| null` | Optional target; 0–1000 when set |
 | `updatedAt` | `Date` / `Timestamp` | |
@@ -308,7 +308,7 @@ Partners only see show-up signals (today / last date / streak)—never workout d
 | `joinedAt` | `Timestamp` | |
 | `lastWorkoutDateKey` | `string \| null` | Local `YYYY-MM-DD` |
 | `lastWorkoutAt` | `Timestamp \| null` | |
-| `currentStreak` | `number` | Consecutive local **weeks** (Mon–Sun) the member met their own `weeklyGoal` — not consecutive days |
+| `currentStreak` | `number` | Consecutive local **weeks** (Sun–Sat) the member met their own `weeklyGoal` — not consecutive days |
 | `weeklyGoal` | `2 \| 3 \| 4 \| 5 \| 6 \| 7` | Copy of the member's private `settings/progress.weeklyGoal` so the roster can show progress without reading another user's private data |
 
 `weeklyGoal` is kept in sync by `syncWeeklyGoalToGroups` when the setting changes, and re-written on each workout finish by `bumpGroupWorkoutSignals`.
@@ -352,7 +352,7 @@ Opt-in shareable slice. Default is private (`profilePublic: false` or missing do
 | `displayName` | `string` | Auth snapshot, max 80 |
 | `profilePublic` | `boolean` | Public read only when `true` |
 | `currentStreak` | `number` | Consecutive local days with a workout |
-| `workoutsThisWeek` | `number` | Completed sessions in the Mon–Sun week of last workout |
+| `workoutsThisWeek` | `number` | Completed sessions in the Sun–Sat week of last workout |
 | `lastWorkoutDateKey` | `string \| null` | Local `YYYY-MM-DD` |
 | `activityByDay` | `map` | Sparse `YYYY-MM-DD` → **workout** count for the consistency chart (max 200 keys, ~26 weeks) |
 | `updatedAt` | `Timestamp` | |

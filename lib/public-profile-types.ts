@@ -15,7 +15,7 @@ export type PublicProfileDoc = {
   profilePublic: boolean;
   /** Consecutive local calendar days with a completed workout. */
   currentStreak: number;
-  /** Completed workouts in the local Mon–Sun week of `lastWorkoutDateKey`. */
+  /** Completed workouts in the local Sun–Sat week of `lastWorkoutDateKey`. */
   workoutsThisWeek: number;
   /** Local calendar day of last completed workout (`YYYY-MM-DD`). */
   lastWorkoutDateKey: string | null;

@@ -68,7 +68,7 @@ export function ProgressMomentum({ momentum }: ProgressMomentumProps) {
           <span className="font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
             {momentum.bankedStreak}
           </span>{" "}
-          until the week ends—Monday isn’t a reset.
+          until the week ends—Sunday isn’t a reset.
         </p>
       ) : null}
     </section>

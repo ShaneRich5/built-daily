@@ -29,7 +29,7 @@ export type GroupMemberDoc = {
   lastWorkoutDateKey: string | null;
   lastWorkoutAt: Date | null;
   /**
-   * Consecutive local weeks (Mon–Sun) the member met their own `weeklyGoal`.
+   * Consecutive local weeks (Sun–Sat) the member met their own `weeklyGoal`.
    * Not a stored decay — see `isGroupStreakStale` in group-mapper.ts for why
    * the UI must re-check staleness against `lastWorkoutDateKey` at read time.
    */

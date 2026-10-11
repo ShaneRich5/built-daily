@@ -18,7 +18,8 @@ import {
   currentWorkoutStreak,
   type WorkoutActivityByDay,
 } from "@/lib/workout-activity";
-import { weekStartMondayKey, workoutsInWeek } from "@/lib/progress-insights";
+import { startOfWeekDateKey } from "@/lib/calendar-views";
+import { workoutsInWeek } from "@/lib/progress-insights";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 
 export type CompletedSessionSummary = {
@@ -73,7 +74,7 @@ export function computeWorkoutSignals(
 
   return {
     currentStreak: currentWorkoutStreak(activityByDay, todayKey),
-    workoutsThisWeek: workoutsInWeek(activityByDay, weekStartMondayKey(todayKey)),
+    workoutsThisWeek: workoutsInWeek(activityByDay, startOfWeekDateKey(todayKey)),
     lastWorkoutDateKey,
     lastWorkoutAt,
     activityByDay,
