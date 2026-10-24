@@ -120,14 +120,17 @@ export function HomeStartWorkout() {
             </Link>
           </div>
         ) : (
-          <ul className="space-y-2">
+          // One horizontal row of compact cards so templates don't push the
+          // rest of home down. Bleeds to the screen edge (negative margin
+          // matches the app shell's gutter) so it reads as scrollable.
+          <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-5 sm:scroll-px-5 sm:px-5 [&::-webkit-scrollbar]:hidden">
             {savedPlans.map((p) => {
               const meta = toTemplateMeta(p);
               return (
-                <li key={p.id}>
-                  <div className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 transition sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-950">
+                <li key={p.id} className="w-40 shrink-0 snap-start">
+                  <div className="flex h-full flex-col gap-3 rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
                     <div className="min-w-0 flex-1">
-                      <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                      <span className="line-clamp-2 text-sm font-medium text-zinc-900 dark:text-zinc-50">
                         {meta.name}
                       </span>
                       <span className="mt-0.5 block text-xs text-zinc-500">
@@ -135,17 +138,19 @@ export function HomeStartWorkout() {
                         {meta.exerciseCount === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => startTemplate(meta)}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                        aria-label={`Start ${meta.name}`}
+                        className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
                       >
                         <Play className="size-3.5" aria-hidden />
                         Start
                       </button>
                       <Link
                         href={`/templates/${p.id}`}
+                        aria-label={`Edit ${meta.name}`}
                         className="inline-flex h-9 items-center rounded-lg px-2 text-xs font-semibold text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
                       >
                         Edit
