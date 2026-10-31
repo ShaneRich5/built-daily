@@ -48,7 +48,7 @@ function toDate(value: unknown): Date | null {
   return null;
 }
 
-function toIso(value: unknown): string | null {
+export function toIso(value: unknown): string | null {
   const date = toDate(value);
   return date ? date.toISOString() : null;
 }
