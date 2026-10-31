@@ -1,4 +1,4 @@
-import { Timestamp } from "firebase-admin/firestore";
+import { Timestamp, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import {
   normalizeWorkoutDate,
@@ -102,13 +102,25 @@ function parseSummary(
   };
 }
 
+export type SessionStatusFilter = "all" | "completed" | "in_progress";
+
+function parseSummaries(
+  docs: QueryDocumentSnapshot[],
+): SessionSummaryJson[] {
+  const sessions: SessionSummaryJson[] = [];
+  for (const doc of docs) {
+    const row = parseSummary(doc.id, doc.data() as Record<string, unknown>);
+    if (row) sessions.push(row);
+  }
+  return sessions;
+}
+
 /** Last N completed sessions for `uid`, newest ended first. */
-export async function listRecentCompletedSessions(
+async function listCompletedSessions(
   uid: string,
   limit: number,
-): Promise<{ uid: string; sessions: SessionSummaryJson[] }> {
-  const firestore = getAdminFirestore();
-  const snap = await firestore
+): Promise<SessionSummaryJson[]> {
+  const snap = await getAdminFirestore()
     .collection("users")
     .doc(uid)
     .collection("sessions")
@@ -116,13 +128,51 @@ export async function listRecentCompletedSessions(
     .orderBy("endedAt", "desc")
     .limit(limit)
     .get();
+  return parseSummaries(snap.docs);
+}
 
-  const sessions: SessionSummaryJson[] = [];
-  for (const doc of snap.docs) {
-    const row = parseSummary(doc.id, doc.data() as Record<string, unknown>);
-    if (row) sessions.push(row);
+/**
+ * Up to N in-progress sessions for `uid`, newest started first. Sorted in
+ * memory so the equality filter doesn't need a (status, startedAt) composite
+ * index — a user only ever has a handful of unfinished sessions.
+ */
+async function listInProgressSessions(
+  uid: string,
+  limit: number,
+): Promise<SessionSummaryJson[]> {
+  const snap = await getAdminFirestore()
+    .collection("users")
+    .doc(uid)
+    .collection("sessions")
+    .where("status", "==", "in_progress")
+    .get();
+  return parseSummaries(snap.docs)
+    .sort((a, b) => (b.startedAt ?? "").localeCompare(a.startedAt ?? ""))
+    .slice(0, limit);
+}
+
+/**
+ * Recent sessions for `uid`. With `status: "all"`, in-progress sessions come
+ * first (newest started), then completed ones (newest ended) — the same order
+ * the app's recent-workouts list uses.
+ */
+export async function listRecentSessions(
+  uid: string,
+  limit: number,
+  status: SessionStatusFilter,
+): Promise<{ uid: string; sessions: SessionSummaryJson[] }> {
+  if (status === "completed") {
+    return { uid, sessions: await listCompletedSessions(uid, limit) };
   }
-  return { uid, sessions };
+  if (status === "in_progress") {
+    return { uid, sessions: await listInProgressSessions(uid, limit) };
+  }
+
+  const [inProgress, completed] = await Promise.all([
+    listInProgressSessions(uid, limit),
+    listCompletedSessions(uid, limit),
+  ]);
+  return { uid, sessions: [...inProgress, ...completed].slice(0, limit) };
 }
 
 /** Full session document under `uid`, or null if missing. */

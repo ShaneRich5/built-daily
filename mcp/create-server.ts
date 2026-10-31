@@ -4,7 +4,7 @@ import { filterCatalogExercises } from "../lib/exercise-catalog";
 import {
   createWorkoutSession,
   getSessionById,
-  listRecentCompletedSessions,
+  listRecentSessions,
   updateWorkoutSession,
 } from "./firestore";
 
@@ -133,7 +133,8 @@ export function createBuiltDailyServer(uid: string): McpServer {
     {
       title: "List recent sessions",
       description:
-        "List the most recent completed workout sessions for the authenticated user.",
+        "List the most recent workout sessions for the authenticated user. By default includes " +
+        'unfinished (in_progress) sessions first, then completed ones. Check each row\'s "status".',
       inputSchema: z.object({
         limit: z
           .number()
@@ -141,13 +142,23 @@ export function createBuiltDailyServer(uid: string): McpServer {
           .min(1)
           .max(40)
           .optional()
-          .describe("How many completed sessions to return (default 10)."),
+          .describe("How many sessions to return in total (default 10)."),
+        status: z
+          .enum(["all", "completed", "in_progress"])
+          .optional()
+          .describe(
+            'Which sessions to include. Defaults to "all" (in-progress first, then completed).',
+          ),
       }),
       annotations: readOnly,
     },
-    async ({ limit }) => {
+    async ({ limit, status }) => {
       try {
-        const result = await listRecentCompletedSessions(uid, limit ?? 10);
+        const result = await listRecentSessions(
+          uid,
+          limit ?? 10,
+          status ?? "all",
+        );
         return textResult(result);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
