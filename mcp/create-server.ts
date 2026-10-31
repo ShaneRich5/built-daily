@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { filterCatalogExercises } from "../lib/exercise-catalog";
+import { getExerciseHistory } from "./exercise-history";
 import {
   createWorkoutSession,
   getSessionById,
@@ -204,6 +205,46 @@ export function createBuiltDailyServer(uid: string): McpServer {
         secondary: ex.secondary ?? [],
       }));
       return textResult({ query, count: exercises.length, exercises });
+    },
+  );
+
+  server.registerTool(
+    "get_exercise_history",
+    {
+      title: "Get exercise history",
+      description:
+        "Recent completed sessions that include one exercise (newest first), with the sets logged each time, " +
+        'plus the best set. "best" is by estimated 1RM for weight_reps, most reps for bodyweight_reps, longest ' +
+        "durationSec for duration, and longest distanceMiles for cardio. Use it to answer \"what did I do last " +
+        'time?" or to suggest a weight. Weights are in lbs. Scans the last 100 completed sessions.',
+      inputSchema: z.object({
+        exerciseId: z
+          .string()
+          .min(1)
+          .describe(
+            "Exercise id — look it up with search_exercises, or use a custom-* id from get_session.",
+          ),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(20)
+          .optional()
+          .describe("How many sessions to return (default 5)."),
+      }),
+      annotations: readOnly,
+    },
+    async ({ exerciseId, limit }) => {
+      try {
+        const history = await getExerciseHistory(
+          uid,
+          exerciseId.trim(),
+          limit ?? 5,
+        );
+        return textResult(history);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
     },
   );
 
