@@ -7,6 +7,7 @@ import {
   listRecentCompletedSessions,
   updateWorkoutSession,
 } from "./firestore";
+import { addSetsToSession } from "./add-sets";
 
 const readOnly = {
   readOnlyHint: true,
@@ -267,6 +268,57 @@ export function createBuiltDailyServer(uid: string): McpServer {
         if (result.kind === "unknown_exercise_ids") {
           return errorResult(
             `Unknown exerciseId(s): ${result.exerciseIds.join(", ")}. Use search_exercises to find valid ids.`,
+          );
+        }
+        return textResult(result.session);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    },
+  );
+
+  server.registerTool(
+    "add_sets",
+    {
+      title: "Add sets",
+      description:
+        "Append sets to one exercise in an existing workout session — the safe way to log during a workout. " +
+        "If the session already has the exercise, the sets are added after its existing sets; otherwise the " +
+        "exercise is added at the end. Never changes or removes existing sets. Look up exerciseId with " +
+        "search_exercises first. Note: if the workout is open in the app's active workout screen, the app's " +
+        "next autosave can overwrite changes made here.",
+      inputSchema: z.object({
+        sessionId: z.string().min(1).describe("Firestore session document id."),
+        exerciseId: exerciseInputSchema.shape.exerciseId,
+        sets: z
+          .array(setInputSchema)
+          .min(1)
+          .max(40)
+          .describe(
+            "Sets to append, in order. Only the fields relevant to the exercise's metric are kept.",
+          ),
+      }),
+      annotations: write,
+    },
+    async ({ sessionId, exerciseId, sets }) => {
+      try {
+        const result = await addSetsToSession(
+          uid,
+          sessionId.trim(),
+          exerciseId,
+          sets,
+        );
+        if (result.kind === "not_found") {
+          return errorResult(`Session not found: ${sessionId}`);
+        }
+        if (result.kind === "unknown_exercise_id") {
+          return errorResult(
+            `Unknown exerciseId: ${exerciseId}. Use search_exercises to find valid ids.`,
+          );
+        }
+        if (result.kind === "too_many_exercises") {
+          return errorResult(
+            "This session already has 40 exercises, the maximum. Add the sets to an exercise already in it.",
           );
         }
         return textResult(result.session);
