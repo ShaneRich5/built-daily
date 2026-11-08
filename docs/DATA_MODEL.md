@@ -156,6 +156,7 @@ One object per performed set. Fields are nullable when not used / empty.
 | `resistanceLevel` | `number \| null` | Optional bike / elliptical resistance |
 | `distanceMiles` | `number \| null` | Optional cardio distance (miles) |
 | `note` | `string \| null` | Set-level note |
+| `done` | `boolean` (optional) | Checked off in the active workout. **Absent** on sets saved before this field existed and on sets written by the MCP server; read with `isSetLogDone` (`lib/workout-session-mapper.ts`), which treats a missing flag as *done if the set has any value*. |
 
 ### Client finish / autosave snapshot (`ActiveWorkoutFinishSnapshot`)
 
@@ -170,7 +171,7 @@ Built in the active workout UI and passed into the session repository. Mapped to
 | `planId` | Optional |
 | `lineIds` | Stable line ids parallel to `exercises` (required for updates) |
 
-UI row shape: `UiSetRow` (`weight`, `reps`, `seconds`, `timedSetSec`, `paceMph`, `inclinePercent`, `resistanceLevel`, `distanceMiles`, `note` strings) → `SetLog` via `uiSetRowToSetLog`.
+UI row shape: `UiSetRow` (`weight`, `reps`, `seconds`, `timedSetSec`, `paceMph`, `inclinePercent`, `resistanceLevel`, `distanceMiles`, `note` strings, plus `done: boolean`) → `SetLog` via `uiSetRowToSetLog`.
 
 List UIs use a slim `SessionSummary` (`id`, `status`, dates, title, counts, preview names) rather than full `lines`.
 
@@ -623,6 +624,7 @@ Table set_logs {
   resistanceLevel float
   distanceMiles float
   note string [note: 'max 200']
+  done boolean [note: 'optional; missing = done if the set has values']
 
   Note: 'Embedded in session_lines.sets[]'
 }

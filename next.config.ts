@@ -2,6 +2,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Dev-only badge. Bottom-left covered the workout screen's "More actions" button.
+  devIndicators: { position: "bottom-right" },
   transpilePackages: [
     "@musclemap/react",
     "@musclemap/core",

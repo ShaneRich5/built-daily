@@ -24,7 +24,24 @@ export type UiSetRow = {
   resistanceLevel: string;
   distanceMiles: string;
   note: string;
+  /** Checked off in the active workout. */
+  done: boolean;
 };
+
+export function emptyUiSetRow(): UiSetRow {
+  return {
+    weight: "",
+    reps: "",
+    seconds: "",
+    timedSetSec: "",
+    paceMph: "",
+    inclinePercent: "",
+    resistanceLevel: "",
+    distanceMiles: "",
+    note: "",
+    done: false,
+  };
+}
 
 /** Snapshot passed from the active workout screen on finish or autosave. */
 export type ActiveWorkoutFinishSnapshot = {
@@ -78,6 +95,10 @@ function emptyCardioFields(): Pick<
 }
 
 export function uiSetRowToSetLog(row: UiSetRow, metric: ExerciseMetric): SetLog {
+  return { ...setFieldsForMetric(row, metric), done: row.done };
+}
+
+function setFieldsForMetric(row: UiSetRow, metric: ExerciseMetric): SetLog {
   const note = trimToNull(row.note, NOTE_LIMITS.setNote);
   const timedSetSec = parseIntLoose(row.timedSetSec);
 
@@ -139,6 +160,27 @@ export function createLineId(): string {
   return newLineId();
 }
 
+function setLogHasValues(set: SetLog): boolean {
+  return (
+    set.weight != null ||
+    set.reps != null ||
+    set.durationSec != null ||
+    set.timedSetSec != null ||
+    set.paceMph != null ||
+    set.inclinePercent != null ||
+    set.resistanceLevel != null ||
+    set.distanceMiles != null
+  );
+}
+
+/**
+ * Whether a set is checked off. Sets saved before the `done` field existed
+ * (or written by the MCP server) count as done when they have values.
+ */
+export function isSetLogDone(set: SetLog): boolean {
+  return set.done ?? setLogHasValues(set);
+}
+
 /** Convert a persisted set back into active-workout UI fields. */
 export function setLogToUiSetRow(set: SetLog): UiSetRow {
   return {
@@ -152,6 +194,7 @@ export function setLogToUiSetRow(set: SetLog): UiSetRow {
       set.resistanceLevel != null ? String(set.resistanceLevel) : "",
     distanceMiles: set.distanceMiles != null ? String(set.distanceMiles) : "",
     note: set.note ?? "",
+    done: isSetLogDone(set),
   };
 }
 
@@ -255,6 +298,7 @@ export function sessionDocToFirestore(
         resistanceLevel: s.resistanceLevel,
         distanceMiles: s.distanceMiles,
         note: s.note,
+        ...(s.done !== undefined ? { done: s.done } : {}),
       })),
     })),
     exerciseCount: doc.exerciseCount,
@@ -324,6 +368,7 @@ function parseSetLog(raw: unknown): SetLog | null {
     resistanceLevel: asNullableNumber(o.resistanceLevel),
     distanceMiles: asNullableNumber(o.distanceMiles),
     note: note && note.trim().length > 0 ? note : null,
+    ...(typeof o.done === "boolean" ? { done: o.done } : {}),
   };
 }
 

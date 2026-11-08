@@ -32,7 +32,15 @@ import {
   combineToTotalSeconds,
   splitTotalSeconds,
 } from "@/lib/duration-input";
-import { uiSetRowToSetLog, type UiSetRow } from "@/lib/workout-session-mapper";
+import {
+  emptyUiSetRow,
+  setLogToUiSetRow,
+  uiSetRowToSetLog,
+  type UiSetRow,
+} from "@/lib/workout-session-mapper";
+
+/** Text fields of a set (everything except the done flag). */
+type SetTextField = Exclude<keyof UiSetRow, "done">;
 import {
   deleteWorkoutSession,
   reopenSessionAsInProgress,
@@ -69,20 +77,6 @@ type WorkoutSessionDetailProps = {
 
 const numberFieldClassName =
   "h-11 font-mono tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
-
-function emptyUiSet(): UiSetRow {
-  return {
-    weight: "",
-    reps: "",
-    seconds: "",
-    timedSetSec: "",
-    paceMph: "",
-    inclinePercent: "",
-    resistanceLevel: "",
-    distanceMiles: "",
-    note: "",
-  };
-}
 
 function setLogHasValues(set: SetLog): boolean {
   return (
@@ -122,21 +116,6 @@ function summarizeSessionSets(sets: SetLog[]): string {
     return `${meaningful.length} set${meaningful.length === 1 ? "" : "s"} · ${meaningful[0]}`;
   }
   return meaningful.map((s, i) => `${i + 1}. ${s}`).join(" · ");
-}
-
-function setLogToUi(set: SetLog): UiSetRow {
-  return {
-    weight: set.weight != null ? String(set.weight) : "",
-    reps: set.reps != null ? String(set.reps) : "",
-    seconds: set.durationSec != null ? String(set.durationSec) : "",
-    timedSetSec: set.timedSetSec != null ? String(set.timedSetSec) : "",
-    paceMph: set.paceMph != null ? String(set.paceMph) : "",
-    inclinePercent: set.inclinePercent != null ? String(set.inclinePercent) : "",
-    resistanceLevel:
-      set.resistanceLevel != null ? String(set.resistanceLevel) : "",
-    distanceMiles: set.distanceMiles != null ? String(set.distanceMiles) : "",
-    note: set.note ?? "",
-  };
 }
 
 function cloneSession(session: WorkoutSessionDoc): WorkoutSessionDoc {
@@ -326,7 +305,7 @@ export function WorkoutSessionDetail({
     lineIndex: number,
     setIndex: number,
     metric: ExerciseMetric,
-    field: keyof UiSetRow,
+    field: SetTextField,
     value: string,
   ) => {
     setLines((prev) => {
@@ -334,7 +313,7 @@ export function WorkoutSessionDetail({
         if (li !== lineIndex) return line;
         const sets = line.sets.map((set, si) => {
           if (si !== setIndex) return set;
-          const ui = setLogToUi(set);
+          const ui = setLogToUiSetRow(set);
           ui[field] = value;
           return uiSetRowToSetLog(ui, metric);
         });
@@ -350,7 +329,7 @@ export function WorkoutSessionDetail({
         if (li !== lineIndex) return line;
         return {
           ...line,
-          sets: [...line.sets, uiSetRowToSetLog(emptyUiSet(), line.metric)],
+          sets: [...line.sets, uiSetRowToSetLog(emptyUiSetRow(), line.metric)],
         };
       }),
     );
@@ -1006,11 +985,11 @@ function SetEditors({
     lineIndex: number,
     setIndex: number,
     metric: ExerciseMetric,
-    field: keyof UiSetRow,
+    field: SetTextField,
     value: string,
   ) => void;
 }) {
-  const ui = setLogToUi(set);
+  const ui = setLogToUiSetRow(set);
 
   if (metric === "duration") {
     const parts = splitTotalSeconds(ui.seconds);

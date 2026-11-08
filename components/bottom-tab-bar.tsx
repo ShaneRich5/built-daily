@@ -29,7 +29,7 @@ const TABS = [
 ] as const;
 
 /** Routes with their own full-screen flow — no tab switching mid-flow. */
-const HIDDEN_PATHS = new Set(["/login", "/onboarding"]);
+const HIDDEN_PATHS = new Set(["/login", "/onboarding", "/workout"]);
 
 /** Shared with the layout so it can reserve matching space above the bar. */
 export function useShowBottomTabBar(): boolean {

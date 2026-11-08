@@ -53,26 +53,34 @@ test.describe("mobile input zoom (issue #38)", () => {
     await page.getByRole("button", { name: "Start workout" }).click();
     await expect(page).toHaveURL(/\/workout\?s=/);
 
-    // Name / date / time — collapsible WorkoutMetaFields (workout-meta-fields.tsx).
-    await page.locator("summary").filter({ hasText: "Edit" }).first().click();
-    await expectAtLeastMobileFontSize(page.getByLabel("Name"));
-    await expectAtLeastMobileFontSize(page.getByLabel("Date"));
-    await expectAtLeastMobileFontSize(page.getByLabel("Time"));
-
-    // Workout note — the shared CollapsibleNote textarea.
-    await page.locator("summary").filter({ hasText: "Workout note" }).click();
+    // Name / date / time / note — the workout details sheet, opened from the header.
+    await page.getByRole("button", { name: /Edit workout name/ }).click();
+    await expectAtLeastMobileFontSize(page.getByLabel("Name", { exact: true }));
+    await expectAtLeastMobileFontSize(page.getByLabel("Date", { exact: true }));
+    await expectAtLeastMobileFontSize(page.getByLabel("Time", { exact: true }));
     await expectAtLeastMobileFontSize(page.getByLabel("Workout note"));
+    await page.keyboard.press("Escape");
 
-    // Add an exercise, then switch to Compact density — the number inputs
-    // there (weight/reps/duration) were the ones hardcoded to text-sm.
-    await page.getByText("Add Exercise", { exact: true }).first().click();
-    await page
-      .getByRole("button", { name: /^Barbell back squat/ })
-      .click();
-    await page.getByRole("button", { name: "Compact" }).click();
+    // Exercise search, then the set inputs on the quick card.
+    await page.getByRole("button", { name: "Add exercise" }).first().click();
+    await expectAtLeastMobileFontSize(
+      page.getByRole("searchbox", { name: "Search exercises" }),
+    );
+    await page.getByRole("searchbox", { name: "Search exercises" }).fill("back squat");
+    await page.getByRole("button", { name: /^Barbell back squat/ }).click();
+    await page.getByRole("button", { name: "Add 1 exercise" }).click();
 
     await expectAtLeastMobileFontSize(page.getByLabel("Weight for set 1"));
     await expectAtLeastMobileFontSize(page.getByLabel("Reps for set 1"));
+
+    // Details screen: set note and exercise note.
+    await page.getByRole("button", { name: /^Details/ }).click();
+    await page.getByRole("button", { name: "Add a note to set 1" }).click();
+    await expectAtLeastMobileFontSize(
+      page.getByRole("textbox", { name: "Note for set 1" }),
+    );
+    await expectAtLeastMobileFontSize(page.getByLabel("Exercise note"));
+    await page.getByRole("button", { name: "Done" }).click();
 
     await discardActiveWorkout(page);
   });
