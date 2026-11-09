@@ -26,7 +26,7 @@ async function signIn(page: Page) {
 }
 
 async function startWorkoutWithOneSet(page: Page) {
-  await page.getByRole("button", { name: "Start workout" }).click();
+  await page.getByRole("link", { name: "Start empty workout" }).click();
   await expect(page).toHaveURL(/\/workout\?s=/);
 
   await page.getByRole("button", { name: "Add exercise" }).first().click();

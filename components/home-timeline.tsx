@@ -252,7 +252,7 @@ export function HomeTimeline() {
         setActivities(null);
       };
     }
-    const unsubSessions = subscribeRecentSessions(setSessions, { maxDocs: 30 });
+    const unsubSessions = subscribeRecentSessions(setSessions, { maxDocs: 100 });
     const unsubActivities = subscribeRecentActivities(setActivities, {
       maxDocs: 40,
     });
@@ -394,7 +394,7 @@ export function HomeTimeline() {
           id="timeline-heading"
           className="text-sm font-semibold uppercase tracking-wide text-zinc-500"
         >
-          {selecting ? "Select workouts" : "Recent"}
+          {selecting ? "Select workouts" : "Workouts & activities"}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           {selecting ? (
