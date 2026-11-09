@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { WorkoutSessionDetail } from "@/components/workout-session-detail";
+import { SavedSessionScreen } from "@/features/saved-session/saved-session-screen";
 import {
   getCompletedWorkoutSession,
   type SavedWorkoutSession,
@@ -135,7 +135,7 @@ function SessionDetailLoader({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <WorkoutSessionDetail
+    <SavedSessionScreen
       key={loaded.id}
       sessionId={loaded.id}
       session={loaded.session}
