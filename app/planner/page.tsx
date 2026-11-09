@@ -1,5 +1,5 @@
-import { WorkoutPlanner } from "@/components/workout-planner";
+import { PlannerScreen } from "@/features/planner/planner-screen";
 
 export default function PlannerPage() {
-  return <WorkoutPlanner />;
+  return <PlannerScreen />;
 }
