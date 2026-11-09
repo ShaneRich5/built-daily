@@ -8,7 +8,6 @@ import {
   Copy,
   NotebookText,
   Plus,
-  Timer,
   Trash2,
   X,
 } from "lucide-react";
@@ -29,8 +28,6 @@ import {
   type SetRow,
 } from "@/features/workout-session/session-model";
 import { SetFieldInput } from "@/features/workout-session/set-row";
-import type { SetStopwatch } from "@/features/workout-session/use-set-stopwatch";
-import { formatElapsed } from "@/features/workout-session/use-session-timer";
 
 type ExerciseDetailsSheetProps = {
   open: boolean;
@@ -40,7 +37,6 @@ type ExerciseDetailsSheetProps = {
   total: number;
   history: ExerciseHistoryEntry[];
   historyLoading: boolean;
-  stopwatch: SetStopwatch;
   onUpdateSet: (setIndex: number, patch: Partial<SetRow>) => void;
   onAddSet: () => void;
   onCopyLastSet: () => void;
@@ -64,7 +60,7 @@ function historyDate(entry: ExerciseHistoryEntry): string {
     : formatWorkoutHeaderDate(entry.performedAt.getTime());
 }
 
-/** Everything for one exercise: all set fields, notes, timers, history, and change/move/remove. */
+/** Everything for one exercise: all set fields, notes, history, and change/move/remove. */
 export function ExerciseDetailsSheet({
   open,
   onOpenChange,
@@ -73,7 +69,6 @@ export function ExerciseDetailsSheet({
   total,
   history,
   historyLoading,
-  stopwatch,
   onUpdateSet,
   onAddSet,
   onCopyLastSet,
@@ -91,7 +86,6 @@ export function ExerciseDetailsSheet({
   const lastTimeSets = history[0]?.line.sets;
   const { primary, secondary } = targetingForExercise(exercise);
   const muscles = muscleTargetSummary(primary, secondary);
-  const timesIntoSeconds = exercise.metric === "duration" || exercise.metric === "cardio";
 
   const toggleNote = (setIndex: number) =>
     setNotesOpen((prev) => {
@@ -100,17 +94,6 @@ export function ExerciseDetailsSheet({
       else next.add(setIndex);
       return next;
     });
-
-  const saveStopwatch = () => {
-    const result = stopwatch.stop();
-    if (!result) return;
-    onUpdateSet(
-      result.target.setIndex,
-      timesIntoSeconds
-        ? { seconds: String(result.seconds) }
-        : { timedSetSec: String(result.seconds) },
-    );
-  };
 
   return (
     <BottomSheet
@@ -177,10 +160,7 @@ export function ExerciseDetailsSheet({
           {sets.map((set, setIndex) => {
             const setNumber = setIndex + 1;
             const suggestion = suggestionForSet(sets, setIndex, lastTimeSets);
-            const timing =
-              stopwatch.active?.lineId === lineId && stopwatch.active.setIndex === setIndex;
             const noteVisible = notesOpen.has(setIndex) || set.note.trim() !== "";
-            const timed = set.timedSetSec.trim();
             return (
               <div
                 key={setIndex}
@@ -224,15 +204,6 @@ export function ExerciseDetailsSheet({
                   </button>
                   <button
                     type="button"
-                    className={cn(iconButton, timing || timed ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400")}
-                    aria-label={timing ? `Timing set ${setNumber}` : `Time set ${setNumber}`}
-                    disabled={stopwatch.active !== null && !timing}
-                    onClick={() => (timing ? saveStopwatch() : stopwatch.start({ lineId, setIndex }))}
-                  >
-                    <Timer className="size-4" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
                     className={cn(iconButton, "text-zinc-400")}
                     aria-label={`Remove set ${setNumber}`}
                     onClick={() => onRemoveSet(setIndex)}
@@ -256,24 +227,6 @@ export function ExerciseDetailsSheet({
                       </label>
                     ))}
                   </div>
-                ) : null}
-
-                {timing ? (
-                  <div className="flex items-center gap-2 pl-7" aria-live="polite">
-                    <span className="font-mono text-sm tabular-nums">{formatElapsed(stopwatch.liveMs)}</span>
-                    <button
-                      type="button"
-                      onClick={saveStopwatch}
-                      className="h-9 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
-                    >
-                      Stop &amp; save
-                    </button>
-                    <button type="button" onClick={stopwatch.cancel} className="h-9 px-2 text-xs font-medium text-zinc-500">
-                      Cancel
-                    </button>
-                  </div>
-                ) : timed && !timesIntoSeconds ? (
-                  <p className="pl-7 text-xs text-zinc-500">Timed: {timed}s</p>
                 ) : null}
 
                 {noteVisible ? (

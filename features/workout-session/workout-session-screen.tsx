@@ -32,7 +32,6 @@ import {
 } from "@/features/workout-session/session-model";
 import { nextUnfinishedAfter } from "@/features/workout-session/session-reducer";
 import type { WorkoutSessionInitialData } from "@/features/workout-session/session-snapshot";
-import { useSetStopwatch } from "@/features/workout-session/use-set-stopwatch";
 import { useWorkoutSession } from "@/features/workout-session/use-workout-session";
 import { WorkoutDetailsSheet } from "@/features/workout-session/workout-details-sheet";
 
@@ -55,8 +54,7 @@ export function WorkoutSessionScreen({
   ...data
 }: WorkoutSessionScreenProps) {
   const session = useWorkoutSession(data, onPersist);
-  const { state, dispatch, timer, history } = session;
-  const stopwatch = useSetStopwatch();
+  const { state, dispatch, history } = session;
 
   const [panel, setPanel] = useState<Panel>(null);
   /** The exercise the details / move / change sheet is about. Kept after closing for the exit animation. */
@@ -125,7 +123,6 @@ export function WorkoutSessionScreen({
     if (!window.confirm(`Remove ${focusItem.exercise.name} and all of its sets from this workout?`)) {
       return;
     }
-    if (stopwatch.active?.lineId === focusItem.lineId) stopwatch.cancel();
     dispatch({ type: "removeExercise", lineId: focusItem.lineId });
     setPanel(null);
   };
@@ -134,7 +131,6 @@ export function WorkoutSessionScreen({
     if (set && !setRowIsBlank(set) && !window.confirm(`Remove set ${setIndex + 1} from ${name}?`)) {
       return;
     }
-    if (stopwatch.active?.lineId === lineId) stopwatch.cancel();
     dispatch({ type: "removeSet", lineId, setIndex });
   };
 
@@ -146,7 +142,6 @@ export function WorkoutSessionScreen({
     ) {
       return;
     }
-    if (stopwatch.active?.lineId === focusItem.lineId) stopwatch.cancel();
     dispatch({ type: "replaceSets", lineId: focusItem.lineId, sets: rowsFromHistory(entry.line.sets) });
   };
 
@@ -189,8 +184,6 @@ export function WorkoutSessionScreen({
         exerciseCount={exercises.length}
         setCount={setCount}
         doneSetCount={countDoneSets(exercises)}
-        timerPhase={timer.phase}
-        elapsedMs={timer.elapsedMs}
         onOpenWorkoutDetails={() => setPanel("workout")}
       />
 
@@ -303,7 +296,6 @@ export function WorkoutSessionScreen({
           total={exercises.length}
           history={history[focusItem.exercise.id] ?? []}
           historyLoading={session.historyLoading}
-          stopwatch={stopwatch}
           onUpdateSet={(setIndex, patch) =>
             dispatch({ type: "updateSet", lineId: focusItem.lineId, setIndex, patch })
           }
@@ -344,7 +336,6 @@ export function WorkoutSessionScreen({
         onOpenChange={closePanel}
         state={state}
         startedAtMs={session.startedAtMs}
-        timer={timer}
         exercises={exercises.map((item) => item.exercise)}
         onMetaChange={(patch) => dispatch({ type: "updateMeta", patch })}
       />

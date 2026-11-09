@@ -36,7 +36,6 @@ export const MidWorkout: Story = {
     exercises: pushDay.map((item) => item.exercise),
     initialLineIds: pushDay.map((item) => item.lineId),
     initialSetsByExercise: pushDay.map((item) => item.sets),
-    initialActiveDurationMs: 32 * 60 * 1000,
   },
 };
 
@@ -55,8 +54,6 @@ export const Header: StoryObj<typeof SessionHeader> = {
       exerciseCount={4}
       setCount={12}
       doneSetCount={8}
-      timerPhase="running"
-      elapsedMs={32 * 60 * 1000 + 14000}
       onOpenWorkoutDetails={() => {}}
     />
   ),

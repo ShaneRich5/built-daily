@@ -5,8 +5,6 @@ import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-
 import { MoveExerciseSheet } from "@/features/workout-session/move-exercise-sheet";
 import { ReorderSheet } from "@/features/workout-session/reorder-sheet";
 import { flyHistory, pushDay, suggested } from "@/features/workout-session/story-fixtures";
-import { useSessionTimer } from "@/features/workout-session/use-session-timer";
-import { useSetStopwatch } from "@/features/workout-session/use-set-stopwatch";
 import { WorkoutDetailsSheet } from "@/features/workout-session/workout-details-sheet";
 
 /**
@@ -84,7 +82,6 @@ export const ChangeExercise: Story = {
 export const ExerciseDetails: Story = {
   render: function Render() {
     const [open, setOpen] = useState(true);
-    const stopwatch = useSetStopwatch();
     const [item, setItem] = useState(pushDay[2]!);
     return (
       <>
@@ -97,7 +94,6 @@ export const ExerciseDetails: Story = {
           total={4}
           history={flyHistory}
           historyLoading={false}
-          stopwatch={stopwatch}
           onUpdateSet={(setIndex, patch) =>
             setItem((it) => ({
               ...it,
@@ -166,10 +162,9 @@ export const Reorder: Story = {
 };
 
 export const WorkoutDetails: Story = {
-  name: "Workout details (name, note, timer)",
+  name: "Workout details (name, date, note)",
   render: function Render() {
     const [open, setOpen] = useState(true);
-    const timer = useSessionTimer(0);
     const [meta, setMeta] = useState({
       title: "Push day",
       workoutDate: "2026-11-08",
@@ -184,7 +179,6 @@ export const WorkoutDetails: Story = {
           onOpenChange={setOpen}
           state={meta}
           startedAtMs={Date.now()}
-          timer={timer}
           exercises={pushDay.map((i) => i.exercise)}
           onMetaChange={(patch) => setMeta((m) => ({ ...m, ...patch }))}
         />

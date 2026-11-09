@@ -29,7 +29,7 @@ export type WorkoutSessionInitialData = {
   initialWorkoutDate?: string | null;
   /** Local `HH:mm`. */
   initialWorkoutTime?: string | null;
-  /** Session timer value when resuming (ms). */
+  /** Saved session duration when resuming (ms); kept as-is, no timer UI. */
   initialActiveDurationMs?: number;
   /** Original session start time. */
   sessionStartedAtMs?: number;

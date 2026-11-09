@@ -5,7 +5,6 @@ import {
   useEffect,
   useMemo,
   useReducer,
-  useRef,
   useState,
 } from "react";
 import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
@@ -24,13 +23,12 @@ import {
   toFinishSnapshot,
   type WorkoutSessionInitialData,
 } from "@/features/workout-session/session-snapshot";
-import { useSessionTimer } from "@/features/workout-session/use-session-timer";
 
 const AUTOSAVE_DELAY_MS = 1200;
 
 /**
- * Owns the live workout: session state, the optional timer, debounced
- * autosave, and past workouts (for "last time" values and suggestions).
+ * Owns the live workout: session state, debounced autosave, and past
+ * workouts (for "last time" values and suggestions).
  */
 export function useWorkoutSession(
   data: WorkoutSessionInitialData,
@@ -40,24 +38,21 @@ export function useWorkoutSession(
   const [state, dispatch] = useReducer(sessionReducer, undefined, () =>
     initialSessionState(data, startedAtMs),
   );
-  const timer = useSessionTimer(data.initialActiveDurationMs ?? 0);
+  // The session timer UI is gone; keep any duration an older session already has.
+  const activeDurationMs = data.initialActiveDurationMs ?? 0;
   const planId = data.planId ?? null;
 
   const buildSnapshot = useCallback(
     () =>
       toFinishSnapshot(state, {
-        activeDurationMs: timer.elapsedMs,
+        activeDurationMs,
         sessionStartedAtMs: startedAtMs,
         planId,
       }),
-    [state, timer.elapsedMs, startedAtMs, planId],
+    [state, activeDurationMs, startedAtMs, planId],
   );
 
-  // Autosave on content changes only — not on timer ticks or opening a card.
-  const elapsedRef = useRef(timer.elapsedMs);
-  useEffect(() => {
-    elapsedRef.current = timer.elapsedMs;
-  }, [timer.elapsedMs]);
+  // Autosave on content changes only — not on opening a card.
   const { title, workoutDate, workoutTime, workoutNote, exercises } = state;
   useEffect(() => {
     if (!onPersist) return;
@@ -66,7 +61,7 @@ export function useWorkoutSession(
         toFinishSnapshot(
           { title, workoutDate, workoutTime, workoutNote, exercises, openLineId: null },
           {
-            activeDurationMs: elapsedRef.current,
+            activeDurationMs,
             sessionStartedAtMs: startedAtMs,
             planId,
           },
@@ -74,7 +69,7 @@ export function useWorkoutSession(
       );
     }, AUTOSAVE_DELAY_MS);
     return () => window.clearTimeout(id);
-  }, [onPersist, title, workoutDate, workoutTime, workoutNote, exercises, startedAtMs, planId]);
+  }, [onPersist, title, workoutDate, workoutTime, workoutNote, exercises, activeDurationMs, startedAtMs, planId]);
 
   const [recent, setRecent] = useState<{
     loaded: boolean;
@@ -126,7 +121,6 @@ export function useWorkoutSession(
   return {
     state,
     dispatch,
-    timer,
     startedAtMs,
     planId,
     buildSnapshot,
