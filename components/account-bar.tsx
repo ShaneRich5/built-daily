@@ -16,7 +16,8 @@ export function AccountBar() {
     setMounted(true);
   }, []);
 
-  if (pathname === "/login") {
+  // The active workout is a full-screen flow with its own header.
+  if (pathname === "/login" || pathname === "/workout") {
     return null;
   }
 

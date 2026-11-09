@@ -41,6 +41,12 @@ export type SetLog = {
   /** Cardio distance in miles (optional). */
   distanceMiles: number | null;
   note: string | null;
+  /**
+   * Checked off in the active workout. Optional: sets written before this
+   * field existed (and sets written by the MCP server) omit it — read those
+   * with `isSetLogDone`, which treats a set with values as done.
+   */
+  done?: boolean;
 };
 
 /** One exercise line inside a session or plan template. */

@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ActiveWorkoutView } from "@/components/active-workout-view";
+import { WorkoutSessionScreen } from "@/features/workout-session/workout-session-screen";
 import { useAuth } from "@/components/auth-provider";
 import { FinishConfetti } from "@/components/finish-confetti";
 import { WorkoutSavedExport } from "@/components/workout-saved-export";
@@ -15,6 +15,7 @@ import {
 import {
   buildWorkoutSessionDoc,
   createLineId,
+  emptyUiSetRow,
   setLogToUiSetRow,
   type ActiveWorkoutFinishSnapshot,
   type UiSetRow,
@@ -54,19 +55,6 @@ type ResumeBundle = {
   sessionStartedAtMs: number;
 };
 
-function emptyUiSet(): UiSetRow {
-  return {
-    weight: "",
-    reps: "",
-    seconds: "",
-    timedSetSec: "",
-    paceMph: "",
-    inclinePercent: "",
-    resistanceLevel: "",
-    distanceMiles: "",
-    note: "",
-  };
-}
 
 function sessionToResumeBundle(
   sessionId: string,
@@ -79,7 +67,7 @@ function sessionToResumeBundle(
   }));
   const lineIds = session.lines.map((l) => l.lineId);
   const setsByExercise = session.lines.map((line) =>
-    line.sets.length > 0 ? line.sets.map(setLogToUiSetRow) : [emptyUiSet()],
+    line.sets.length > 0 ? line.sets.map(setLogToUiSetRow) : [emptyUiSetRow()],
   );
   const exerciseNotesById: Record<string, string> = {};
   for (const line of session.lines) {
@@ -238,7 +226,7 @@ export function ActiveWorkoutFromUrl() {
       );
       if (line?.notes) notes[exercise.id] = line.notes;
       const targetSets = Math.max(1, Math.min(99, line?.targetSets ?? 1));
-      return Array.from({ length: targetSets }, emptyUiSet);
+      return Array.from({ length: targetSets }, emptyUiSetRow);
     });
     return { notes, setsByExercise };
   }, [needsPlanFetch, planLoad, urlExercises]);
@@ -429,7 +417,7 @@ export function ActiveWorkoutFromUrl() {
       );
     } else {
       main = (
-        <ActiveWorkoutView
+        <WorkoutSessionScreen
           key={resume.sessionId}
           title={resume.title}
           titleIsCustom={resume.titleIsCustom}
@@ -484,7 +472,7 @@ export function ActiveWorkoutFromUrl() {
     );
   } else {
     main = (
-      <ActiveWorkoutView
+      <WorkoutSessionScreen
         key={liveSessionId ?? `local:${ids.join(",") || "empty"}`}
         title={title}
         titleIsCustom={titleIsCustom}

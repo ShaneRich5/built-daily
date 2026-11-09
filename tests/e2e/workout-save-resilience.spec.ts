@@ -29,8 +29,10 @@ async function startWorkoutWithOneSet(page: Page) {
   await page.getByRole("button", { name: "Start workout" }).click();
   await expect(page).toHaveURL(/\/workout\?s=/);
 
-  await page.getByText("Add Exercise", { exact: true }).first().click();
+  await page.getByRole("button", { name: "Add exercise" }).first().click();
+  await page.getByRole("searchbox", { name: "Search exercises" }).fill("back squat");
   await page.getByRole("button", { name: /^Barbell back squat/ }).click();
+  await page.getByRole("button", { name: "Add 1 exercise" }).click();
 
   await page.getByLabel("Weight for set 1").fill("135");
   await page.getByLabel("Reps for set 1").fill("5");

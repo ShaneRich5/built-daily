@@ -1,0 +1,141 @@
+"use client";
+
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
+import {
+  exerciseHistoriesFromSessions,
+  getRecentCompletedSessions,
+  type SavedWorkoutSession,
+} from "@/lib/workout-session-repository";
+import {
+  recentExercises,
+  suggestNextExercises,
+} from "@/features/workout-session/exercise-suggestions";
+import { sessionReducer } from "@/features/workout-session/session-reducer";
+import {
+  initialSessionState,
+  toFinishSnapshot,
+  type WorkoutSessionInitialData,
+} from "@/features/workout-session/session-snapshot";
+import { useSessionTimer } from "@/features/workout-session/use-session-timer";
+
+const AUTOSAVE_DELAY_MS = 1200;
+
+/**
+ * Owns the live workout: session state, the optional timer, debounced
+ * autosave, and past workouts (for "last time" values and suggestions).
+ */
+export function useWorkoutSession(
+  data: WorkoutSessionInitialData,
+  onPersist?: (snapshot: ActiveWorkoutFinishSnapshot) => void | Promise<void>,
+) {
+  const [startedAtMs] = useState(() => data.sessionStartedAtMs ?? Date.now());
+  const [state, dispatch] = useReducer(sessionReducer, undefined, () =>
+    initialSessionState(data, startedAtMs),
+  );
+  const timer = useSessionTimer(data.initialActiveDurationMs ?? 0);
+  const planId = data.planId ?? null;
+
+  const buildSnapshot = useCallback(
+    () =>
+      toFinishSnapshot(state, {
+        activeDurationMs: timer.elapsedMs,
+        sessionStartedAtMs: startedAtMs,
+        planId,
+      }),
+    [state, timer.elapsedMs, startedAtMs, planId],
+  );
+
+  // Autosave on content changes only — not on timer ticks or opening a card.
+  const elapsedRef = useRef(timer.elapsedMs);
+  useEffect(() => {
+    elapsedRef.current = timer.elapsedMs;
+  }, [timer.elapsedMs]);
+  const { title, workoutDate, workoutTime, workoutNote, exercises } = state;
+  useEffect(() => {
+    if (!onPersist) return;
+    const id = window.setTimeout(() => {
+      void onPersist(
+        toFinishSnapshot(
+          { title, workoutDate, workoutTime, workoutNote, exercises, openLineId: null },
+          {
+            activeDurationMs: elapsedRef.current,
+            sessionStartedAtMs: startedAtMs,
+            planId,
+          },
+        ),
+      );
+    }, AUTOSAVE_DELAY_MS);
+    return () => window.clearTimeout(id);
+  }, [onPersist, title, workoutDate, workoutTime, workoutNote, exercises, startedAtMs, planId]);
+
+  const [recent, setRecent] = useState<{
+    loaded: boolean;
+    sessions: SavedWorkoutSession[];
+  }>({ loaded: false, sessions: [] });
+  useEffect(() => {
+    let cancelled = false;
+    getRecentCompletedSessions()
+      .catch(() => [])
+      .then((sessions) => {
+        if (!cancelled) setRecent({ loaded: true, sessions });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Only recompute history when the exercise list itself changes, not on every keystroke.
+  const exerciseKey = exercises
+    .map((item) => `${item.exercise.id}:${item.exercise.metric}:${item.exercise.name}`)
+    .join("|");
+  const catalogExercises = useMemo(
+    () => exercises.map((item) => item.exercise),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on exerciseKey on purpose
+    [exerciseKey],
+  );
+  const history = useMemo(
+    () => exerciseHistoriesFromSessions(recent.sessions, catalogExercises),
+    [recent.sessions, catalogExercises],
+  );
+  const suggestions = useMemo(
+    () => suggestNextExercises(recent.sessions, catalogExercises),
+    [recent.sessions, catalogExercises],
+  );
+  const recent12 = useMemo(() => recentExercises(recent.sessions), [recent.sessions]);
+  // The search sheet's "Suggested" tab: next-up picks first, topped up with recent ones.
+  const suggestedForSearch = useMemo(() => {
+    const inWorkout = new Set(catalogExercises.map((exercise) => exercise.id));
+    const seen = new Set<string>();
+    return [...suggestNextExercises(recent.sessions, catalogExercises, 8), ...recent12]
+      .filter((exercise) => {
+        if (inWorkout.has(exercise.id) || seen.has(exercise.id)) return false;
+        seen.add(exercise.id);
+        return true;
+      })
+      .slice(0, 8);
+  }, [recent.sessions, catalogExercises, recent12]);
+
+  return {
+    state,
+    dispatch,
+    timer,
+    startedAtMs,
+    planId,
+    buildSnapshot,
+    history,
+    historyLoading: !recent.loaded,
+    suggestions,
+    suggestedForSearch,
+    recentExercises: recent12,
+  };
+}
+
+export type WorkoutSessionController = ReturnType<typeof useWorkoutSession>;

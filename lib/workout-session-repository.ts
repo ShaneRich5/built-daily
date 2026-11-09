@@ -242,19 +242,45 @@ export function subscribeCompletedSessionsDetailed(
 }
 
 /**
- * Load recent completed sets for several exercises with one Firestore query.
- * We scan a bounded recent window so this also works for older session docs
- * that do not have a denormalized exercise-id array.
+ * Recent completed sessions, newest first. The active workout loads these once
+ * and derives "last time" values and next-exercise suggestions from them.
  */
-export async function getExerciseHistories(
-  exercises: CatalogExercise[],
-  options?: { maxSessions?: number; maxPerExercise?: number },
-): Promise<ExerciseHistoryById> {
+export async function getRecentCompletedSessions(
+  maxSessions = 80,
+): Promise<SavedWorkoutSession[]> {
   const col = sessionsCollectionRef();
-  if (!col || exercises.length === 0) return {};
+  if (!col) return [];
 
-  const maxSessions = options?.maxSessions ?? 80;
-  const maxPerExercise = options?.maxPerExercise ?? 10;
+  const snap = await getDocs(
+    query(
+      col,
+      where("status", "==", "completed"),
+      orderBy("endedAt", "desc"),
+      limit(maxSessions),
+    ),
+  );
+
+  const out: SavedWorkoutSession[] = [];
+  for (const d of snap.docs) {
+    const session = firestoreToWorkoutSessionDoc(
+      d.data() as Record<string, unknown>,
+    );
+    if (session && session.status === "completed") {
+      out.push({ id: d.id, session });
+    }
+  }
+  return out;
+}
+
+/**
+ * Past sets for each exercise, newest first. Matches by id, then by name +
+ * metric so older custom exercises still find their history.
+ */
+export function exerciseHistoriesFromSessions(
+  sessions: SavedWorkoutSession[],
+  exercises: CatalogExercise[],
+  maxPerExercise = 10,
+): ExerciseHistoryById {
   const result: ExerciseHistoryById = Object.fromEntries(
     exercises.map((exercise) => [exercise.id, []]),
   );
@@ -266,21 +292,7 @@ export async function getExerciseHistories(
     ]),
   );
 
-  const snap = await getDocs(
-    query(
-      col,
-      where("status", "==", "completed"),
-      orderBy("endedAt", "desc"),
-      limit(maxSessions),
-    ),
-  );
-
-  for (const sessionSnap of snap.docs) {
-    const session = firestoreToWorkoutSessionDoc(
-      sessionSnap.data() as Record<string, unknown>,
-    );
-    if (!session || session.status !== "completed") continue;
-
+  for (const { id, session } of sessions) {
     for (const line of session.lines) {
       const exercise =
         byId.get(line.exerciseId) ??
@@ -292,7 +304,7 @@ export async function getExerciseHistories(
       const entries = result[exercise.id]!;
       if (entries.length >= maxPerExercise) continue;
       entries.push({
-        sessionId: sessionSnap.id,
+        sessionId: id,
         sessionTitle: session.title,
         performedAt: session.endedAt ?? session.startedAt,
         workoutDate: session.workoutDate,
