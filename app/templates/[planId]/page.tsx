@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { WorkoutTemplateEditor } from "@/components/workout-template-editor";
+import { useAuth } from "@/components/auth-provider";
+import { TemplateEditor } from "@/features/templates/template-editor";
 import {
   getWorkoutPlan,
   type SavedWorkoutPlan,
@@ -47,7 +48,11 @@ function EditTemplateLoader({ planId }: { planId: string }) {
     "loading",
   );
 
+  const { user, loading } = useAuth();
+
+  // Wait for sign-in to settle; reading before it does looks like "not found" on reload.
   useEffect(() => {
+    if (loading) return;
     let cancelled = false;
     void getWorkoutPlan(planId).then((res) => {
       if (!cancelled) setLoaded(res ?? null);
@@ -55,7 +60,7 @@ function EditTemplateLoader({ planId }: { planId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [planId]);
+  }, [planId, loading, user]);
 
   if (loaded === "loading") {
     return (
@@ -80,7 +85,7 @@ function EditTemplateLoader({ planId }: { planId: string }) {
   }
 
   return (
-    <WorkoutTemplateEditor
+    <TemplateEditor
       planId={loaded.id}
       initialPlan={loaded.plan}
     />
