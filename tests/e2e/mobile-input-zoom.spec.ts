@@ -50,7 +50,7 @@ test.describe("mobile input zoom (issue #38)", () => {
   }) => {
     await signIn(page);
 
-    await page.getByRole("button", { name: "Start workout" }).click();
+    await page.getByRole("link", { name: "Start empty workout" }).click();
     await expect(page).toHaveURL(/\/workout\?s=/);
 
     // Name / date / time / note — the workout details sheet, opened from the header.
