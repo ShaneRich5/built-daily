@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ProgressDashboard } from "@/components/progress-dashboard";
+import { ProgressScreen } from "@/features/progress/progress-screen";
 
 export const metadata: Metadata = {
   title: "Progress",
@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function ProgressPage() {
-  return <ProgressDashboard />;
+  return <ProgressScreen />;
 }
