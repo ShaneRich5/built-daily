@@ -1,19 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Timer } from "lucide-react";
-import {
-  formatElapsed,
-  type SessionTimerPhase,
-} from "@/features/workout-session/use-session-timer";
+import { ChevronRight } from "lucide-react";
 
 type SessionHeaderProps = {
   title: string;
   exerciseCount: number;
   setCount: number;
   doneSetCount: number;
-  timerPhase: SessionTimerPhase;
-  elapsedMs: number;
   onOpenWorkoutDetails: () => void;
 };
 
@@ -28,11 +22,8 @@ export function SessionHeader({
   exerciseCount,
   setCount,
   doneSetCount,
-  timerPhase,
-  elapsedMs,
   onOpenWorkoutDetails,
 }: SessionHeaderProps) {
-  const showTimer = timerPhase !== "idle" || elapsedMs > 0;
   return (
     <header className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
@@ -41,14 +32,6 @@ export function SessionHeader({
             <span className="size-2 rounded-full bg-amber-500" aria-hidden />
             In progress
           </span>
-          {showTimer ? (
-            <span className="inline-flex items-center gap-1 font-mono text-xs text-zinc-500 tabular-nums dark:text-zinc-400">
-              <Timer className="size-3.5" aria-hidden />
-              <span className="sr-only">Session time</span>
-              {formatElapsed(elapsedMs)}
-              {timerPhase === "paused" ? <span className="font-sans">· paused</span> : null}
-            </span>
-          ) : null}
         </div>
         <Link
           href="/"
@@ -71,7 +54,7 @@ export function SessionHeader({
           </span>
         </span>
         <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden />
-        <span className="sr-only">Edit workout name, date, note and timer</span>
+        <span className="sr-only">Edit workout name, date and note</span>
       </button>
     </header>
   );

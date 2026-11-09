@@ -60,7 +60,7 @@ export function SessionActionBar({
           <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-56">
             <DropdownMenuItem className="min-h-11 gap-2" onClick={onOpenWorkoutDetails}>
               <NotebookPen className="size-4" aria-hidden />
-              Name, note &amp; timer
+              Name &amp; note
             </DropdownMenuItem>
             <DropdownMenuItem
               className="min-h-11 gap-2"

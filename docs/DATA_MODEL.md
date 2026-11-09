@@ -119,7 +119,7 @@ Logical shape before/after mapping (`sessionDocToFirestore` stores date fields a
 | `workoutTime` | `string \| null` | Optional local **`HH:mm`** (independent of date) |
 | `startedAt` | `Date` / `Timestamp` | Session screen / logical start |
 | `endedAt` | `Date` / `Timestamp` \| `null` | Set on finish; **null** while `in_progress` |
-| `activeDurationSec` | `number \| null` | Session timer total seconds, if greater than 0 |
+| `activeDurationSec` | `number \| null` | Session timer total seconds, if greater than 0. **No UI writes new values** (the session timer was removed); an existing value is kept when the session is saved again. |
 | `workoutNote` | `string \| null` | Session-level note |
 | `exerciseNotesByLineId` | `Record<string, string> \| null` | Keys are **`lineId`** |
 | `lines` | `SessionLine[]` | Embedded lines + sets |
@@ -150,7 +150,7 @@ One object per performed set. Fields are nullable when not used / empty.
 | `weight` | `number \| null` | `weight_reps` |
 | `reps` | `number \| null` | `weight_reps`, `bodyweight_reps` |
 | `durationSec` | `number \| null` | Hold / cardio seconds; `duration`, `cardio` |
-| `timedSetSec` | `number \| null` | Set stopwatch (non-duration metrics) |
+| `timedSetSec` | `number \| null` | Set stopwatch (non-duration metrics). **No UI writes new values** (the set stopwatch was removed); existing values are kept on save. |
 | `paceMph` | `number \| null` | Optional cardio pace / speed (mph) |
 | `inclinePercent` | `number \| null` | Optional treadmill incline (%) |
 | `resistanceLevel` | `number \| null` | Optional bike / elliptical resistance |
@@ -166,7 +166,7 @@ Built in the active workout UI and passed into the session repository. Mapped to
 |-------|--------|
 | `title`, `workoutDate`, `workoutTime`, `exercises`, `setsByExercise` | Mirror UI state (`workoutDate`/`workoutTime` may be empty strings) |
 | `workoutNote`, `exerciseNotesByExerciseId` | UI keys exercise by **catalog `exerciseId`**; mapper copies onto **`lineId`** keys |
-| `activeDurationMs` | Session timer display at finish |
+| `activeDurationMs` | Carried over from the loaded session (0 for new ones); there is no timer UI |
 | `sessionStartedAtMs` | When session screen mounted |
 | `planId` | Optional |
 | `lineIds` | Stable line ids parallel to `exercises` (required for updates) |
@@ -189,7 +189,7 @@ Templates live under `users/{userId}/plans/{planId}`. Home subscribes ordered by
 | `createdAt`, `updatedAt` | `Date` / `Timestamp` | |
 | `source` | `"starter_copy" \| "custom"` | How the plan was created |
 | `lines` | `PlanLine[]` | 1–40 lines |
-| `restPreferences` | optional `{ autoRestTimer: boolean; defaultRestSec: 30 \| 60 \| 90 \| 120 }` | Template editor; used when starting from this plan |
+| `restPreferences` | optional `{ autoRestTimer: boolean; defaultRestSec: 30 \| 60 \| 90 \| 120 }` | Kept when a template is saved again; nothing in the UI reads or edits it yet (rest timer not built) |
 
 Custom exercises use `exerciseId` values prefixed with `custom-` and rely on `nameSnapshot` + `metric`; the active workout URL resolver loads the saved plan when needed to rebuild `CatalogExercise` rows for those ids.
 
