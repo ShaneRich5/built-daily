@@ -20,15 +20,12 @@ export function ThisWeekCard({
   movement,
   days,
   consistency,
-  showChart = true,
 }: {
   todayKey: string;
   week: WeekGoalStatus;
   movement: MovementGoalStatus;
   days: HomeWeekDay[];
   consistency: HomeConsistency;
-  /** The last 16 weeks inside the card; off when the page shows the year heatmap instead. */
-  showChart?: boolean;
 }) {
   return (
     <section aria-labelledby="this-week-heading" className="flex flex-col gap-2">
@@ -57,7 +54,7 @@ export function ThisWeekCard({
             {movement.completed} / {movement.target}
           </span>
         </div>
-        {showChart ? <ConsistencyChart consistency={consistency} showProgressLink={false} /> : null}
+        <ConsistencyChart consistency={consistency} showProgressLink={false} />
       </div>
     </section>
   );

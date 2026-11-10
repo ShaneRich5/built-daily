@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { progressHeatmapFlag } from "@/flags";
+import { progressRedesignFlag } from "@/flags";
 import { ProgressScreen } from "@/features/progress/progress-screen";
 
 export const metadata: Metadata = {
@@ -10,6 +10,6 @@ export const metadata: Metadata = {
 
 export default async function ProgressPage() {
   // Evaluated on the server (Vercel Flags), then handed to the client screen.
-  const heatmap = await progressHeatmapFlag();
-  return <ProgressScreen heatmapStyle={heatmap} />;
+  const redesign = await progressRedesignFlag();
+  return <ProgressScreen redesign={redesign} />;
 }

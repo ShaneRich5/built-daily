@@ -11,18 +11,16 @@
 import { vercelAdapter } from "@flags-sdk/vercel";
 import { flag } from "flags/next";
 
-/** Which consistency view the Progress page shows. */
-export type ProgressHeatmapStyle = "weeks" | "year";
-
-export const progressHeatmapFlag = flag<ProgressHeatmapStyle>({
-  key: "progress-heatmap",
+/** The redesigned Progress page (Home's This week card) instead of the old one. */
+export const progressRedesignFlag = flag<boolean>({
+  key: "progress-redesign",
   description:
-    "Progress page consistency view: the 16-week chart inside the This week card, or the year-long Consistency heatmap.",
-  // What production showed before the This week redesign: the year heatmap.
-  defaultValue: "year",
+    "Progress page: the new design (Home's This week card with streak and 16-week chart) or the old one (This week card, streak tiles, year heatmap).",
+  // Off: the design production shows today.
+  defaultValue: false,
   options: [
-    { value: "weeks", label: "16-week chart (in This week)" },
-    { value: "year", label: "Year heatmap (Consistency)" },
+    { value: false, label: "Old design" },
+    { value: true, label: "New design" },
   ],
   adapter: vercelAdapter,
 });
