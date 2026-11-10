@@ -27,6 +27,12 @@ function dayLabel(dateKey: string, todayKey: string): string {
   return `${weekday} ${d.getDate()}`;
 }
 
+/** `?next=/groups/…` (set by OnboardingGate) so an invite still lands in its group. */
+function nextPathAfterOnboarding(): string {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
 export function OnboardingFlow() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("goal");
@@ -71,7 +77,7 @@ export function OnboardingFlow() {
         });
       }
       await setOnboardingCompleted();
-      router.replace("/");
+      router.replace(nextPathAfterOnboarding());
     } finally {
       setSaving(false);
     }

@@ -35,14 +35,17 @@ import {
   GROUP_LIMITS,
   type AccountabilityGroupDoc,
   type CheerDoc,
+  type GroupKind,
   type GroupMemberDoc,
   type GroupMembershipIndexDoc,
 } from "@/lib/group-types";
+import { syncUpcomingPlansToGroups } from "@/lib/group-plan-sync";
 import { firestoreToProgressSettings } from "@/lib/progress-mapper";
 import type { WeeklyGoalTarget } from "@/lib/progress-types";
 import { goalWeekStreak } from "@/lib/progress-insights";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 import { computeUserWorkoutSignals } from "@/lib/workout-signals-client";
+import { trainedDaysThisAndLastWeek } from "@/lib/workout-signals";
 
 export type SavedGroupMembership = {
   id: string;
@@ -175,8 +178,48 @@ export function subscribeGroupMembers(
   );
 }
 
+export type CreateGroupOptions = {
+  /** `buddy` caps the group at two. Defaults to `group`. */
+  kind?: GroupKind;
+  /** Buddy only: private name for the other person until they join. */
+  buddyNickname?: string | null;
+};
+
+/** A fresh member row: signals start empty and fill on the member's next sync. */
+function newMemberDoc(
+  user: { uid: string; displayName: string | null; email: string | null },
+  role: "owner" | "member",
+  joinedAt: Date,
+  weeklyGoal: WeeklyGoalTarget,
+): GroupMemberDoc {
+  return {
+    uid: user.uid,
+    displayName: displayNameFromAuth(user),
+    role,
+    joinedAt,
+    lastWorkoutDateKey: null,
+    lastWorkoutAt: null,
+    currentStreak: 0,
+    workoutsThisWeek: 0,
+    weeklyGoal,
+    trainedDays: [],
+    lastWorkoutLabel: null,
+    upcomingPlans: [],
+  };
+}
+
+/** Fill a just-written member row with real signals and plans (best-effort). */
+async function syncNewMembership(): Promise<void> {
+  try {
+    await Promise.all([bumpGroupWorkoutSignals(), syncUpcomingPlansToGroups()]);
+  } catch {
+    /* best-effort */
+  }
+}
+
 export async function createAccountabilityGroup(
   nameRaw: string,
+  options: CreateGroupOptions = {},
 ): Promise<{ groupId: string; inviteCode: string } | null> {
   const db = getFirestoreDb();
   const user = getFirebaseAuth()?.currentUser;
@@ -234,24 +277,19 @@ export async function createAccountabilityGroup(
     groupRef.id,
   );
 
+  const kind: GroupKind = options.kind === "buddy" ? "buddy" : "group";
   const group: AccountabilityGroupDoc = {
     name,
     createdBy: user.uid,
     createdAt: now,
     inviteCode,
     memberCount: 1,
+    kind,
+    maxMembers: kind === "buddy" ? GROUP_LIMITS.buddyMembers : GROUP_LIMITS.maxMembers,
   };
-  const member: GroupMemberDoc = {
-    uid: user.uid,
-    displayName: displayNameFromAuth(user),
-    role: "owner",
-    joinedAt: now,
-    lastWorkoutDateKey: null,
-    lastWorkoutAt: null,
-    currentStreak: 0,
-    workoutsThisWeek: 0,
-    weeklyGoal: await currentWeeklyGoal(user.uid),
-  };
+  const member = newMemberDoc(user, "owner", now, await currentWeeklyGoal(user.uid));
+  const buddyNickname =
+    kind === "buddy" ? options.buddyNickname?.trim().slice(0, GROUP_LIMITS.displayName) || null : null;
 
   try {
     // Group + invite first so member create rules can get() the group doc.
@@ -277,6 +315,7 @@ export async function createAccountabilityGroup(
         nameSnapshot: name,
         role: "owner",
         joinedAt: now,
+        buddyNickname,
       }),
     );
     await membership.commit();
@@ -289,6 +328,7 @@ export async function createAccountabilityGroup(
     throw err;
   }
 
+  void syncNewMembership();
   return { groupId: groupRef.id, inviteCode };
 }
 
@@ -335,17 +375,7 @@ export async function joinAccountabilityGroupByCode(
   if (existingMember.exists()) return { groupId };
 
   const now = new Date();
-  const member: GroupMemberDoc = {
-    uid: user.uid,
-    displayName: displayNameFromAuth(user),
-    role: "member",
-    joinedAt: now,
-    lastWorkoutDateKey: null,
-    lastWorkoutAt: null,
-    currentStreak: 0,
-    workoutsThisWeek: 0,
-    weeklyGoal: await currentWeeklyGoal(user.uid),
-  };
+  const member = newMemberDoc(user, "member", now, await currentWeeklyGoal(user.uid));
 
   const gRef = doc(db, "groups", groupId);
   const membershipRef = doc(db, "users", user.uid, "groupMemberships", groupId);
@@ -362,6 +392,7 @@ export async function joinAccountabilityGroupByCode(
           nameSnapshot: "Group",
           role: "member",
           joinedAt: now,
+          buddyNickname: null,
         }),
       );
       tx.update(gRef, { memberCount: increment(1) });
@@ -382,6 +413,7 @@ export async function joinAccountabilityGroupByCode(
     /* best-effort — the group page itself always reads the live name */
   }
 
+  await syncNewMembership();
   return { groupId };
 }
 
@@ -462,6 +494,8 @@ export async function rotateGroupInviteCode(
     }),
   );
   batch.update(doc(db, "groups", groupId), { inviteCode: newCode });
+  // The old link should stop showing anything to signed-out visitors too.
+  if (group.inviteCode) batch.delete(doc(db, "invitePreviews", group.inviteCode));
   await batch.commit();
   return newCode;
 }
@@ -495,6 +529,7 @@ export async function deleteAccountabilityGroup(
       { active: false },
       { merge: true },
     );
+    batch.delete(doc(db, "invitePreviews", group.inviteCode));
   }
   batch.delete(doc(db, "groups", groupId));
   await batch.commit();
@@ -530,6 +565,11 @@ export async function bumpGroupWorkoutSignals(): Promise<void> {
   ]);
   const todayKey = localDateKeyFromMs(Date.now());
   const rosterStreak = goalWeekStreak(signals.activityByDay, weeklyGoal, todayKey).current;
+  // Days and the workout name only — never sets, weights or notes.
+  const trainedDays = trainedDaysThisAndLastWeek(signals.activityByDay, todayKey).slice(
+    -GROUP_LIMITS.trainedDaysMax,
+  );
+  const lastWorkoutLabel = signals.lastWorkoutLabel?.slice(0, GROUP_LIMITS.workoutLabel) ?? null;
 
   await Promise.all(
     membershipsSnap.docs.map(async (membershipDoc) => {
@@ -542,6 +582,8 @@ export async function bumpGroupWorkoutSignals(): Promise<void> {
           workoutsThisWeek: signals.workoutsThisWeek,
           displayName: displayNameFromAuth(user),
           weeklyGoal,
+          trainedDays,
+          lastWorkoutLabel,
         });
       } catch {
         /* best-effort per group */
@@ -681,4 +723,50 @@ export async function toggleGroupCheer(
   } catch {
     return false;
   }
+}
+
+/**
+ * "Turn this into a group": raises a buddy's cap to 12. Owner only (rules
+ * check it). Nothing else changes, so the week and plans carry over.
+ */
+export async function convertBuddyToGroup(groupId: string, nameRaw: string): Promise<boolean> {
+  const db = getFirestoreDb();
+  const user = getFirebaseAuth()?.currentUser;
+  if (!db || !user || !groupId) return false;
+  const name = nameRaw.trim().slice(0, GROUP_LIMITS.name);
+  if (!name) return false;
+  try {
+    await updateDoc(doc(db, "groups", groupId), {
+      kind: "group",
+      maxMembers: GROUP_LIMITS.maxMembers,
+      name,
+    });
+    await updateDoc(doc(db, "users", user.uid, "groupMemberships", groupId), {
+      nameSnapshot: name,
+      buddyNickname: null,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Live group doc (name, count, code), so renames and joins show up without a reload. */
+export function subscribeAccountabilityGroup(
+  groupId: string,
+  onGroup: (row: SavedGroup | null) => void,
+): () => void {
+  const db = getFirestoreDb();
+  if (!db || !groupId) {
+    onGroup(null);
+    return () => {};
+  }
+  return onSnapshot(
+    doc(db, "groups", groupId),
+    (snap) => {
+      const group = snap.exists() ? firestoreToGroupDoc(snap.data() as Record<string, unknown>) : null;
+      onGroup(group ? { id: snap.id, group } : null);
+    },
+    () => onGroup(null),
+  );
 }

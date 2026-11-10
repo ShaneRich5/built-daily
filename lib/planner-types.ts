@@ -15,6 +15,12 @@ export type ScheduledWorkoutDoc = {
   /** Session that completed this entry; only set when `status` is `completed`. */
   sessionId: string | null;
   createdAt: Date;
+  /**
+   * Set when this entry came from saying "I'm in" to a plan together
+   * (`groups/{groupId}/plans/{sharedPlanId}`). Missing on ordinary entries.
+   */
+  sharedPlanId?: string | null;
+  groupId?: string | null;
 };
 
 export type ScheduledWorkoutEntry = ScheduledWorkoutDoc & { id: string };

@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -21,6 +22,16 @@ import type {
   UnscheduledWorkoutEntry,
 } from "@/lib/planner-types";
 import { NOTE_LIMITS } from "@/lib/workout-types";
+import { removeSelfFromSharedPlan, syncUpcomingPlansToGroups } from "@/lib/group-plan-sync";
+
+/** Groupmates see your next 7 days (day + label); refresh that after any planner write. */
+function afterPlannerWrite(): void {
+  void syncUpcomingPlansToGroups();
+}
+
+function optionalId(v: unknown): string | null {
+  return typeof v === "string" && v.length > 0 && v.length <= 128 ? v : null;
+}
 
 function asStatus(v: unknown): ScheduledWorkoutStatus {
   return v === "completed" || v === "skipped" ? v : "planned";
@@ -64,6 +75,8 @@ function parseEntryFields(
         ? sessionIdRaw
         : null,
     createdAt: created,
+    sharedPlanId: optionalId(raw.sharedPlanId),
+    groupId: optionalId(raw.groupId),
   };
 }
 
@@ -165,6 +178,9 @@ export type NewScheduledWorkoutInput = Pick<
 > & {
   /** A local day, or null for Unscheduled. */
   dateKey: string | null;
+  /** Links the entry to a plan together ("I'm in"). Both or neither. */
+  sharedPlanId?: string | null;
+  groupId?: string | null;
 };
 
 export async function addScheduledWorkout(
@@ -185,6 +201,11 @@ export async function addScheduledWorkout(
       ? null
       : input.planId.slice(0, 128);
 
+  const shared =
+    input.sharedPlanId && input.groupId
+      ? { sharedPlanId: input.sharedPlanId.slice(0, 128), groupId: input.groupId.slice(0, 128) }
+      : {};
+
   const ref = await addDoc(col, {
     dateKey,
     label,
@@ -193,7 +214,9 @@ export async function addScheduledWorkout(
     status: "planned",
     sessionId: null,
     createdAt: serverTimestamp(),
+    ...shared,
   });
+  afterPlannerWrite();
   return ref.id;
 }
 
@@ -242,6 +265,7 @@ export async function updateScheduledWorkout(
   if (Object.keys(next).length === 0) return false;
 
   await updateDoc(doc(col, entryId), next);
+  afterPlannerWrite();
   return true;
 }
 
@@ -263,14 +287,44 @@ export async function moveScheduledWorkouts(moves: ScheduledWorkoutMove[]): Prom
     batch.update(doc(col, move.id), { dateKey: move.dateKey, status: "planned", sessionId: null });
   }
   await batch.commit();
+  afterPlannerWrite();
   return true;
 }
 
 export async function deleteScheduledWorkout(entryId: string): Promise<boolean> {
   const col = scheduledCollectionRef();
   if (!col) return false;
-  await deleteDoc(doc(col, entryId));
+  const ref = doc(col, entryId);
+  // Removing a plan-together entry from your planner also takes you off its going list.
+  const snap = await getDoc(ref).catch(() => null);
+  const data = snap?.exists() ? (snap.data() as Record<string, unknown>) : null;
+  await deleteDoc(ref);
+  const sharedPlanId = optionalId(data?.sharedPlanId);
+  const groupId = optionalId(data?.groupId);
+  if (sharedPlanId && groupId) void removeSelfFromSharedPlan(groupId, sharedPlanId);
+  afterPlannerWrite();
   return true;
+}
+
+/** The signed-in user's planner entries linked to one plan together. */
+export async function findEntriesForSharedPlan(sharedPlanId: string): Promise<string[]> {
+  const col = scheduledCollectionRef();
+  if (!col || !sharedPlanId) return [];
+  const snap = await getDocs(query(col, where("sharedPlanId", "==", sharedPlanId)));
+  return snap.docs.map((d) => d.id);
+}
+
+/** Deletes linked entries without touching the plan's going list (the caller already did). */
+export async function deleteEntriesForSharedPlan(sharedPlanId: string): Promise<void> {
+  const db = getFirestoreDb();
+  const col = scheduledCollectionRef();
+  if (!db || !col) return;
+  const ids = await findEntriesForSharedPlan(sharedPlanId);
+  if (ids.length === 0) return;
+  const batch = writeBatch(db);
+  for (const id of ids) batch.delete(doc(col, id));
+  await batch.commit();
+  afterPlannerWrite();
 }
 
 export type CopyLastWeekResult = {
@@ -348,5 +402,6 @@ export async function copyLastWeekPlan(
     added++;
   }
 
+  if (added > 0) afterPlannerWrite();
   return { added, skippedExisting };
 }

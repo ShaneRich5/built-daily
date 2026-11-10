@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { HomeCatchUp } from "@/features/home/home-catch-up";
 import { HomeRecent } from "@/features/home/home-recent";
 import { HomeStartCard } from "@/features/home/home-start-card";
+import { HomeTogetherCard, type HomeTogether } from "@/features/home/home-together-card";
 import { HomeWeek } from "@/features/home/home-week";
 import { dateFromLocalDateKey } from "@/lib/workout-date";
 import type {
@@ -28,6 +29,8 @@ export type HomeViewProps = {
   week: HomeWeekDay[];
   recent: HomeRecentItem[];
   onLogActivity: () => void;
+  /** Today's plan together, if any (G9). */
+  together?: HomeTogether | null;
   /** A planned workout that slid past, with ways to fit it back in. */
   catchUp: {
     missed: BoardCard;
@@ -84,6 +87,7 @@ export function HomeView(props: HomeViewProps) {
           {props.catchUp && !props.inProgress ? (
             <HomeCatchUp todayKey={props.todayKey} {...props.catchUp} />
           ) : null}
+          {props.together && !props.inProgress ? <HomeTogetherCard together={props.together} /> : null}
           <HomeStartCard
             todayKey={props.todayKey}
             planned={props.planned}

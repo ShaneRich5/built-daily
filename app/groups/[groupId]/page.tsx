@@ -1,18 +1,17 @@
-import { GroupDetail } from "@/components/group-detail";
+import { GroupScreen } from "@/features/groups/group-screen";
 
 type GroupPageProps = {
   params: Promise<{ groupId: string }>;
+  searchParams: Promise<{ invite?: string }>;
 };
 
-export async function generateMetadata({ params }: GroupPageProps) {
-  const { groupId } = await params;
-  return {
-    title: "Group",
-    description: `Accountability group ${groupId}`,
-  };
-}
+export const metadata = {
+  title: "Group",
+};
 
-export default async function GroupPage({ params }: GroupPageProps) {
+export default async function GroupPage({ params, searchParams }: GroupPageProps) {
   const { groupId } = await params;
-  return <GroupDetail groupId={groupId} />;
+  const { invite } = await searchParams;
+  // `key` so a fresh `?invite=1` (right after creating) opens the invite sheet.
+  return <GroupScreen key={invite ?? ""} groupId={groupId} openInvite={invite === "1"} />;
 }

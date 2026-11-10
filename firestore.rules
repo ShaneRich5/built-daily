@@ -114,7 +114,10 @@ service cloud.firestore {
         && (
           d.sessionId == null
           || (d.status == 'completed' && nonEmptyString(d.sessionId, 128))
-        );
+        )
+        // Optional link to a plan together ("I'm in"); absent on ordinary rows.
+        && (!('sharedPlanId' in d) || d.sharedPlanId == null || nonEmptyString(d.sharedPlanId, 128))
+        && (!('groupId' in d) || d.groupId == null || nonEmptyString(d.groupId, 128));
     }
 
     function validScheduledWorkoutCreate() {
@@ -137,7 +140,19 @@ service cloud.firestore {
         && d.createdAt is timestamp
         && nonEmptyString(d.inviteCode, 12)
         && isIntLike(d.memberCount)
-        && d.memberCount == 1;
+        && d.memberCount == 1
+        && validKindAndCap(d);
+    }
+
+    /** Max members for a group doc; groups created before buddies hold 12. */
+    function groupCap(d) {
+      return d.get('maxMembers', 12);
+    }
+
+    /** A buddy is a group capped at 2; a group caps at 12. Both fields optional (older docs). */
+    function validKindAndCap(d) {
+      return d.get('kind', 'group') in ['group', 'buddy']
+        && (d.get('kind', 'group') == 'buddy' ? groupCap(d) == 2 : groupCap(d) == 12);
     }
 
     function validWeeklyGoal(v) {
@@ -159,6 +174,7 @@ service cloud.firestore {
         && isIntLike(d.currentStreak)
         && d.currentStreak >= 0
         && validWeeklyGoal(d.weeklyGoal)
+        && validMemberTogetherFields(d)
         && (
           (d.role == 'owner'
             && get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy
@@ -167,10 +183,22 @@ service cloud.firestore {
         );
     }
 
+    /**
+     * Groups Together fields on a member row: days trained, the workout name,
+     * and the next 7 days of plans (day + label). All optional so rows written
+     * before them stay valid. Never sets, weights, notes or body weight.
+     */
+    function validMemberTogetherFields(d) {
+      return (!('trainedDays' in d) || (d.trainedDays is list && d.trainedDays.size() <= 14))
+        && (!('lastWorkoutLabel' in d) || optionalString(d.lastWorkoutLabel, 80))
+        && (!('upcomingPlans' in d) || (d.upcomingPlans is list && d.upcomingPlans.size() <= 14));
+    }
+
     function validMemberSelfSignalUpdate() {
       let d = request.resource.data;
       let before = resource.data;
-      return d.uid == before.uid
+      return validMemberTogetherFields(d)
+        && d.uid == before.uid
         && d.uid == request.auth.uid
         && d.role == before.role
         && d.joinedAt == before.joinedAt
@@ -229,7 +257,9 @@ service cloud.firestore {
           && request.resource.data.groupId == groupId
           && nonEmptyString(request.resource.data.nameSnapshot, 100)
           && request.resource.data.role in ['owner', 'member']
-          && request.resource.data.joinedAt is timestamp;
+          && request.resource.data.joinedAt is timestamp
+          // Private name for a gym buddy before they join (only its owner reads this doc).
+          && optionalString(request.resource.data.get('buddyNickname', null), 80);
         // Owner of the group may clear indexes when deleting the group.
         allow delete: if isOwner(userId) || isGroupOwner(groupId);
       }
@@ -326,7 +356,8 @@ service cloud.firestore {
         && nonEmptyString(request.resource.data.inviteCode, 12)
         && isIntLike(request.resource.data.memberCount)
         && request.resource.data.memberCount >= 0
-        && request.resource.data.memberCount <= 12;
+        && validKindAndCap(request.resource.data)
+        && request.resource.data.memberCount <= groupCap(request.resource.data);
     }
 
     /** Join: +1 count only. Leave: −1 count only (same batch as member write). */
@@ -334,6 +365,8 @@ service cloud.firestore {
       return groupCoreUnchanged()
         && request.resource.data.name == resource.data.name
         && request.resource.data.inviteCode == resource.data.inviteCode
+        && request.resource.data.get('kind', 'group') == resource.data.get('kind', 'group')
+        && groupCap(request.resource.data) == groupCap(resource.data)
         && (
           (request.resource.data.memberCount == resource.data.memberCount + 1
             && !exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid)))
@@ -363,7 +396,8 @@ service cloud.firestore {
         allow create: if isSignedIn()
           && memberId == request.auth.uid
           && validMemberCreate(groupId)
-          && get(/databases/$(database)/documents/groups/$(groupId)).data.memberCount < 12;
+          && get(/databases/$(database)/documents/groups/$(groupId)).data.memberCount
+            < groupCap(get(/databases/$(database)/documents/groups/$(groupId)).data);
         allow update: if isSignedIn()
           && memberId == request.auth.uid
           && validMemberSelfSignalUpdate();
@@ -389,10 +423,65 @@ service cloud.firestore {
             + '_' + request.resource.data.fromUid;
         allow delete: if isSignedIn() && resource.data.fromUid == request.auth.uid;
       }
+
+      // Plans together: day, optional time / where / note, a template's
+      // exercise names + set counts (never weights), and who's going.
+      // Members read; anyone in the group can create one with only
+      // themselves going; everyone can add or remove only their OWN uid.
+      match /plans/{planId} {
+        allow read: if isGroupMember(groupId);
+        allow create: if isGroupMember(groupId)
+          && validSharedPlanFields(groupId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.going == [request.auth.uid]
+          && request.resource.data.goingAt.keys().hasOnly([request.auth.uid]);
+        allow update: if isGroupMember(groupId)
+          && validSharedPlanFields(groupId)
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt
+          && goingChangeIsSelfOnly()
+          && (
+            resource.data.createdBy == request.auth.uid
+            || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going', 'goingAt'])
+          );
+        allow delete: if isSignedIn()
+          && (resource.data.createdBy == request.auth.uid || isGroupOwner(groupId));
+      }
+    }
+
+    function validSharedPlanFields(groupId) {
+      let d = request.resource.data;
+      return d.keys().hasAll([
+            'groupId', 'dateKey', 'time', 'where', 'label', 'exercises', 'note',
+            'createdBy', 'createdByName', 'going', 'goingAt', 'createdAt'
+          ])
+        && d.groupId == groupId
+        && d.dateKey is string && validDateKey(d.dateKey)
+        && (d.time == null
+          || (d.time is string && d.time.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')))
+        && optionalString(d.where, 80)
+        && nonEmptyString(d.label, 80)
+        && d.exercises is list && d.exercises.size() <= 20
+        && optionalString(d.note, 140)
+        && nonEmptyString(d.createdByName, 80)
+        && d.going is list && d.going.size() <= 12
+        && d.goingAt is map && d.goingAt.size() <= 12;
+    }
+
+    /** `going` may only gain or lose the caller's own uid, and `goingAt` only the caller's key. */
+    function goingChangeIsSelfOnly() {
+      let before = resource.data.going.toSet();
+      let after = request.resource.data.going.toSet();
+      let me = [request.auth.uid].toSet();
+      return (after == before.union(me) || after == before.difference(me))
+        && request.resource.data.goingAt.diff(resource.data.goingAt).affectedKeys()
+          .hasOnly([request.auth.uid]);
     }
 
     match /inviteCodes/{code} {
-      allow read: if isSignedIn();
+      // Look up one code you already have; never list them all.
+      allow get: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.keys().hasAll([
           'groupId', 'createdBy', 'createdAt', 'active'
@@ -408,6 +497,40 @@ service cloud.firestore {
         && request.resource.data.active is bool;
       allow delete: if isSignedIn()
         && resource.data.createdBy == request.auth.uid;
+    }
+
+    /**
+     * What a signed-out visitor with an invite link may see: group name,
+     * first names, counts, and the plans someone chose to invite to (day,
+     * name, time, where, going first names). Readable by exact code only.
+     */
+    match /invitePreviews/{code} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isGroupMember(request.resource.data.groupId)
+        && validInvitePreview(code);
+      // `resource == null`: rotating or deleting a group clears a preview that may never have been written.
+      allow delete: if isSignedIn()
+        && (resource == null || isGroupMember(resource.data.groupId));
+    }
+
+    function validInvitePreview(code) {
+      let d = request.resource.data;
+      let invite = get(/databases/$(database)/documents/inviteCodes/$(code)).data;
+      return d.keys().hasOnly([
+            'groupId', 'groupName', 'kind', 'invitedByName', 'memberFirstNames',
+            'memberCount', 'workoutsThisWeek', 'plans', 'updatedAt'
+          ])
+        && invite.groupId == d.groupId
+        && invite.active == true
+        && nonEmptyString(d.groupName, 100)
+        && d.kind in ['group', 'buddy']
+        && nonEmptyString(d.invitedByName, 80)
+        && d.memberFirstNames is list && d.memberFirstNames.size() <= 12
+        && isIntLike(d.memberCount) && d.memberCount >= 0 && d.memberCount <= 12
+        && isIntLike(d.workoutsThisWeek) && d.workoutsThisWeek >= 0 && d.workoutsThisWeek <= 200
+        && d.plans is map && d.plans.size() <= 10
+        && d.updatedAt is timestamp;
     }
 
     function validPublicProfileWrite() {
