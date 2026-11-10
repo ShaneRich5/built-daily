@@ -7,6 +7,8 @@ import type { SavedActivity } from "@/lib/activity-types";
 import { addDaysToDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
 import { buildWorkoutHref } from "@/lib/planner-list-items";
 import type { ScheduledWorkoutEntry } from "@/lib/planner-types";
+import { goalWeekStreak, workoutsInWeek } from "@/lib/progress-insights";
+import type { WeeklyGoalTarget } from "@/lib/progress-types";
 import { activityByDayFromSessions } from "@/lib/workout-activity";
 import { dateFromLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
 import type { SavedWorkoutPlan } from "@/lib/workout-plan-repository";
@@ -290,29 +292,113 @@ export function buildWeekGoal(
   return { completed, target };
 }
 
-/** The headline and one-line nudge at the top of home. */
-export function weekGoalCopy(
-  goal: HomeWeekGoal,
+/** "today", "tomorrow", "Thu", or "Thu, Nov 19" for a planned day. */
+function plannedWhen(dateKey: string, todayKey: string): string {
+  if (dateKey === todayKey) return "today";
+  if (dateKey === addDaysToDateKey(todayKey, 1)) return "tomorrow";
+  const label = shortDayLabel(dateKey);
+  return dateKey <= addDaysToDateKey(todayKey, 6) ? (label.split(",")[0] ?? label) : label;
+}
+
+/** The start card's headline and one line under it. The weekly count lives in This week. */
+export function startCopy(
   planned: HomePlanned | null,
+  hasTemplates: boolean,
+  todayKey: string,
 ): { headline: string; detail: string } {
-  const { completed, target } = goal;
-  const when = planned
-    ? planned.dayLabel === "Today"
-      ? "today"
-      : (planned.dayLabel.split(",")[0] ?? planned.dayLabel)
-    : "";
-  const plannedHint = planned ? ` ${planned.label} is planned for ${when}.` : "";
-  if (completed >= target) {
+  if (planned) {
     return {
-      headline: "Goal met this week",
-      detail: `${completed} of ${target} workouts. Anything extra is a bonus.`,
+      headline: "Ready when you are",
+      detail: `${planned.label} is planned for ${plannedWhen(planned.dateKey, todayKey)}.`,
     };
   }
-  if (completed === 0) {
-    return { headline: "Fresh week", detail: `0 of ${target} workouts so far.${plannedHint}` };
-  }
   return {
-    headline: "On your way",
-    detail: `${completed} of ${target} workouts this week.${plannedHint}`,
+    headline: "Ready when you are",
+    detail: hasTemplates ? "Pick a template or start empty." : "Start an empty workout, or make a template.",
   };
+}
+
+export type HomeChartDay = "workout" | "activity" | "rest" | "today" | "planned" | "ahead";
+
+export type HomeChartWeek = {
+  startKey: string;
+  /** Sun–Sat. */
+  days: HomeChartDay[];
+  /** Finished weeks are hit or missed; this week is hit or still open. */
+  goal: "hit" | "missed" | "open";
+};
+
+export type HomeConsistency = {
+  /** Weeks in a row hitting the goal (this week counts once it's hit). */
+  streak: number;
+  longest: number;
+  /** Oldest first, ending with this week. */
+  weeks: HomeChartWeek[];
+  /** Screen-reader summary of the chart. */
+  label: string;
+};
+
+/** The goal streak plus a day-by-day grid of the last few weeks. */
+export function buildHomeConsistency(
+  todayKey: string,
+  sessions: SessionSummary[],
+  activities: SavedActivity[],
+  entries: ScheduledWorkoutEntry[],
+  weeklyGoal: WeeklyGoalTarget,
+  weekCount = 16,
+): HomeConsistency {
+  const workoutDays = activityByDayFromSessions(sessions);
+  const activityDays = new Set(activities.map((a) => a.activity.activityDate));
+  const plannedDays = new Set(
+    entries.filter((e) => e.status === "planned").map((e) => e.dateKey),
+  );
+  const { current, longest } = goalWeekStreak(workoutDays, weeklyGoal, todayKey);
+
+  const thisWeekStart = startOfWeekDateKey(todayKey);
+  const weeks: HomeChartWeek[] = [];
+  for (let w = weekCount - 1; w >= 0; w--) {
+    const startKey = addDaysToDateKey(thisWeekStart, -7 * w);
+    const days = Array.from({ length: 7 }, (_, i): HomeChartDay => {
+      const dateKey = addDaysToDateKey(startKey, i);
+      if (workoutDays.has(dateKey)) return "workout";
+      if (activityDays.has(dateKey)) return "activity";
+      if (dateKey === todayKey) return "today";
+      if (dateKey < todayKey) return "rest";
+      return plannedDays.has(dateKey) ? "planned" : "ahead";
+    });
+    const hit = workoutsInWeek(workoutDays, startKey) >= weeklyGoal;
+    weeks.push({ startKey, days, goal: hit ? "hit" : w === 0 ? "open" : "missed" });
+  }
+
+  const finished = weeks.slice(0, -1);
+  const finishedHit = finished.filter((week) => week.goal === "hit").length;
+  const label =
+    `Last ${weekCount} weeks: goal hit in ${finishedHit} of ${finished.length} finished weeks. ` +
+    `Current streak ${plural(current, "week")}, longest ${plural(longest, "week")}.`;
+
+  return { streak: current, longest, weeks, label };
+}
+
+function moreWorkouts(n: number): string {
+  if (n === 1) return "One more";
+  if (n === 2) return "Two more";
+  if (n === 3) return "Three more";
+  return `${n} more`;
+}
+
+/** One encouraging line under the weekly count. Never talks about losing the streak. */
+export function weekNudge(goal: HomeWeekGoal, streak: number, todayKey: string): string {
+  const remaining = goal.target - goal.completed;
+  if (remaining <= 0) {
+    return streak > 1
+      ? `Goal met. That's ${streak} weeks in a row.`
+      : "Goal met this week. Anything extra is a bonus.";
+  }
+  const weekday = dateFromLocalDateKey(todayKey)?.getDay() ?? 0;
+  const daysLeft = 7 - weekday; // including today; weeks end Saturday
+  if (remaining > daysLeft) return "Every workout this week still counts.";
+  const when = daysLeft === 1 ? "today" : "by Saturday";
+  return streak > 0
+    ? `${moreWorkouts(remaining)} ${when} makes it ${streak + 1} weeks in a row.`
+    : `${moreWorkouts(remaining)} ${when} hits your weekly goal.`;
 }

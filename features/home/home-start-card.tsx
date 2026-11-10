@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { ChevronRight, Plus } from "lucide-react";
 import {
-  weekGoalCopy,
+  startCopy,
   type HomeInProgress,
   type HomePlanned,
   type HomeTemplate,
-  type HomeWeekGoal,
 } from "@/features/home/home-model";
 
 /** How many templates home lists before "All". */
@@ -17,7 +16,7 @@ const secondaryButton =
   "inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-zinc-200 bg-white text-[13px] font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900";
 
 type HomeStartCardProps = {
-  weekGoal: HomeWeekGoal;
+  todayKey: string;
   planned: HomePlanned | null;
   inProgress: HomeInProgress | null;
   templates: HomeTemplate[];
@@ -26,7 +25,7 @@ type HomeStartCardProps = {
 
 /** Home's one job: start (or resume) a workout. */
 export function HomeStartCard({
-  weekGoal,
+  todayKey,
   planned,
   inProgress,
   templates,
@@ -34,7 +33,7 @@ export function HomeStartCard({
 }: HomeStartCardProps) {
   if (inProgress) return <ResumeCard workout={inProgress} />;
 
-  const copy = weekGoalCopy(weekGoal, planned);
+  const copy = startCopy(planned, templates.length > 0, todayKey);
   return (
     <section
       aria-labelledby="home-start-heading"

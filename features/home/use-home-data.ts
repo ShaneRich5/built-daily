@@ -8,7 +8,7 @@ import { addDaysToDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
 import { subscribeScheduledWorkoutsInRange } from "@/lib/planner-repository";
 import type { ScheduledWorkoutEntry } from "@/lib/planner-types";
 import { subscribeProgressSettings } from "@/lib/progress-settings-repository";
-import { DEFAULT_PROGRESS_SETTINGS } from "@/lib/progress-types";
+import { DEFAULT_PROGRESS_SETTINGS, type WeeklyGoalTarget } from "@/lib/progress-types";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
   subscribeUserWorkoutPlans,
@@ -19,6 +19,7 @@ import {
   type SessionSummary,
 } from "@/lib/workout-session-repository";
 import {
+  buildHomeConsistency,
   buildHomeRecent,
   buildHomeTemplates,
   buildHomeWeek,
@@ -30,12 +31,19 @@ import {
 /** How far ahead home looks for the next planned workout. */
 const PLAN_LOOKAHEAD_DAYS = 14;
 
+/**
+ * Enough history for the 16-week chart and a fair longest streak
+ * (about a year at three workouts a week).
+ */
+const SESSION_HISTORY_DOCS = 160;
+const ACTIVITY_HISTORY_DOCS = 120;
+
 type RawHomeData = {
   plans: SavedWorkoutPlan[];
   sessions: SessionSummary[];
   activities: SavedActivity[];
   entries: ScheduledWorkoutEntry[];
-  weeklyGoal: number;
+  weeklyGoal: WeeklyGoalTarget;
 };
 
 const EMPTY: RawHomeData = {
@@ -66,9 +74,9 @@ export function useHomeData() {
           patch({ sessions });
           setLoaded(true);
         },
-        { maxDocs: 60 },
+        { maxDocs: SESSION_HISTORY_DOCS },
       ),
-      subscribeRecentActivities((activities) => patch({ activities }), { maxDocs: 30 }),
+      subscribeRecentActivities((activities) => patch({ activities }), { maxDocs: ACTIVITY_HISTORY_DOCS }),
       subscribeScheduledWorkoutsInRange(rangeStart, rangeEnd, (entries) => patch({ entries })),
       subscribeProgressSettings((settings) => patch({ weeklyGoal: settings.weeklyGoal })),
     ];
@@ -88,6 +96,7 @@ export function useHomeData() {
       week: buildHomeWeek(todayKey, sessions, activities, entries),
       recent: buildHomeRecent(sessions, activities),
       weekGoal: buildWeekGoal(sessions, weeklyGoal, todayKey),
+      consistency: buildHomeConsistency(todayKey, sessions, activities, entries, weeklyGoal),
     };
   }, [raw, todayKey]);
 
