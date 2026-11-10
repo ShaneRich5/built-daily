@@ -1,22 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import type { PlannerDayMarkers } from "@/lib/planner-list-items";
-import type { ScheduledWorkoutMove } from "@/lib/planner-repository";
-import type { ScheduledWorkoutEntry, UnscheduledWorkoutEntry } from "@/lib/planner-types";
-import type { SessionSummary } from "@/lib/workout-session-repository";
 import type { SavedWorkoutPlan } from "@/lib/workout-plan-repository";
 import { PlanSheet } from "@/features/planner/plan-sheet";
 import { calendarDays, calendarTitle } from "@/features/planner/planner-model";
 import { PlannerView } from "@/features/planner/planner-view";
-import { MoveSheet } from "@/features/planner/move-sheet";
-import {
-  buildWeekBoard,
-  movableEntries,
-  movesForDrop,
-  toBoardCard,
-  workoutDayKeys,
-  type BoardCard,
-} from "@/features/planner/week-board-model";
 
 const TODAY = "2026-11-08";
 const none: PlannerDayMarkers = { hasWorkout: false, hasPlan: false, hasReminder: false, hasActivity: false };
@@ -135,138 +123,26 @@ export const PlanASheet: StoryObj<typeof PlanSheet> = {
   },
 };
 
-/* ---------- Week board ---------- */
-
-/** Wednesday, so the board shows a done day, a missed day and days ahead. */
-const BOARD_TODAY = "2026-11-11";
-
-function planned(id: string, dateKey: string, label: string, exercises: number): ScheduledWorkoutEntry {
-  return {
-    id,
-    dateKey,
-    label,
-    planId: null,
-    exerciseIds: Array.from({ length: exercises }, (_, i) => `ex-${id}-${i}`),
-    status: "planned",
-    sessionId: null,
-    createdAt: new Date(2026, 10, 1),
-  };
-}
-
-const boardEntries: Array<ScheduledWorkoutEntry | UnscheduledWorkoutEntry> = [
-  planned("push-mon", "2026-11-09", "Push day", 5),
-  planned("leg", "2026-11-10", "Leg day", 4),
-  planned("push", "2026-11-12", "Push day", 5),
-  planned("pull", "2026-11-14", "Pull day", 5),
-  { ...planned("mob", "2026-11-11", "Mobility", 0), dateKey: null },
-  { ...planned("left", "2026-11-11", "Face pull + lateral raise", 2), dateKey: null },
-];
-
-const boardSessions: SessionSummary[] = [
-  {
-    id: "s-mon",
-    status: "completed",
-    workoutDate: "2026-11-09",
-    workoutTime: "07:10",
-    title: "Push day",
-    planId: null,
-    startedAt: new Date(2026, 10, 9, 7, 10),
-    endedAt: new Date(2026, 10, 9, 8, 0),
-    exerciseCount: 5,
-    setCount: 17,
-    previewExerciseNames: [],
-  },
-];
-
-/** The board with local state, so handles, drops and the sheet can be tried. */
-function BoardDemo({ initialPicked, openSheetFor }: { initialPicked?: string; openSheetFor?: string }) {
-  const [entries, setEntries] = useState(boardEntries);
-  const dated = entries.filter((e): e is ScheduledWorkoutEntry => e.dateKey !== null);
-  const tray = entries
-    .filter((e): e is UnscheduledWorkoutEntry => e.dateKey === null)
-    .map((e) => toBoardCard(e, BOARD_TODAY));
-  const board = buildWeekBoard({
-    weekStartKey: BOARD_TODAY,
-    todayKey: BOARD_TODAY,
-    scheduled: dated,
-    sessions: boardSessions,
-    activities: [],
-    weeklyGoal: 3,
-  });
-  const allCards = [...board.days.flatMap((d) => d.cards), ...tray];
-  const [picked, setPicked] = useState<BoardCard | null>(
-    allCards.find((c) => c.id === initialPicked) ?? null,
-  );
-  const [sheetCard, setSheetCard] = useState<BoardCard | null>(
-    allCards.find((c) => c.id === openSheetFor) ?? null,
-  );
-  const apply = (moves: ScheduledWorkoutMove[]) =>
-    setEntries((prev) =>
-      prev.map((e) => {
-        const move = moves.find((m) => m.id === e.id);
-        return move ? ({ ...e, dateKey: move.dateKey } as (typeof prev)[number]) : e;
-      }),
+export const PlanLater: StoryObj<typeof PlanSheet> = {
+  name: "Plan a workout (sheet) · Later",
+  parameters: { frame: "none" },
+  render: function Render() {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)} className="m-4 h-11 rounded-lg border px-4 text-sm">
+          Open again
+        </button>
+        <PlanSheet
+          open={open}
+          onOpenChange={setOpen}
+          todayKey={TODAY}
+          initialDateKey={TODAY}
+          initialLater
+          plans={plans}
+          onPlan={async () => {}}
+        />
+      </>
     );
-
-  return (
-    <>
-      <PlannerView
-        {...meta.args}
-        view="week"
-        templates={templates}
-        board={{
-          board,
-          tray,
-          todayKey: BOARD_TODAY,
-          picked,
-          onPick: setPicked,
-          onDrop: (day) => {
-            if (picked) apply(movesForDrop(day, picked, BOARD_TODAY));
-            setPicked(null);
-          },
-          onDropInTray: () => {
-            if (picked) apply([{ id: picked.id, dateKey: null }]);
-            setPicked(null);
-          },
-          onOpenCard: setSheetCard,
-          onPlanDay: noop,
-          onPrev: noop,
-          onNext: noop,
-        }}
-      />
-      <MoveSheet
-        open={sheetCard !== null}
-        onOpenChange={(open) => !open && setSheetCard(null)}
-        card={sheetCard}
-        todayKey={BOARD_TODAY}
-        movable={movableEntries(dated, BOARD_TODAY, workoutDayKeys(boardSessions))}
-      />
-    </>
-  );
-}
-
-export const WeekBoard: Story = {
-  name: "Week board (try it)",
-  args: { board: null },
-  render: () => <BoardDemo />,
-};
-
-export const WeekBoardMoving: Story = {
-  name: "Week board · moving Push day",
-  args: { board: null },
-  render: () => <BoardDemo initialPicked="push" />,
-};
-
-export const MoveSheetMissed: Story = {
-  name: "Move sheet · missed Leg day",
-  args: { board: null },
-  parameters: { frame: "none" },
-  render: () => <BoardDemo openSheetFor="leg" />,
-};
-
-export const MoveSheetUpcoming: Story = {
-  name: "Move sheet · upcoming Push day",
-  args: { board: null },
-  parameters: { frame: "none" },
-  render: () => <BoardDemo openSheetFor="push" />,
+  },
 };
