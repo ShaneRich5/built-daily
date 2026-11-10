@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { LogActivitySheet } from "@/components/log-activity-sheet";
+import { moveScheduledWorkouts, updateScheduledWorkout } from "@/lib/planner-repository";
 import { AccountMenu } from "@/features/home/account-menu";
+import { MoveSheet } from "@/features/planner/move-sheet";
 import { HomeHeader, HomeView } from "@/features/home/home-view";
 import { useHomeData } from "@/features/home/use-home-data";
 
@@ -13,6 +15,8 @@ export function HomeScreen() {
   const { user, loading, firebaseReady, signOutUser } = useAuth();
   const home = useHomeData();
   const [logOpen, setLogOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [catchUpBusy, setCatchUpBusy] = useState(false);
 
   if (!firebaseReady) {
     return (
@@ -55,6 +59,18 @@ export function HomeScreen() {
     );
   }
 
+  const runCatchUp = async (write: () => Promise<boolean>) => {
+    setCatchUpBusy(true);
+    try {
+      if (!(await write())) throw new Error("not saved");
+    } catch {
+      window.alert("Couldn’t update your plan. Check your connection and try again.");
+    } finally {
+      setCatchUpBusy(false);
+    }
+  };
+  const missed = home.missed;
+
   return (
     <>
       <HomeView
@@ -64,6 +80,25 @@ export function HomeScreen() {
           <AccountMenu email={user?.email ?? null} onSignOut={() => void signOutUser()} />
         }
         onLogActivity={() => setLogOpen(true)}
+        catchUp={
+          missed
+            ? {
+                missed,
+                busy: catchUpBusy,
+                onDoToday: () =>
+                  void runCatchUp(() => moveScheduledWorkouts([{ id: missed.id, dateKey: home.todayKey }])),
+                onPickDay: () => setMoveOpen(true),
+                onSkip: () => void runCatchUp(() => updateScheduledWorkout(missed.id, { status: "skipped" })),
+              }
+            : null
+        }
+      />
+      <MoveSheet
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        card={missed}
+        todayKey={home.todayKey}
+        movable={home.movable}
       />
       <LogActivitySheet open={logOpen} onClose={() => setLogOpen(false)} />
     </>

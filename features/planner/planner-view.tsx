@@ -3,6 +3,10 @@ import { PlannerCalendar } from "@/features/planner/planner-calendar";
 import { PlannerDayAgenda } from "@/features/planner/planner-day-agenda";
 import type { PlannerAgendaItem, PlannerCalendarDay, PlannerView as View } from "@/features/planner/planner-model";
 import { PlannerTemplates, type PlannerTemplateRow } from "@/features/planner/planner-templates";
+import { WeekBoard, type WeekBoardProps } from "@/features/planner/week-board";
+
+const secondaryButton =
+  "inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-zinc-200 bg-white text-[13px] font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900";
 
 export type PlannerViewProps = {
   view: View;
@@ -22,9 +26,11 @@ export type PlannerViewProps = {
   /** Week view only: repeat last week's planned workouts. */
   copyLastWeek: { onCopy: () => void; busy: boolean; message: string | null } | null;
   templates: PlannerTemplateRow[];
+  /** Week view shows the rearrangeable week board instead of the calendar and agenda. */
+  board: WeekBoardProps | null;
 };
 
-/** Planner: a calendar, the selected day's agenda, and your templates. */
+/** Planner: the week board (or a month calendar and the day's agenda), then your templates. */
 export function PlannerView(props: PlannerViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -55,15 +61,19 @@ export function PlannerView(props: PlannerViewProps) {
         </div>
       </header>
 
-      <PlannerCalendar
-        view={props.view}
-        title={props.calendarTitle}
-        days={props.days}
-        selectedKey={props.selectedKey}
-        onSelect={props.onSelect}
-        onPrev={props.onPrev}
-        onNext={props.onNext}
-      />
+      {props.board ? (
+        <WeekBoard {...props.board} />
+      ) : (
+        <PlannerCalendar
+          view={props.view}
+          title={props.calendarTitle}
+          days={props.days}
+          selectedKey={props.selectedKey}
+          onSelect={props.onSelect}
+          onPrev={props.onPrev}
+          onNext={props.onNext}
+        />
+      )}
 
       {props.copyLastWeek ? (
         <div className="-mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -83,14 +93,25 @@ export function PlannerView(props: PlannerViewProps) {
         </div>
       ) : null}
 
-      <PlannerDayAgenda
-        heading={props.agendaHeading}
-        items={props.agenda}
-        canPlan={props.canPlan}
-        onPlan={props.onPlan}
-        onLogActivity={props.onLogActivity}
-        onRemovePlanned={props.onRemovePlanned}
-      />
+      {props.board ? (
+        <div className="flex gap-2">
+          <button type="button" onClick={props.onPlan} className={`${secondaryButton} border-dashed border-zinc-300 dark:border-zinc-700`}>
+            + Plan a workout
+          </button>
+          <button type="button" onClick={props.onLogActivity} className={secondaryButton}>
+            Log activity
+          </button>
+        </div>
+      ) : (
+        <PlannerDayAgenda
+          heading={props.agendaHeading}
+          items={props.agenda}
+          canPlan={props.canPlan}
+          onPlan={props.onPlan}
+          onLogActivity={props.onLogActivity}
+          onRemovePlanned={props.onRemovePlanned}
+        />
+      )}
 
       <PlannerTemplates templates={props.templates} />
     </div>

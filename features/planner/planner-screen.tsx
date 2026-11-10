@@ -8,9 +8,12 @@ import {
   addScheduledWorkout,
   copyLastWeekPlan,
   deleteScheduledWorkout,
+  moveScheduledWorkouts,
   type CopyLastWeekResult,
+  type ScheduledWorkoutMove,
 } from "@/lib/planner-repository";
 import { localDateKeyFromMs } from "@/lib/workout-date";
+import { MoveSheet } from "@/features/planner/move-sheet";
 import { PlanSheet } from "@/features/planner/plan-sheet";
 import {
   agendaHeading,
@@ -23,6 +26,20 @@ import {
 } from "@/features/planner/planner-model";
 import { PlannerView } from "@/features/planner/planner-view";
 import { usePlannerData } from "@/features/planner/use-planner-data";
+import {
+  buildWeekBoard,
+  movableEntries,
+  movesForDrop,
+  toBoardCard,
+  workoutDayKeys,
+  type BoardCard,
+} from "@/features/planner/week-board-model";
+
+async function applyMoves(moves: ScheduledWorkoutMove[]) {
+  if (moves.length === 0) return;
+  const ok = await moveScheduledWorkouts(moves).catch(() => false);
+  if (!ok) window.alert("Couldn’t move that. Check your connection and try again.");
+}
 
 function copyMessage(result: CopyLastWeekResult | null): string {
   if (!result) return "Couldn’t copy last week’s plan.";
@@ -36,11 +53,16 @@ function copyMessage(result: CopyLastWeekResult | null): string {
 
 export function PlannerScreen() {
   const [todayKey] = useState(() => localDateKeyFromMs(Date.now()));
-  const [view, setView] = useState<View>("month");
+  const [view, setView] = useState<View>("week");
   const [anchorKey, setAnchorKey] = useState(todayKey);
   const [selectedKey, setSelectedKey] = useState(todayKey);
   const [planOpen, setPlanOpen] = useState(false);
   const [planKey, setPlanKey] = useState(0);
+  const [planDayKey, setPlanDayKey] = useState(todayKey);
+  /** Week board: the card picked up by its handle, waiting for a day. */
+  const [picked, setPicked] = useState<BoardCard | null>(null);
+  const [moveCard, setMoveCard] = useState<BoardCard | null>(null);
+  const [moveOpen, setMoveOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [copyState, setCopyState] = useState<{ busy: boolean; message: string | null }>({
     busy: false,
@@ -48,7 +70,29 @@ export function PlannerScreen() {
   });
 
   const range = useMemo(() => visibleRange(view, anchorKey), [view, anchorKey]);
-  const { signedIn, plans, items, markers } = usePlannerData(range);
+  const data = usePlannerData(range, todayKey);
+  const { signedIn, plans, items, markers } = data;
+
+  const board = useMemo(
+    () =>
+      buildWeekBoard({
+        weekStartKey: anchorKey,
+        todayKey,
+        scheduled: data.scheduled,
+        sessions: data.sessions,
+        activities: data.activities,
+        weeklyGoal: data.weeklyGoal,
+      }),
+    [anchorKey, todayKey, data.scheduled, data.sessions, data.activities, data.weeklyGoal],
+  );
+  const tray = useMemo(
+    () => data.unscheduled.map((entry) => toBoardCard(entry, todayKey)),
+    [data.unscheduled, todayKey],
+  );
+  const movable = useMemo(
+    () => movableEntries(data.openNearby, todayKey, workoutDayKeys(data.sessions)),
+    [data.openNearby, todayKey, data.sessions],
+  );
 
   const days = useMemo(
     () => calendarDays(view, anchorKey, todayKey, markers),
@@ -88,6 +132,13 @@ export function PlannerScreen() {
   const changeView = (next: View) => {
     setView(next);
     setAnchorKey(selectedKey);
+    setPicked(null);
+  };
+
+  const openPlanSheet = (dateKey: string) => {
+    setPlanDayKey(dateKey);
+    setPlanKey((k) => k + 1);
+    setPlanOpen(true);
   };
 
   return (
@@ -104,10 +155,7 @@ export function PlannerScreen() {
         agendaHeading={agendaHeading(selectedKey, todayKey)}
         agenda={agenda}
         canPlan={selectedKey >= todayKey}
-        onPlan={() => {
-          setPlanKey((k) => k + 1);
-          setPlanOpen(true);
-        }}
+        onPlan={() => openPlanSheet(view === "week" ? (selectedKey < todayKey ? todayKey : selectedKey) : selectedKey)}
         onLogActivity={() => setLogOpen(true)}
         onRemovePlanned={(id) => {
           if (window.confirm("Remove this from the calendar?")) void deleteScheduledWorkout(id);
@@ -126,13 +174,50 @@ export function PlannerScreen() {
             : null
         }
         templates={templates}
+        board={
+          view === "week"
+            ? {
+                board,
+                tray,
+                todayKey,
+                picked,
+                onPick: setPicked,
+                onDrop: (day) => {
+                  if (!picked) return;
+                  const moves = movesForDrop(day, picked, todayKey);
+                  setPicked(null);
+                  void applyMoves(moves);
+                },
+                onDropInTray: () => {
+                  if (!picked) return;
+                  setPicked(null);
+                  void applyMoves([{ id: picked.id, dateKey: null }]);
+                },
+                onOpenCard: (card) => {
+                  setPicked(null);
+                  setMoveCard(card);
+                  setMoveOpen(true);
+                },
+                onPlanDay: openPlanSheet,
+                onPrev: () => setAnchorKey((key) => shiftAnchor("week", key, -1)),
+                onNext: () => setAnchorKey((key) => shiftAnchor("week", key, 1)),
+              }
+            : null
+        }
+      />
+      <MoveSheet
+        open={moveOpen}
+        onOpenChange={setMoveOpen}
+        card={moveCard}
+        todayKey={todayKey}
+        movable={movable}
       />
       <PlanSheet
         key={planKey}
         open={planOpen}
         onOpenChange={setPlanOpen}
         todayKey={todayKey}
-        initialDateKey={selectedKey}
+        initialDateKey={planDayKey}
         plans={plans}
         onPlan={async (input) => {
           const id = await addScheduledWorkout(input);
@@ -140,7 +225,7 @@ export function PlannerScreen() {
             window.alert("Couldn’t add that to the calendar. Check that you’re signed in.");
             return;
           }
-          setSelectedKey(input.dateKey);
+          if (input.dateKey) setSelectedKey(input.dateKey);
         }}
       />
       <LogActivitySheet

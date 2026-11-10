@@ -10,6 +10,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
@@ -17,6 +18,7 @@ import type {
   ScheduledWorkoutDoc,
   ScheduledWorkoutEntry,
   ScheduledWorkoutStatus,
+  UnscheduledWorkoutEntry,
 } from "@/lib/planner-types";
 import { NOTE_LIMITS } from "@/lib/workout-types";
 
@@ -31,23 +33,18 @@ function scheduledCollectionRef() {
   return collection(db, "users", uid, "scheduledWorkouts");
 }
 
-function parseScheduledEntry(
+const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Everything but the day, shared by dated and unscheduled entries. */
+function parseEntryFields(
   id: string,
   raw: Record<string, unknown>,
-): ScheduledWorkoutEntry | null {
-  const dateKey = raw.dateKey;
+): Omit<ScheduledWorkoutEntry, "dateKey"> | null {
   const label = raw.label;
   const planId = raw.planId;
   const exerciseIds = raw.exerciseIds;
   const createdAt = raw.createdAt;
-  if (
-    typeof dateKey !== "string" ||
-    dateKey.length !== 10 ||
-    typeof label !== "string" ||
-    label.length === 0
-  ) {
-    return null;
-  }
+  if (typeof label !== "string" || label.length === 0) return null;
   if (planId != null && typeof planId !== "string") return null;
   if (!Array.isArray(exerciseIds)) return null;
   const ids = exerciseIds.filter((x): x is string => typeof x === "string");
@@ -58,7 +55,6 @@ function parseScheduledEntry(
   const sessionIdRaw = raw.sessionId;
   return {
     id,
-    dateKey,
     label: label.slice(0, NOTE_LIMITS.title),
     planId: planId == null || planId === "" ? null : planId,
     exerciseIds: ids.slice(0, 40),
@@ -69,6 +65,16 @@ function parseScheduledEntry(
         : null,
     createdAt: created,
   };
+}
+
+function parseScheduledEntry(
+  id: string,
+  raw: Record<string, unknown>,
+): ScheduledWorkoutEntry | null {
+  const dateKey = raw.dateKey;
+  if (typeof dateKey !== "string" || dateKey.length !== 10) return null;
+  const fields = parseEntryFields(id, raw);
+  return fields ? { ...fields, dateKey } : null;
 }
 
 /**
@@ -129,10 +135,37 @@ export function subscribeScheduledWorkoutsForYear(
   );
 }
 
+/** Live Unscheduled entries (no day yet) that are still open, oldest first. */
+export function subscribeUnscheduledWorkouts(
+  onEntries: (entries: UnscheduledWorkoutEntry[]) => void,
+): () => void {
+  const col = scheduledCollectionRef();
+  if (!col) {
+    onEntries([]);
+    return () => {};
+  }
+  return onSnapshot(
+    query(col, where("dateKey", "==", null)),
+    (snap) => {
+      const out: UnscheduledWorkoutEntry[] = [];
+      for (const d of snap.docs) {
+        const fields = parseEntryFields(d.id, d.data() as Record<string, unknown>);
+        if (fields && fields.status === "planned") out.push({ ...fields, dateKey: null });
+      }
+      out.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      onEntries(out);
+    },
+    () => onEntries([]),
+  );
+}
+
 export type NewScheduledWorkoutInput = Pick<
   ScheduledWorkoutDoc,
-  "dateKey" | "label" | "planId" | "exerciseIds"
->;
+  "label" | "planId" | "exerciseIds"
+> & {
+  /** A local day, or null for Unscheduled. */
+  dateKey: string | null;
+};
 
 export async function addScheduledWorkout(
   input: NewScheduledWorkoutInput,
@@ -143,8 +176,8 @@ export async function addScheduledWorkout(
   const label = input.label.trim().slice(0, NOTE_LIMITS.title);
   if (!label) return null;
 
-  const dateKey = input.dateKey.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+  const dateKey = input.dateKey == null ? null : input.dateKey.trim();
+  if (dateKey !== null && !DATE_KEY.test(dateKey)) return null;
 
   const exerciseIds = input.exerciseIds.slice(0, 40);
   const planId =
@@ -165,8 +198,8 @@ export async function addScheduledWorkout(
 }
 
 export type ScheduledWorkoutPatch = {
-  /** Reschedule to another local day. */
-  dateKey?: string;
+  /** Reschedule to another local day, or null to move it to Unscheduled. */
+  dateKey?: string | null;
   label?: string;
   status?: ScheduledWorkoutStatus;
   /** Session that completed the entry; ignored unless status is `completed`. */
@@ -187,8 +220,8 @@ export async function updateScheduledWorkout(
   const next: Record<string, unknown> = {};
 
   if (patch.dateKey !== undefined) {
-    const dateKey = patch.dateKey.trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return false;
+    const dateKey = patch.dateKey == null ? null : patch.dateKey.trim();
+    if (dateKey !== null && !DATE_KEY.test(dateKey)) return false;
     next.dateKey = dateKey;
   }
 
@@ -209,6 +242,27 @@ export async function updateScheduledWorkout(
   if (Object.keys(next).length === 0) return false;
 
   await updateDoc(doc(col, entryId), next);
+  return true;
+}
+
+export type ScheduledWorkoutMove = { id: string; dateKey: string | null };
+
+/**
+ * Moves several entries at once (a swap, or pushing the week back) so the
+ * planner never shows a half-applied shuffle.
+ */
+export async function moveScheduledWorkouts(moves: ScheduledWorkoutMove[]): Promise<boolean> {
+  const db = getFirestoreDb();
+  const col = scheduledCollectionRef();
+  if (!db || !col || moves.length === 0) return false;
+  if (moves.some((m) => !m.id || (m.dateKey !== null && !DATE_KEY.test(m.dateKey)))) return false;
+  const batch = writeBatch(db);
+  // Only open entries move, so status/sessionId are always planned/null; writing
+  // them also backfills entries created before those fields existed (rules need them).
+  for (const move of moves) {
+    batch.update(doc(col, move.id), { dateKey: move.dateKey, status: "planned", sessionId: null });
+  }
+  await batch.commit();
   return true;
 }
 

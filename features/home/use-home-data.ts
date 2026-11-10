@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { subscribeRecentActivities } from "@/lib/activity-repository";
 import type { SavedActivity } from "@/lib/activity-types";
-import { addDaysToDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
+import { addDaysToDateKey } from "@/lib/calendar-views";
 import { subscribeScheduledWorkoutsInRange } from "@/lib/planner-repository";
 import type { ScheduledWorkoutEntry } from "@/lib/planner-types";
 import { subscribeProgressSettings } from "@/lib/progress-settings-repository";
@@ -27,9 +27,17 @@ import {
   pickInProgress,
   pickNextPlanned,
 } from "@/features/home/home-model";
+import {
+  isMissed,
+  movableEntries,
+  toBoardCard,
+  workoutDayKeys,
+} from "@/features/planner/week-board-model";
 
 /** How far ahead home looks for the next planned workout. */
 const PLAN_LOOKAHEAD_DAYS = 14;
+/** How far back home looks for a planned workout that slid past. */
+const MISSED_LOOKBACK_DAYS = 7;
 
 /**
  * Enough history for the 16-week chart and a fair longest streak
@@ -65,7 +73,8 @@ export function useHomeData() {
   useEffect(() => {
     if (!signedIn) return;
     const patch = (next: Partial<RawHomeData>) => setRaw((prev) => ({ ...prev, ...next }));
-    const rangeStart = startOfWeekDateKey(todayKey);
+    // Before this week's Sunday too, so last week's misses can still be caught up.
+    const rangeStart = addDaysToDateKey(todayKey, -MISSED_LOOKBACK_DAYS);
     const rangeEnd = addDaysToDateKey(todayKey, PLAN_LOOKAHEAD_DAYS);
     const unsubs = [
       subscribeUserWorkoutPlans((plans) => patch({ plans })),
@@ -97,10 +106,23 @@ export function useHomeData() {
       recent: buildHomeRecent(sessions, activities),
       weekGoal: buildWeekGoal(sessions, weeklyGoal, todayKey),
       consistency: buildHomeConsistency(todayKey, sessions, activities, entries, weeklyGoal),
+      ...catchUp(entries, sessions, todayKey),
     };
   }, [raw, todayKey]);
 
   return { signedIn, loaded, todayKey, ...view };
+}
+
+/** The most recent planned workout that slid past, and what the move sheet needs. */
+function catchUp(entries: ScheduledWorkoutEntry[], sessions: SessionSummary[], todayKey: string) {
+  const workoutDays = workoutDayKeys(sessions);
+  const missed = entries
+    .filter((e) => isMissed(e, todayKey, workoutDays))
+    .sort((a, b) => b.dateKey.localeCompare(a.dateKey))[0];
+  return {
+    missed: missed ? toBoardCard(missed, todayKey) : null,
+    movable: movableEntries(entries, todayKey, workoutDays),
+  };
 }
 
 export type HomeData = ReturnType<typeof useHomeData>;

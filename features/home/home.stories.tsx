@@ -79,6 +79,7 @@ const meta = {
     week: weekFrom(["empty", "empty", "planned", "empty", "empty", "empty", "empty"], 0),
     recent,
     onLogActivity: () => {},
+    catchUp: null,
   },
 } satisfies Meta<typeof HomeView>;
 
@@ -144,3 +145,28 @@ export const NewUser: Story = {
 };
 
 export const Loading: Story = { args: { loaded: false } };
+
+export const CatchUp: Story = {
+  name: "Missed yesterday (catch up)",
+  args: {
+    todayKey: "2026-11-11",
+    weekGoal: { completed: 1, target: 3 },
+    week: weekFrom(["empty", "workout", "empty", "empty", "planned", "empty", "empty"], 3),
+    catchUp: {
+      missed: {
+        id: "leg",
+        title: "Leg day",
+        meta: "Slid past · 4 exercises",
+        dateKey: "2026-11-10",
+        planId: "legs",
+        exerciseIds: ["a", "b", "c", "d"],
+        startHref: "/workout?p=legs",
+        slid: true,
+      },
+      busy: false,
+      onDoToday: () => {},
+      onPickDay: () => {},
+      onSkip: () => {},
+    },
+  },
+};
