@@ -4,6 +4,7 @@ import { HomeStartCard } from "@/features/home/home-start-card";
 import { HomeWeek } from "@/features/home/home-week";
 import { dateFromLocalDateKey } from "@/lib/workout-date";
 import type {
+  HomeConsistency,
   HomeInProgress,
   HomePlanned,
   HomeRecentItem,
@@ -18,6 +19,7 @@ export type HomeViewProps = {
   account: ReactNode;
   loaded: boolean;
   weekGoal: HomeWeekGoal;
+  consistency: HomeConsistency;
   planned: HomePlanned | null;
   inProgress: HomeInProgress | null;
   templates: HomeTemplate[];
@@ -56,13 +58,13 @@ function HomeSkeleton() {
   return (
     <div className="flex flex-col gap-5" aria-busy="true" aria-label="Loading">
       <div className="h-64 animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-900" />
-      <div className="h-28 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
+      <div className="h-96 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
       <div className="h-40 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
     </div>
   );
 }
 
-/** Home, signed in: start or resume, this week, recent. */
+/** Home, signed in: start or resume, this week (goal, streak, last 16 weeks), recent. */
 export function HomeView(props: HomeViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-5">
@@ -70,13 +72,18 @@ export function HomeView(props: HomeViewProps) {
       {props.loaded ? (
         <>
           <HomeStartCard
-            weekGoal={props.weekGoal}
+            todayKey={props.todayKey}
             planned={props.planned}
             inProgress={props.inProgress}
             templates={props.templates}
             onLogActivity={props.onLogActivity}
           />
-          <HomeWeek days={props.week} planned={props.planned} />
+          <HomeWeek
+            todayKey={props.todayKey}
+            days={props.week}
+            goal={props.weekGoal}
+            consistency={props.consistency}
+          />
           <HomeRecent items={props.recent} />
         </>
       ) : (
