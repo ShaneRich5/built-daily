@@ -1,78 +1,62 @@
+import Link from "next/link";
 import type { MovementGoalStatus } from "@/lib/movement-insights";
-import type { WeekMomentum } from "@/lib/progress-insights";
 import type { Milestone, PersonalRecord, WeekGoalStatus } from "@/lib/progress-types";
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import { formatLocalDateKey } from "@/lib/workout-date";
 import { cn } from "@/lib/utils";
+import type { HomeConsistency, HomeWeekDay } from "@/features/home/home-model";
+import { ConsistencyChart, WeekDays, WeekGoal } from "@/features/home/home-week";
 
 const card = "rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950";
 const label = "text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400";
 
-/** This week's workouts against the goal, the nudge, and active days. */
+/**
+ * Home's This week card (count, streak pill, nudge, Sun–Sat, last 16 weeks) plus the
+ * active-days line Progress has always shown.
+ */
 export function ThisWeekCard({
+  todayKey,
   week,
-  momentum,
   movement,
+  days,
+  consistency,
 }: {
+  todayKey: string;
   week: WeekGoalStatus;
-  momentum: WeekMomentum;
   movement: MovementGoalStatus;
+  days: HomeWeekDay[];
+  consistency: HomeConsistency;
 }) {
-  const segments = Array.from({ length: week.target }, (_, i) => i < week.completed);
   return (
-    <section aria-labelledby="this-week-heading" className={cn(card, "flex flex-col gap-3")}>
-      <h2 id="this-week-heading" className={label}>
-        This week
-      </h2>
-      <p className="flex items-baseline gap-2">
-        <span className="font-mono text-4xl font-medium tracking-tight text-zinc-900 dark:text-zinc-50">
-          {week.completed}
-        </span>
-        <span className="text-[15px] text-zinc-600 dark:text-zinc-400">
-          of {week.target} workouts
-        </span>
-      </p>
-      <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${segments.length}, minmax(0, 1fr))` }}
-        aria-hidden
-      >
-        {segments.map((done, i) => (
-          <span
-            key={i}
-            className={cn("h-2 rounded-full", done ? "bg-emerald-700 dark:bg-emerald-500" : "bg-zinc-200 dark:bg-zinc-800")}
-          />
-        ))}
+    <section aria-labelledby="this-week-heading" className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <h2 id="this-week-heading" className={label}>
+          This week
+        </h2>
+        <Link
+          href="/planner"
+          className="text-[13px] font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        >
+          Planner
+        </Link>
       </div>
-      <div>
-        <p className="text-[15px] font-medium text-zinc-900 dark:text-zinc-50">{momentum.title}</p>
-        <p className="mt-0.5 text-[13px] text-zinc-600 dark:text-zinc-400">{momentum.detail}</p>
-      </div>
-      <div className="flex items-center gap-2.5 border-t border-zinc-100 pt-3 text-[13px] dark:border-zinc-800">
-        <span className="flex-1 text-zinc-700 dark:text-zinc-300">Active days (workouts or activities)</span>
-        <span className="font-mono text-zinc-900 dark:text-zinc-100">
-          {movement.completed} / {movement.target}
-        </span>
+      <div className="flex flex-col gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3.5 dark:border-zinc-800 dark:bg-zinc-950">
+        <WeekGoal
+          todayKey={todayKey}
+          goal={{ completed: week.completed, target: week.target }}
+          streak={consistency.streak}
+          linkStreak={false}
+        />
+        <WeekDays days={days} />
+        <div className="flex items-center gap-2.5 border-t border-zinc-100 px-0.5 pt-3 text-[13px] dark:border-zinc-800">
+          <span className="flex-1 text-zinc-700 dark:text-zinc-300">Active days (workouts or activities)</span>
+          <span className="font-mono text-zinc-900 dark:text-zinc-100">
+            {movement.completed} / {movement.target}
+          </span>
+        </div>
+        <ConsistencyChart consistency={consistency} showProgressLink={false} />
       </div>
     </section>
-  );
-}
-
-/** Weeks in a row hitting the weekly goal. */
-export function StreakTiles({ current, longest }: { current: number; longest: number }) {
-  const tile = "rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950";
-  const weeks = (n: number) => `${n} wk`;
-  return (
-    <dl className="grid grid-cols-2 gap-2">
-      <div className={cn(tile, "flex flex-col-reverse")}>
-        <dt className="text-xs text-zinc-500 dark:text-zinc-400">Goal streak</dt>
-        <dd className="font-mono text-2xl font-medium text-zinc-900 dark:text-zinc-50">{weeks(current)}</dd>
-      </div>
-      <div className={cn(tile, "flex flex-col-reverse")}>
-        <dt className="text-xs text-zinc-500 dark:text-zinc-400">Longest streak</dt>
-        <dd className="font-mono text-2xl font-medium text-zinc-900 dark:text-zinc-50">{weeks(longest)}</dd>
-      </div>
-    </dl>
   );
 }
 

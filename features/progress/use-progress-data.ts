@@ -10,12 +10,14 @@ import {
   movementDaysFromMaps,
   movementGoalStatus,
 } from "@/lib/movement-insights";
+import { endOfWeekDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
+import { subscribeScheduledWorkoutsInRange } from "@/lib/planner-repository";
+import type { ScheduledWorkoutEntry } from "@/lib/planner-types";
 import {
   activityFromProgressSessions,
   buildDayActivityDetails,
   computeMilestones,
   computePersonalRecords,
-  computeWeekMomentum,
   goalWeekStreak,
   strongestLifts,
   weekGoalStatus,
@@ -33,7 +35,27 @@ import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
   subscribeCompletedSessionsDetailed,
   type SavedWorkoutSession,
+  type SessionSummary,
 } from "@/lib/workout-session-repository";
+import { buildHomeConsistency, buildHomeWeek } from "@/features/home/home-model";
+
+/** The summary shape Home's This week builders take, from a full saved session. */
+function toSummary({ id, session }: SavedWorkoutSession): SessionSummary | null {
+  if (session.status !== "completed") return null;
+  return {
+    id,
+    status: "completed",
+    workoutDate: session.workoutDate,
+    workoutTime: session.workoutTime,
+    title: session.title,
+    planId: session.planId,
+    startedAt: session.startedAt,
+    endedAt: session.endedAt,
+    exerciseCount: session.exerciseCount,
+    setCount: session.setCount,
+    previewExerciseNames: session.previewExerciseNames,
+  };
+}
 
 /** Everything the progress page shows, live from Firestore. */
 export function useProgressData() {
@@ -44,6 +66,8 @@ export function useProgressData() {
   const [activities, setActivities] = useState<SavedActivity[] | null>(null);
   const [weights, setWeights] = useState<SavedBodyWeightEntry[]>([]);
   const [settings, setSettings] = useState<ProgressSettingsDoc>(DEFAULT_PROGRESS_SETTINGS);
+  /** This week's planner days, for the week circles and the chart's planned days. */
+  const [entries, setEntries] = useState<ScheduledWorkoutEntry[]>([]);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -52,9 +76,14 @@ export function useProgressData() {
       subscribeRecentActivities(setActivities, { maxDocs: 200 }),
       subscribeBodyWeightEntries(setWeights, { maxDocs: 200 }),
       subscribeProgressSettings(setSettings),
+      subscribeScheduledWorkoutsInRange(
+        startOfWeekDateKey(todayKey),
+        endOfWeekDateKey(todayKey),
+        setEntries,
+      ),
     ];
     return () => unsubs.forEach((unsub) => unsub());
-  }, [signedIn]);
+  }, [signedIn, todayKey]);
 
   const insights = useMemo(() => {
     const rows = sessions ?? [];
@@ -64,6 +93,7 @@ export function useProgressData() {
     const movementDays = movementDaysFromMaps(activity, activityByDay);
     const goalStreak = goalWeekStreak(activity, settings.weeklyGoal, todayKey);
     const { recentPrs, bestByExercise, prDateKeys } = computePersonalRecords(rows);
+    const summaries = rows.map(toSummary).filter((s): s is SessionSummary => s !== null);
     const firstPr = [...recentPrs].sort((a, b) => a.dateKey.localeCompare(b.dateKey))[0];
     return {
       activity,
@@ -74,8 +104,9 @@ export function useProgressData() {
       ),
       week: weekGoalStatus(activity, settings.weeklyGoal, todayKey),
       movementWeek: movementGoalStatus(movementDays, settings.movementGoalDays, todayKey),
-      momentum: computeWeekMomentum(activity, settings.weeklyGoal, todayKey),
       goalStreak,
+      weekDays: buildHomeWeek(todayKey, summaries, acts, entries),
+      consistency: buildHomeConsistency(todayKey, summaries, acts, entries, settings.weeklyGoal),
       lifts: strongestLifts(bestByExercise),
       milestones: computeMilestones(
         rows,
@@ -85,7 +116,7 @@ export function useProgressData() {
         firstPr?.dateKey ?? null,
       ),
     };
-  }, [sessions, activities, settings.weeklyGoal, settings.movementGoalDays, todayKey]);
+  }, [sessions, activities, entries, settings.weeklyGoal, settings.movementGoalDays, todayKey]);
 
   return {
     signedIn,
