@@ -1,11 +1,16 @@
+"use client";
+
 import Link from "next/link";
-import { Flame } from "lucide-react";
+import { Activity, ChevronRight, Dumbbell, Flame } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
+  shortDayLabel,
   weekNudge,
   type HomeChartDay,
   type HomeChartWeek,
   type HomeConsistency,
+  type HomeRecentItem,
   type HomeWeekDay,
   type HomeWeekGoal,
 } from "@/features/home/home-model";
@@ -159,8 +164,19 @@ function WeekDays({ days }: { days: HomeWeekDay[] }) {
   );
 }
 
+/** Past days and today open their details; days ahead aren't tappable. */
+function isTappable(day: HomeChartDay): boolean {
+  return day === "workout" || day === "activity" || day === "rest" || day === "today";
+}
+
 function ConsistencyChart({ consistency }: { consistency: HomeConsistency }) {
-  const { weeks, longest, label } = consistency;
+  const { weeks, longest, label, dayItems } = consistency;
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const selectedDay = selectedKey
+    ? weeks.flatMap((w) => w.days.map((day, i) => ({ day, dateKey: w.dateKeys[i] }))).find(
+        (d) => d.dateKey === selectedKey,
+      )
+    : undefined;
   return (
     <div className="flex flex-col gap-2.5 border-t border-zinc-100 px-0.5 pt-3 dark:border-zinc-800">
       <div className="flex items-baseline justify-between">
@@ -174,24 +190,44 @@ function ConsistencyChart({ consistency }: { consistency: HomeConsistency }) {
           </span>
         ) : null}
       </div>
+      <p className="sr-only">{label}</p>
       <div
-        role="img"
-        aria-label={label}
         className="grid gap-1"
         style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
       >
         {weeks.map((week) => (
           <div key={week.startKey} className="flex flex-col gap-1">
-            {week.days.map((day, i) => (
-              <span
-                key={i}
-                className={cn("aspect-square rounded-[3px]", chartCell[day])}
-              />
-            ))}
+            {week.days.map((day, i) => {
+              const dateKey = week.dateKeys[i] ?? "";
+              const className = cn("aspect-square rounded-[3px]", chartCell[day]);
+              if (!isTappable(day)) return <span key={dateKey} className={className} />;
+              const selected = dateKey === selectedKey;
+              return (
+                <button
+                  key={dateKey}
+                  type="button"
+                  aria-pressed={selected}
+                  aria-label={`${shortDayLabel(dateKey)}: ${dayKindLabel(day)}`}
+                  onClick={() => setSelectedKey(selected ? null : dateKey)}
+                  className={cn(
+                    className,
+                    "hover:ring-2 hover:ring-zinc-400/60 focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:outline-none",
+                    selected && "ring-2 ring-zinc-700 hover:ring-zinc-700 dark:ring-zinc-200",
+                  )}
+                />
+              );
+            })}
             <span className={cn("h-1 rounded-full", goalBar[week.goal])} />
           </div>
         ))}
       </div>
+      {selectedKey && selectedDay ? (
+        <DayDetails
+          dateKey={selectedKey}
+          isToday={selectedDay.day === "today"}
+          items={dayItems[selectedKey] ?? []}
+        />
+      ) : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2.5 text-[11px] text-zinc-500 dark:text-zinc-400" aria-hidden>
           <span className="inline-flex items-center gap-1">
@@ -211,6 +247,70 @@ function ConsistencyChart({ consistency }: { consistency: HomeConsistency }) {
           Progress
         </Link>
       </div>
+    </div>
+  );
+}
+
+function dayKindLabel(day: HomeChartDay): string {
+  if (day === "workout") return "workout";
+  if (day === "activity") return "activity";
+  if (day === "today") return "today";
+  return "rest day";
+}
+
+/** What was logged on the tapped day, like the Progress heatmap's day panel. */
+function DayDetails({
+  dateKey,
+  isToday,
+  items,
+}: {
+  dateKey: string;
+  isToday: boolean;
+  items: HomeRecentItem[];
+}) {
+  return (
+    <div
+      aria-live="polite"
+      className="flex flex-col gap-1.5 rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-900/50"
+    >
+      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+        {isToday ? `Today · ${shortDayLabel(dateKey)}` : shortDayLabel(dateKey)}
+      </p>
+      {items.length === 0 ? (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          {isToday
+            ? "Nothing logged yet. Log a workout or activity when you're ready."
+            : "Rest day. Recovery is part of training, and rest days don't break your weekly goal."}
+        </p>
+      ) : (
+        <ul className="flex flex-col">
+          {items.map((item) => (
+            <li key={`${item.kind}-${item.id}`}>
+              <Link
+                href={item.href}
+                className="-mx-1 flex min-h-11 items-center gap-2.5 rounded-md px-1 hover:bg-white dark:hover:bg-zinc-900"
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "inline-flex size-7 shrink-0 items-center justify-center rounded-full",
+                    item.kind === "workout"
+                      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                      : "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
+                  )}
+                >
+                  {item.kind === "workout" ? <Dumbbell className="size-3.5" /> : <Activity className="size-3.5" />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{item.title}</span>
+                  <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{item.meta}</span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
