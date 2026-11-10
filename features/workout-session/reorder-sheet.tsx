@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, GripVertical } from "lucide-react";
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { cn } from "@/lib/utils";
 import {
@@ -30,30 +30,59 @@ const arrowButton =
  */
 export function ReorderSheet({ open, onOpenChange, exercises, onMove }: ReorderSheetProps) {
   const [dragLineId, setDragLineId] = useState<string | null>(null);
-  const drag = useRef<{ lineId: string; lastY: number; rowPitch: number } | null>(null);
+  // Latest props for the window listeners, which outlive a single render.
+  const latest = useRef({ exercises, onMove });
+  useEffect(() => {
+    latest.current = { exercises, onMove };
+  });
+  const stopDrag = useRef<(() => void) | null>(null);
 
+  // Never leave window listeners behind if the sheet closes mid-drag.
+  useEffect(() => () => stopDrag.current?.(), []);
+
+  /**
+   * Follows the pointer on `window` rather than with pointer capture: moving the
+   * dragged row in the DOM releases capture, and a mouse soon leaves the small
+   * handle, so the drag used to stall after one step on desktop.
+   */
   const startDrag = (e: PointerEvent<HTMLSpanElement>, lineId: string) => {
+    if (e.button !== 0) return;
     const row = e.currentTarget.closest("li");
     if (!row) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault(); // no text selection while dragging with a mouse
+    stopDrag.current?.();
+
+    const pointerId = e.pointerId;
     // Row height plus the 8px gap between rows.
-    drag.current = { lineId, lastY: e.clientY, rowPitch: row.getBoundingClientRect().height + 8 };
+    const rowPitch = row.getBoundingClientRect().height + 8;
+    let lastY = e.clientY;
+
+    const onPointerMove = (ev: globalThis.PointerEvent) => {
+      if (ev.pointerId !== pointerId) return;
+      const steps = Math.trunc((ev.clientY - lastY) / rowPitch);
+      if (steps === 0) return;
+      const { exercises: list, onMove: move } = latest.current;
+      const from = list.findIndex((item) => item.lineId === lineId);
+      const to = Math.max(0, Math.min(list.length - 1, from + steps));
+      if (from !== -1 && to !== from) move(lineId, to);
+      lastY += steps * rowPitch;
+    };
+    const onPointerEnd = (ev: globalThis.PointerEvent) => {
+      if (ev.pointerId === pointerId) stop();
+    };
+    const stop = () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerEnd);
+      window.removeEventListener("pointercancel", onPointerEnd);
+      stopDrag.current = null;
+      setDragLineId(null);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerEnd);
+    window.addEventListener("pointercancel", onPointerEnd);
+    stopDrag.current = stop;
     setDragLineId(lineId);
-  };
-
-  const moveDrag = (e: PointerEvent<HTMLSpanElement>) => {
-    const current = drag.current;
-    if (!current) return;
-    const steps = Math.trunc((e.clientY - current.lastY) / current.rowPitch);
-    if (steps === 0) return;
-    const from = exercises.findIndex((item) => item.lineId === current.lineId);
-    onMove(current.lineId, from + steps);
-    current.lastY += steps * current.rowPitch;
-  };
-
-  const endDrag = () => {
-    drag.current = null;
-    setDragLineId(null);
   };
 
   return (
@@ -73,7 +102,7 @@ export function ReorderSheet({ open, onOpenChange, exercises, onMove }: ReorderS
         </button>
       }
     >
-      <ol className="flex flex-col gap-2 px-4 py-2">
+      <ol className={cn("flex flex-col gap-2 px-4 py-2", dragLineId && "select-none")}>
         {exercises.map((item, index) => (
           <li
             key={item.lineId}
@@ -111,9 +140,6 @@ export function ReorderSheet({ open, onOpenChange, exercises, onMove }: ReorderS
             <span
               aria-hidden
               onPointerDown={(e) => startDrag(e, item.lineId)}
-              onPointerMove={moveDrag}
-              onPointerUp={endDrag}
-              onPointerCancel={endDrag}
               className="inline-flex size-11 cursor-grab touch-none items-center justify-center text-zinc-400 active:cursor-grabbing"
             >
               <GripVertical className="size-5" />
