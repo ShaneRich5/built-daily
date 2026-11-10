@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { saveProgressSettings } from "@/lib/progress-settings-repository";
+import type { ProgressHeatmapStyle } from "@/flags";
 import { GoalsSheet } from "@/features/progress/goals-sheet";
 import { ProgressView } from "@/features/progress/progress-view";
 import { useProgressData } from "@/features/progress/use-progress-data";
@@ -16,7 +17,7 @@ function Message({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ProgressScreen() {
+export function ProgressScreen({ heatmapStyle }: { heatmapStyle: ProgressHeatmapStyle }) {
   const data = useProgressData();
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [goalsKey, setGoalsKey] = useState(0);
@@ -47,6 +48,7 @@ export function ProgressScreen() {
     <>
       <ProgressView
         todayKey={data.todayKey}
+        heatmapStyle={heatmapStyle}
         week={data.week}
         movementWeek={data.movementWeek}
         weekDays={data.weekDays}

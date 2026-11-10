@@ -85,8 +85,16 @@ const lift = (exerciseId: string, exerciseName: string, weight: number, reps: nu
 const meta = {
   title: "Progress/Screen",
   component: ProgressView,
+  argTypes: {
+    heatmapStyle: {
+      control: "inline-radio",
+      options: ["weeks", "year"],
+      description: "The `progress-heatmap` flag (Vercel Flags) on the real page.",
+    },
+  },
   args: {
     todayKey: TODAY,
+    heatmapStyle: "weeks",
     week: { weekStartKey: "2026-11-08", target: 3, completed: 1, met: false },
     movementWeek: { weekStartKey: "2026-11-08", target: 5, completed: 2, met: false },
     weekDays: buildHomeWeek(TODAY, summaries, walkActivities, []),
@@ -112,7 +120,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const MidWeek: Story = { name: "Mid-week, on track" };
+export const MidWeek: Story = { name: "Mid-week · 16-week chart (flag: weeks)" };
+
+export const YearHeatmap: Story = {
+  name: "Mid-week · year heatmap (flag: year)",
+  args: { heatmapStyle: "year" },
+};
 
 export const NewUser: Story = {
   name: "New user",

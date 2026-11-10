@@ -9,11 +9,17 @@ import type {
   WeekGoalStatus,
 } from "@/lib/progress-types";
 import { BodyWeightCard } from "@/features/progress/body-weight-card";
+import type { ProgressHeatmapStyle } from "@/flags";
 import type { HomeConsistency, HomeWeekDay } from "@/features/home/home-model";
 import { MilestonesRow, StrengthCard, ThisWeekCard } from "@/features/progress/progress-cards";
 
 export type ProgressViewProps = {
   todayKey: string;
+  /**
+   * From the `progress-heatmap` flag: the 16-week chart inside This week, or the
+   * year-long Consistency heatmap below it. Only one shows.
+   */
+  heatmapStyle: ProgressHeatmapStyle;
   week: WeekGoalStatus;
   movementWeek: MovementGoalStatus;
   /** Sun–Sat circles, same as Home. */
@@ -29,7 +35,7 @@ export type ProgressViewProps = {
   onLogWeight?: (dateKey: string, weightLbs: number) => Promise<unknown>;
 };
 
-/** Am I showing up? This week (with streak and 16-week chart) first, then the year heatmap, strength, weight, milestones. */
+/** Am I showing up? This week first, then (per the flag) the 16-week chart or the year heatmap, strength, weight, milestones. */
 export function ProgressView(props: ProgressViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -54,9 +60,11 @@ export function ProgressView(props: ProgressViewProps) {
         movement={props.movementWeek}
         days={props.weekDays}
         consistency={props.consistency}
+        showChart={props.heatmapStyle === "weeks"}
       />
-      {/* The old Consistency heatmap stays below the new card for now, to compare the two. */}
-      <ProgressHeatmap {...props.heatmap} todayKey={props.todayKey} />
+      {props.heatmapStyle === "year" ? (
+        <ProgressHeatmap {...props.heatmap} todayKey={props.todayKey} />
+      ) : null}
       <StrengthCard lifts={props.lifts} todayKey={props.todayKey} />
       <BodyWeightCard
         entries={props.weights}
