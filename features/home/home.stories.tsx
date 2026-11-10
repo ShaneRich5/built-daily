@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { AccountMenu } from "@/features/home/account-menu";
-import type { HomeChartDay, HomeConsistency, HomeWeekDay } from "@/features/home/home-model";
+import { addDaysToDateKey } from "@/lib/calendar-views";
+import type { HomeChartDay, HomeConsistency, HomeRecentItem, HomeWeekDay } from "@/features/home/home-model";
 import { HomeView } from "@/features/home/home-view";
 
 /** Sun Nov 8 – Sat Nov 14, 2026, seen from Sunday. */
@@ -29,23 +30,54 @@ const PAST_WEEKS: Array<[number[], number[]]> = [
   [[1, 4, 6], [3]], [[2, 4, 6], []], [[1, 3, 5], [3]],
 ];
 
+/** Sunday of week `w` (0 = oldest of the 16, 15 = Nov 8). */
+function weekStart(w: number): string {
+  return addDaysToDateKey("2026-11-08", -7 * (15 - w));
+}
+
+function dateKeysFrom(startKey: string): string[] {
+  return Array.from({ length: 7 }, (_, d) => addDaysToDateKey(startKey, d));
+}
+
+const WORKOUT_NAMES = ["Push day", "Pull day", "Leg day"];
+
+/** Sample items behind the chart's squares, so tapping one shows something. */
+function sampleDayItems(weeks: HomeConsistency["weeks"]): Record<string, HomeRecentItem[]> {
+  const byDay: Record<string, HomeRecentItem[]> = {};
+  let n = 0;
+  for (const week of weeks) {
+    week.days.forEach((day, d) => {
+      const dateKey = week.dateKeys[d]!;
+      if (day === "workout") {
+        const title = WORKOUT_NAMES[n++ % WORKOUT_NAMES.length]!;
+        byDay[dateKey] = [{ id: `s-${dateKey}`, kind: "workout", title, meta: "5 exercises · 16 sets", href: "#" }];
+      } else if (day === "activity") {
+        byDay[dateKey] = [{ id: `a-${dateKey}`, kind: "activity", title: "Walk", meta: "35 min · 1.8 mi", href: "#" }];
+      }
+    });
+  }
+  return byDay;
+}
+
 function consistencyFor(
   thisWeek: HomeChartDay[],
   { streak, longest = 6, goalMet = false }: { streak: number; longest?: number; goalMet?: boolean },
 ): HomeConsistency {
   const weeks: HomeConsistency["weeks"] = PAST_WEEKS.map(([workouts, acts], w) => ({
-    startKey: `week-${w}`,
+    startKey: weekStart(w),
+    dateKeys: dateKeysFrom(weekStart(w)),
     days: Array.from({ length: 7 }, (_, d): HomeChartDay =>
       workouts.includes(d) ? "workout" : acts.includes(d) ? "activity" : "rest",
     ),
     goal: workouts.length >= 3 ? ("hit" as const) : ("missed" as const),
   }));
-  weeks.push({ startKey: "2026-11-08", days: thisWeek, goal: goalMet ? "hit" : "open" });
+  weeks.push({ startKey: "2026-11-08", dateKeys: dateKeysFrom("2026-11-08"), days: thisWeek, goal: goalMet ? "hit" : "open" });
   return {
     streak,
     longest,
     weeks,
     label: `Last 16 weeks: goal hit in 12 of 15 finished weeks. Current streak ${streak} weeks, longest ${longest} weeks.`,
+    dayItems: sampleDayItems(weeks),
   };
 }
 
@@ -133,13 +165,15 @@ export const NewUser: Story = {
       streak: 0,
       longest: 0,
       weeks: Array.from({ length: 16 }, (_, w) => ({
-        startKey: `week-${w}`,
+        startKey: weekStart(w),
+        dateKeys: dateKeysFrom(weekStart(w)),
         days: (w === 15
           ? ["today", "ahead", "ahead", "ahead", "ahead", "ahead", "ahead"]
           : Array(7).fill("rest")) as HomeChartDay[],
         goal: w === 15 ? ("open" as const) : ("missed" as const),
       })),
       label: "Last 16 weeks: nothing logged yet.",
+      dayItems: {},
     },
   },
 };

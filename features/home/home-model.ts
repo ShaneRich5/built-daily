@@ -322,6 +322,8 @@ export type HomeChartDay = "workout" | "activity" | "rest" | "today" | "planned"
 
 export type HomeChartWeek = {
   startKey: string;
+  /** Sun–Sat date keys, matching `days`. */
+  dateKeys: string[];
   /** Sun–Sat. */
   days: HomeChartDay[];
   /** Finished weeks are hit or missed; this week is hit or still open. */
@@ -336,7 +338,60 @@ export type HomeConsistency = {
   weeks: HomeChartWeek[];
   /** Screen-reader summary of the chart. */
   label: string;
+  /** What was logged on each day in the chart, for tapping a square. Days with nothing are absent. */
+  dayItems: Record<string, HomeRecentItem[]>;
 };
+
+/** Workouts and activities logged per day (meta without the date), in the order they happened. */
+function itemsByDay(
+  sessions: SessionSummary[],
+  activities: SavedActivity[],
+  startKey: string,
+  endKey: string,
+): Record<string, HomeRecentItem[]> {
+  const rows: Array<{ dateKey: string; sortKey: string; item: HomeRecentItem }> = [];
+  for (const s of sessions) {
+    if (s.status !== "completed") continue;
+    const dateKey = sessionDayKey(s);
+    if (dateKey < startKey || dateKey > endKey) continue;
+    rows.push({
+      dateKey,
+      sortKey: `${s.workoutTime ?? "99:99"}-${s.startedAt.getTime()}`,
+      item: {
+        id: s.id,
+        kind: "workout",
+        title: s.title,
+        meta:
+          s.exerciseCount > 0
+            ? `${plural(s.exerciseCount, "exercise")} · ${plural(s.setCount, "set")}`
+            : "Workout",
+        href: `/sessions/${s.id}`,
+      },
+    });
+  }
+  for (const { id, activity } of activities) {
+    const dateKey = activity.activityDate;
+    if (dateKey < startKey || dateKey > endKey) continue;
+    const parts: string[] = [];
+    if (activity.durationMin != null) parts.push(`${activity.durationMin} min`);
+    if (activity.distanceMiles != null) parts.push(`${activity.distanceMiles} mi`);
+    rows.push({
+      dateKey,
+      sortKey: `${activity.activityTime ?? "99:99"}-${activity.createdAt.getTime()}`,
+      item: {
+        id,
+        kind: "activity",
+        title: getActivityTypeById(activity.activityTypeId)?.name ?? "Activity",
+        meta: parts.join(" · ") || "Activity",
+        href: `/activities/${id}`,
+      },
+    });
+  }
+  rows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const byDay: Record<string, HomeRecentItem[]> = {};
+  for (const row of rows) (byDay[row.dateKey] ??= []).push(row.item);
+  return byDay;
+}
 
 /** The goal streak plus a day-by-day grid of the last few weeks. */
 export function buildHomeConsistency(
@@ -358,8 +413,8 @@ export function buildHomeConsistency(
   const weeks: HomeChartWeek[] = [];
   for (let w = weekCount - 1; w >= 0; w--) {
     const startKey = addDaysToDateKey(thisWeekStart, -7 * w);
-    const days = Array.from({ length: 7 }, (_, i): HomeChartDay => {
-      const dateKey = addDaysToDateKey(startKey, i);
+    const dateKeys = Array.from({ length: 7 }, (_, i) => addDaysToDateKey(startKey, i));
+    const days = dateKeys.map((dateKey): HomeChartDay => {
       if (workoutDays.has(dateKey)) return "workout";
       if (activityDays.has(dateKey)) return "activity";
       if (dateKey === todayKey) return "today";
@@ -367,7 +422,7 @@ export function buildHomeConsistency(
       return plannedDays.has(dateKey) ? "planned" : "ahead";
     });
     const hit = workoutsInWeek(workoutDays, startKey) >= weeklyGoal;
-    weeks.push({ startKey, days, goal: hit ? "hit" : w === 0 ? "open" : "missed" });
+    weeks.push({ startKey, dateKeys, days, goal: hit ? "hit" : w === 0 ? "open" : "missed" });
   }
 
   const finished = weeks.slice(0, -1);
@@ -376,7 +431,14 @@ export function buildHomeConsistency(
     `Last ${weekCount} weeks: goal hit in ${finishedHit} of ${finished.length} finished weeks. ` +
     `Current streak ${plural(current, "week")}, longest ${plural(longest, "week")}.`;
 
-  return { streak: current, longest, weeks, label };
+  const firstKey = weeks[0]?.startKey ?? thisWeekStart;
+  return {
+    streak: current,
+    longest,
+    weeks,
+    label,
+    dayItems: itemsByDay(sessions, activities, firstKey, todayKey),
+  };
 }
 
 function moreWorkouts(n: number): string {
