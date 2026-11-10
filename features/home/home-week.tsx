@@ -18,17 +18,45 @@ const dayCircle: Record<HomeWeekDay["state"], string> = {
   empty: "",
 };
 
+/** Same look as the Progress heatmap: small squares, a faint outline, softer blue. */
+const WORKOUT_FILL = "bg-emerald-600 dark:bg-emerald-500";
+const ACTIVITY_FILL = "bg-blue-300 dark:bg-blue-700/70";
+
 const chartCell: Record<HomeChartDay, string> = {
-  workout: "bg-emerald-700 dark:bg-emerald-500",
-  activity: "bg-blue-400 dark:bg-blue-600",
-  rest: "bg-zinc-100 dark:bg-zinc-800",
-  today: "border-[1.5px] border-zinc-900 bg-white dark:border-zinc-100 dark:bg-zinc-950",
-  planned: "border-[1.5px] border-emerald-700 bg-white dark:border-emerald-500 dark:bg-zinc-950",
-  ahead: "border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950",
+  workout: WORKOUT_FILL,
+  activity: ACTIVITY_FILL,
+  both: "",
+  rest: "bg-zinc-100 dark:bg-zinc-800/70",
+  today: "bg-white ring-zinc-900! dark:bg-zinc-950 dark:ring-zinc-100!",
+  planned: "bg-white ring-emerald-600! dark:bg-zinc-950 dark:ring-emerald-500!",
+  ahead: "bg-zinc-50 dark:bg-zinc-900/40",
 };
 
+/** Workout in the top-left half, activity in the bottom-right, like the Progress heatmap. */
+const SPLIT_WORKOUT_CLIP = "polygon(0 0, 100% 0, 0 100%)";
+const SPLIT_ACTIVITY_CLIP = "polygon(100% 0, 100% 100%, 0 100%)";
+
+function ChartSquare({ day }: { day: HomeChartDay }) {
+  return (
+    <span
+      className={cn(
+        "relative block aspect-square w-full overflow-hidden rounded-[3px] ring-1 ring-zinc-900/5 ring-inset dark:ring-white/5",
+        (day === "today" || day === "planned") && "ring-[1.5px]",
+        chartCell[day],
+      )}
+    >
+      {day === "both" ? (
+        <>
+          <span className={cn("absolute inset-0", WORKOUT_FILL)} style={{ clipPath: SPLIT_WORKOUT_CLIP }} />
+          <span className={cn("absolute inset-0", ACTIVITY_FILL)} style={{ clipPath: SPLIT_ACTIVITY_CLIP }} />
+        </>
+      ) : null}
+    </span>
+  );
+}
+
 const goalBar: Record<HomeChartWeek["goal"], string> = {
-  hit: "bg-emerald-700 dark:bg-emerald-500",
+  hit: "bg-emerald-600 dark:bg-emerald-500",
   missed: "bg-zinc-200 dark:bg-zinc-800",
   open: "bg-emerald-200 dark:bg-emerald-900",
 };
@@ -177,33 +205,31 @@ function ConsistencyChart({ consistency }: { consistency: HomeConsistency }) {
       <div
         role="img"
         aria-label={label}
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+        className="grid justify-center gap-1"
+        // Squares stay at most 14px (like the Progress heatmap) and shrink on very narrow phones.
+        style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 0.875rem))` }}
       >
         {weeks.map((week) => (
           <div key={week.startKey} className="flex flex-col gap-1">
             {week.days.map((day, i) => (
-              <span
-                key={i}
-                className={cn("aspect-square rounded-[3px]", chartCell[day])}
-              />
+              <ChartSquare key={i} day={day} />
             ))}
-            <span className={cn("h-1 rounded-full", goalBar[week.goal])} />
+            <span className={cn("mt-0.5 h-[3px] rounded-full", goalBar[week.goal])} />
           </div>
         ))}
       </div>
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2.5 text-[11px] text-zinc-500 dark:text-zinc-400" aria-hidden>
           <span className="inline-flex items-center gap-1">
-            <span className="size-2.5 rounded-[2px] bg-emerald-700 dark:bg-emerald-500" />
+            <span className={cn("size-2.5 rounded-[2px]", WORKOUT_FILL)} />
             Workout
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="size-2.5 rounded-[2px] bg-blue-400 dark:bg-blue-600" />
+            <span className={cn("size-2.5 rounded-[2px]", ACTIVITY_FILL)} />
             Activity
           </span>
           <span className="inline-flex items-center gap-1">
-            <span className="h-1 w-3 rounded-full bg-emerald-700 dark:bg-emerald-500" />
+            <span className="h-[3px] w-3 rounded-full bg-emerald-600 dark:bg-emerald-500" />
             Goal hit
           </span>
         </div>

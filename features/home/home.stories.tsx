@@ -26,7 +26,7 @@ const PAST_WEEKS: Array<[number[], number[]]> = [
   [[1, 3, 5], [0]], [[1, 4], [3]], [[1, 3, 5], []], [[2, 4, 6], [0]],
   [[1, 3, 5], []], [[1, 3, 6], [4]], [[0, 2, 4], []], [[1, 3, 5], [6]],
   [[2, 5], [3]], [[1, 3, 5], []], [[1, 4], [6]], [[1, 3, 5], [0]],
-  [[1, 4, 6], [3]], [[2, 4, 6], []], [[1, 3, 5], [3]],
+  [[1, 4, 6], [3]], [[2, 4, 6], [4]], [[1, 3, 5], [3]],
 ];
 
 function consistencyFor(
@@ -36,7 +36,13 @@ function consistencyFor(
   const weeks: HomeConsistency["weeks"] = PAST_WEEKS.map(([workouts, acts], w) => ({
     startKey: `week-${w}`,
     days: Array.from({ length: 7 }, (_, d): HomeChartDay =>
-      workouts.includes(d) ? "workout" : acts.includes(d) ? "activity" : "rest",
+      workouts.includes(d) && acts.includes(d)
+        ? "both"
+        : workouts.includes(d)
+          ? "workout"
+          : acts.includes(d)
+            ? "activity"
+            : "rest",
     ),
     goal: workouts.length >= 3 ? ("hit" as const) : ("missed" as const),
   }));

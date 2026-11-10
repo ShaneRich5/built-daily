@@ -318,7 +318,15 @@ export function startCopy(
   };
 }
 
-export type HomeChartDay = "workout" | "activity" | "rest" | "today" | "planned" | "ahead";
+export type HomeChartDay =
+  | "workout"
+  | "activity"
+  /** A workout and an activity on the same day. */
+  | "both"
+  | "rest"
+  | "today"
+  | "planned"
+  | "ahead";
 
 export type HomeChartWeek = {
   startKey: string;
@@ -360,8 +368,11 @@ export function buildHomeConsistency(
     const startKey = addDaysToDateKey(thisWeekStart, -7 * w);
     const days = Array.from({ length: 7 }, (_, i): HomeChartDay => {
       const dateKey = addDaysToDateKey(startKey, i);
-      if (workoutDays.has(dateKey)) return "workout";
-      if (activityDays.has(dateKey)) return "activity";
+      const workout = workoutDays.has(dateKey);
+      const activity = activityDays.has(dateKey);
+      if (workout && activity) return "both";
+      if (workout) return "workout";
+      if (activity) return "activity";
       if (dateKey === todayKey) return "today";
       if (dateKey < todayKey) return "rest";
       return plannedDays.has(dateKey) ? "planned" : "ahead";
