@@ -94,7 +94,7 @@ const recent = [
   { id: "s1", kind: "workout" as const, title: "Leg day", meta: "Mon, Nov 2 · 4 exercises · 15 sets", href: "#" },
 ];
 
-const planned = { dateKey: "2026-11-10", label: "Leg day", dayLabel: "Tue, Nov 10", startHref: "/workout?p=legs" };
+const planned = { dateKey: "2026-11-10", label: "Leg day", dayLabel: "Tue, Nov 10", planId: "legs", startHref: "/workout?p=legs" };
 
 const meta = {
   title: "Home/Screen",
@@ -126,7 +126,7 @@ export const MidWeek: Story = {
     todayKey: "2026-11-11",
     weekGoal: { completed: 1, target: 3 },
     consistency: consistencyFor(["rest", "workout", "activity", "today", "planned", "ahead", "ahead"], { streak: 4 }),
-    planned: { ...planned, dateKey: "2026-11-12", label: "Push day", dayLabel: "Thu, Nov 12" },
+    planned: { ...planned, dateKey: "2026-11-12", label: "Push day", dayLabel: "Thu, Nov 12", planId: "push" },
     week: weekFrom(["empty", "workout", "empty", "empty", "planned", "empty", "empty"], 3),
   },
 };
@@ -139,6 +139,15 @@ export const GoalMet: Story = {
     consistency: consistencyFor(["rest", "workout", "activity", "workout", "rest", "workout", "ahead"], { streak: 5, goalMet: true }),
     planned: null,
     week: weekFrom(["empty", "workout", "activity", "workout", "empty", "workout", "empty"], 5),
+  },
+};
+
+export const PlannedToday: Story = {
+  name: "Planned today (Start starts it)",
+  args: {
+    todayKey: "2026-11-10",
+    weekGoal: { completed: 1, target: 3 },
+    week: weekFrom(["empty", "workout", "planned", "empty", "empty", "empty", "empty"], 2),
   },
 };
 
