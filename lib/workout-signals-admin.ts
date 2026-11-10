@@ -12,6 +12,7 @@ import type { WeeklyGoalTarget } from "@/lib/progress-types";
 import { activityMapToRecord } from "@/lib/workout-activity";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
+  trainedDaysThisAndLastWeek,
   computeWorkoutSignals,
   type ActivityDaySummary,
   type CompletedSessionSummary,
@@ -146,6 +147,11 @@ export async function syncWorkoutSignalsForUser(uid: string): Promise<void> {
               currentStreak: rosterStreak,
               workoutsThisWeek: signals.workoutsThisWeek,
               weeklyGoal,
+              // Days only, for the group's week grid (never what was lifted).
+              trainedDays: trainedDaysThisAndLastWeek(
+                signals.activityByDay,
+                localDateKeyFromMs(Date.now()),
+              ).slice(-14),
             };
             if (displayName) patch.displayName = displayName;
             await memberRef.set(patch, { merge: true });

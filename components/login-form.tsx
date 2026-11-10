@@ -11,12 +11,14 @@ type Mode = "signin" | "signup";
 type LoginFormProps = {
   /** Where to send the user after a successful sign-in or account creation. */
   redirectTo?: string;
+  /** Invite links open straight into "create account". */
+  initialMode?: Mode;
 };
 
-export function LoginForm({ redirectTo = "/" }: LoginFormProps) {
+export function LoginForm({ redirectTo = "/", initialMode = "signin" }: LoginFormProps) {
   const router = useRouter();
   const { signIn, signUp, signInWithGoogle, firebaseReady } = useAuth();
-  const [mode, setMode] = useState<Mode>("signin");
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

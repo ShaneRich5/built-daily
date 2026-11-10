@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { GroupsList } from "@/components/groups-list";
+import { GroupsScreen } from "@/features/groups/groups-screen";
 
 export const metadata: Metadata = {
   title: "Groups",
-  description: "Lightweight accountability groups with invite codes.",
+  description: "Train with a buddy or a small group: a shared week and plans together.",
 };
 
 export default function GroupsPage() {
-  return <GroupsList />;
+  return <GroupsScreen />;
 }

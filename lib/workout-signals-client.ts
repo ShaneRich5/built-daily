@@ -1,4 +1,5 @@
 import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import { activityTypeName } from "@/lib/activity-catalog";
 import { firestoreToActivityDoc } from "@/lib/activity-mapper";
 import { getFirestoreDb } from "@/lib/firebase";
 import { firestoreToWorkoutSessionDoc } from "@/lib/workout-session-mapper";
@@ -52,6 +53,7 @@ export async function computeUserWorkoutSignals(uid: string): Promise<WorkoutSig
     activities.push({
       activityDate: activity.activityDate,
       at: activity.endedAt ?? activity.startedAt ?? activity.createdAt,
+      label: activityTypeName(activity.activityTypeId),
     });
   }
 

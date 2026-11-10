@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
-import { JoinGroupLanding } from "@/components/join-group-landing";
+import { JoinScreen } from "@/features/groups/join-screen";
 
 export const metadata: Metadata = {
-  title: "Join a group",
+  title: "You're invited",
 };
 
 export default async function JoinGroupPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ code: string }>;
+  searchParams: Promise<{ plan?: string; auto?: string }>;
 }) {
   const { code } = await params;
-  return <JoinGroupLanding code={code} />;
+  const { plan, auto } = await searchParams;
+  return <JoinScreen code={code} planId={plan?.trim() || null} auto={auto === "1"} />;
 }

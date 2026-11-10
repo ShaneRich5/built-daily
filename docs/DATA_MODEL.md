@@ -39,9 +39,12 @@ All mutable **personal** user data lives under:
 
 | Path | Purpose |
 |------|---------|
-| `groups/{groupId}` | Group metadata + invite code |
-| `groups/{groupId}/members/{uid}` | Roster + shared “showed up” signals |
-| `inviteCodes/{code}` | Join lookup by shareable code |
+| `groups/{groupId}` | Group metadata + invite code (`kind`: group or buddy) |
+| `groups/{groupId}/members/{uid}` | Roster + shared “showed up” signals, days trained, next 7 days of plans |
+| `groups/{groupId}/plans/{planId}` | Plans together: a day, optional time / where / note, template exercise names, who’s going |
+| `groups/{groupId}/cheers/{cheerId}` | One-tap cheers |
+| `inviteCodes/{code}` | Join lookup by shareable code (signed in, get only) |
+| `invitePreviews/{code}` | What a signed-out visitor with the link may see (get only) |
 
 **Opt-in public profiles** (separate from private `users/{uid}/…`):
 
@@ -76,6 +79,9 @@ flowchart LR
   memberships --> groupDoc
   inviteCodes --> groupDoc
   groupDoc --> members
+  groupDoc --> groupPlans[plans together]
+  groupPlans -.->|I'm in| plannerRow
+  inviteCodes -.-> invitePreviews[invitePreviews]
   sessions -.->|opt-in sync| publicProfiles
   sessions -.->|show-up signal| members
 ```
@@ -225,6 +231,8 @@ Types: [`lib/planner-types.ts`](../lib/planner-types.ts). Owners may create, upd
 | `status` | `"planned" \| "completed" \| "skipped"` | Docs written before this field read as `planned` |
 | `sessionId` | `string \| null` | Session that completed the entry; rules only allow non-null when `status` is `completed` |
 | `createdAt` | `Timestamp` | `serverTimestamp()` on create; immutable on update |
+| `sharedPlanId` | `string \| null` (optional) | Set when the entry came from saying “I’m in” to a plan together; missing on ordinary entries |
+| `groupId` | `string \| null` (optional) | The group that plan lives in (always set together with `sharedPlanId`) |
 
 `ScheduledWorkoutEntry` is the same shape plus Firestore `id`. Updates go through `updateScheduledWorkout`, which always writes `status` and `sessionId` together so the pair stays consistent.
 
@@ -287,7 +295,9 @@ Single document id `progress`. Defaults if missing: weekly goal **3**, movement 
 
 Types: [`lib/group-types.ts`](../lib/group-types.ts). Limits: name 100, display name 80, invite code 8 chars (rules allow up to 12), max 12 members, max 20 groups per user.
 
-Partners only see show-up signals (today / last date / streak)—never workout details.
+Groups are a shared week, not a feed. Members see the **days** you train and plan, the **workout name**, and your **weekly goal** and how close you are. Never sets, weights, notes or body weight. Nobody reads another user's private planner: each member's next 7 days of plans (day + label only) are copied onto their member doc, like `weeklyGoal`.
+
+A **gym buddy** is just a group with `kind: "buddy"` and `maxMembers: 2` (friendlier copy: “You & Alex”). The owner can “turn it into a group”, which sets `kind: "group"`, `maxMembers: 12`.
 
 ### `AccountabilityGroupDoc` (`groups/{groupId}`)
 
@@ -297,7 +307,9 @@ Partners only see show-up signals (today / last date / streak)—never workout d
 | `createdBy` | `string` | Owner uid |
 | `createdAt` | `Timestamp` | |
 | `inviteCode` | `string` | Current active code |
-| `memberCount` | `number` | Max 12 |
+| `memberCount` | `number` | ≤ `maxMembers` |
+| `kind` | `"group" \| "buddy"` | Optional; missing reads as `group` |
+| `maxMembers` | `2 \| 12` | Optional; missing reads as 12. Rules: buddy ⇒ 2, group ⇒ 12; joiners can't change either |
 
 ### `GroupMemberDoc` (`groups/{groupId}/members/{uid}`)
 
@@ -311,6 +323,13 @@ Partners only see show-up signals (today / last date / streak)—never workout d
 | `lastWorkoutAt` | `Timestamp \| null` | |
 | `currentStreak` | `number` | Consecutive local **weeks** (Sun–Sat) the member met their own `weeklyGoal` — not consecutive days |
 | `weeklyGoal` | `2 \| 3 \| 4 \| 5 \| 6 \| 7` | Copy of the member's private `settings/progress.weeklyGoal` so the roster can show progress without reading another user's private data |
+| `trainedDays` | `string[]` (optional, ≤ 14) | `YYYY-MM-DD` days with a workout or activity, this week + last week. Days only |
+| `lastWorkoutLabel` | `string \| null` (optional, ≤ 80) | Name of the latest workout / activity (“Push day”, “Run”) for “Maya: Push day” |
+| `upcomingPlans` | `{ dateKey, label }[]` (optional, ≤ 14) | The member's next 7 days of open planner entries. Day + label only |
+
+`trainedDays` and `lastWorkoutLabel` are written with the other signals by `bumpGroupWorkoutSignals` (web app). The MCP server's admin sync (`syncWorkoutSignalsForUser`) writes `trainedDays` too, but not `lastWorkoutLabel` yet, so a workout logged only through MCP shows its day but not its name until the next in-app sync.
+
+**Keeping `upcomingPlans` fresh** (no Cloud Function): [`lib/group-plan-sync.ts`](../lib/group-plan-sync.ts) `syncUpcomingPlansToGroups` re-reads the next 7 days of `scheduledWorkouts` and writes them to every membership. It runs after every planner write in `lib/planner-repository.ts` (add / update / move / delete / copy last week), and, throttled to once per 10 minutes, when the user opens Home or Groups so the window rolls forward as days pass. If someone doesn't open the app for a week their row shows stale plans; the UI only shows planned days from today on, so old ones simply disappear.
 
 `weeklyGoal` is kept in sync by `syncWeeklyGoalToGroups` when the setting changes, and re-written on each workout finish by `bumpGroupWorkoutSignals`.
 
@@ -337,6 +356,47 @@ Reverse index so the owner can list their groups without scanning `groups`.
 | `nameSnapshot` | `string` | Group name at join / last sync, max 100 |
 | `role` | `"owner" \| "member"` | |
 | `joinedAt` | `Timestamp` | |
+| `buddyNickname` | `string \| null` (optional) | Buddy only: what the creator calls the other person before they join (“Alex”). Private, because only the owner reads this doc |
+
+### `SharedPlanDoc` (`groups/{groupId}/plans/{planId}`)
+
+A plan together. Types: `SharedPlanDoc` in [`lib/group-types.ts`](../lib/group-types.ts); persistence in [`lib/group-plan-repository.ts`](../lib/group-plan-repository.ts).
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `groupId` | `string` | Same as the parent group |
+| `dateKey` | `string` | Local `YYYY-MM-DD` |
+| `time` | `string \| null` | Local `HH:mm`; null = anytime |
+| `where` | `string \| null` | Free text, ≤ 80 |
+| `label` | `string` | Workout name, ≤ 80 |
+| `exercises` | `{ id, name, sets }[]` | From a template: exercise id + name + target set count. **No weights or reps.** Empty for “something else”. ≤ 20 |
+| `note` | `string \| null` | One line, ≤ 140 |
+| `createdBy` / `createdByName` | `string` | Creator uid + display name snapshot |
+| `going` | `string[]` | Uids who said “I’m in” (creator starts in it), ≤ 12 |
+| `goingAt` | `map<uid, Timestamp>` | When each person said “I’m in” |
+| `createdAt` | `Timestamp` | |
+
+Rules: members read; a member may create one with only themselves going; anyone (creator included) may add or remove **only their own uid** in `going` / `goingAt`; non-creators may change nothing else; the creator may edit time / where / note and delete (cancel); the group owner may also delete.
+
+“I’m in” (`joinSharedPlan`) adds your uid and creates a `scheduledWorkouts` entry with `sharedPlanId` + `groupId` and the plan's catalog exercise ids (custom `custom-*` exercises from someone else's template can't be rebuilt from a URL, so they're left out of the start link). “Can't make it” (`leaveSharedPlan`) removes both. Deleting the linked planner entry also takes you off `going`. Cancelling a plan deletes it and the creator's own linked entry; other people's linked entries stay on their planners (they're private, the creator can't touch them).
+
+### `InvitePreviewDoc` (`invitePreviews/{code}`)
+
+The only group data a signed-out visitor can read, by exact code (`get` only, never `list`). Refreshed by any member when they open the invite sheet ([`refreshInvitePreview`](../lib/group-plan-repository.ts)); deleted when the code is reset or the group is deleted. Rules require the code to be the group's active code and allow only these keys.
+
+| Field | Type | Notes |
+|-------|------|--------|
+| `groupId` | `string` | |
+| `groupName` | `string` | |
+| `kind` | `"group" \| "buddy"` | |
+| `invitedByName` | `string` | First name of the member who last opened the invite sheet |
+| `memberFirstNames` | `string[]` | First names only, ≤ 12 |
+| `memberCount` | `number` | |
+| `workoutsThisWeek` | `number` | Days trained this week, summed across members |
+| `plans` | `map<planId, { dateKey, time, where, label, goingFirstNames }>` | Upcoming plans someone invited to (≤ 10) |
+| `updatedAt` | `Timestamp` | |
+
+`inviteCodes/{code}` itself stays signed-in only, now `get` only (it was `read`, which also allowed listing every code).
 
 ---
 
@@ -473,6 +533,8 @@ These are rebuilt from sessions, activities, and settings — they are not Fires
 - **Plans**: `users/{uid}/plans` order by `updatedAt` desc.
 - **Planner year window**: `users/{uid}/scheduledWorkouts` where `dateKey` between `YYYY-01-01` and `YYYY-12-31` (client subscribes per visible year).
 - **Unscheduled tray**: `users/{uid}/scheduledWorkouts` where `dateKey == null` (single-field index, no composite needed).
+- **Linked planner entries**: `users/{uid}/scheduledWorkouts` where `sharedPlanId == id` (single-field).
+- **Plans together**: `groups/{groupId}/plans` where `dateKey` between today and today + 6 (single-field range, no composite needed).
 - **Recent activities**: `users/{uid}/activities` order by `activityDate` desc.
 - **Activities by type** (suggestions): `activityTypeId` == id, order by `activityDate` desc.
 - **Body weight**: `users/{uid}/bodyWeight` order by `dateKey` asc.
@@ -507,7 +569,9 @@ Composite indexes: [`firestore.indexes.json`](../firestore.indexes.json)
 | [`lib/progress-settings-repository.ts`](../lib/progress-settings-repository.ts) | Settings + body-weight subscribe / write |
 | [`lib/group-types.ts`](../lib/group-types.ts) | Group, member, invite, membership index |
 | [`lib/group-mapper.ts`](../lib/group-mapper.ts) | Group Firestore mapping + invite codes |
-| [`lib/group-repository.ts`](../lib/group-repository.ts) | Group CRUD, join/leave, show-up signals |
+| [`lib/group-repository.ts`](../lib/group-repository.ts) | Group CRUD, join/leave, show-up signals, buddy → group |
+| [`lib/group-plan-repository.ts`](../lib/group-plan-repository.ts) | Plans together (create, I'm in, can't make it, cancel) + invite previews |
+| [`lib/group-plan-sync.ts`](../lib/group-plan-sync.ts) | Copies your next 7 days of plans onto your member docs |
 | [`lib/public-profile-types.ts`](../lib/public-profile-types.ts) | Opt-in public profile |
 | [`lib/public-profile-mapper.ts`](../lib/public-profile-mapper.ts) | Public profile Firestore mapping |
 | [`lib/public-profile-repository.ts`](../lib/public-profile-repository.ts) | Public profile read / write / consistency sync |

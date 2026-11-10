@@ -9,6 +9,7 @@ import { AccountMenu } from "@/features/home/account-menu";
 import { MoveSheet } from "@/features/planner/move-sheet";
 import { HomeHeader, HomeView } from "@/features/home/home-view";
 import { useHomeData } from "@/features/home/use-home-data";
+import { useTogetherToday } from "@/features/home/use-together-today";
 
 /** Home wired to Firestore. Signed out, it's a short pitch and a sign-in link. */
 export function HomeScreen() {
@@ -17,6 +18,7 @@ export function HomeScreen() {
   const [logOpen, setLogOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
   const [catchUpBusy, setCatchUpBusy] = useState(false);
+  const together = useTogetherToday(home.together, user?.uid ?? null);
 
   if (!firebaseReady) {
     return (
@@ -75,6 +77,7 @@ export function HomeScreen() {
     <>
       <HomeView
         {...home}
+        together={together}
         loaded={home.loaded}
         account={
           <AccountMenu email={user?.email ?? null} onSignOut={() => void signOutUser()} />

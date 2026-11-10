@@ -106,11 +106,22 @@ export function useHomeData() {
       recent: buildHomeRecent(sessions, activities),
       weekGoal: buildWeekGoal(sessions, weeklyGoal, todayKey),
       consistency: buildHomeConsistency(todayKey, sessions, activities, entries, weeklyGoal),
+      // A plan together on today's planner, for the "Training with someone today" card.
+      together: pickTogetherToday(entries, todayKey),
       ...catchUp(entries, sessions, todayKey),
     };
   }, [raw, todayKey]);
 
   return { signedIn, loaded, todayKey, ...view };
+}
+
+function pickTogetherToday(entries: ScheduledWorkoutEntry[], todayKey: string) {
+  const e = entries.find(
+    (x) => x.dateKey === todayKey && x.status === "planned" && x.sharedPlanId && x.groupId,
+  );
+  return e?.sharedPlanId && e.groupId
+    ? { groupId: e.groupId, planId: e.sharedPlanId, exerciseIds: e.exerciseIds, label: e.label }
+    : null;
 }
 
 /** The most recent planned workout that slid past, and what the move sheet needs. */

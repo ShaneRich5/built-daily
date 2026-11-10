@@ -30,9 +30,11 @@ export function OnboardingGate() {
   }, [user, firebaseReady]);
 
   useEffect(() => {
-    if (!user || !profile || EXEMPT_PATHS.has(pathname)) return;
+    // An invite link joins first, so sign-up flows straight into the group.
+    if (!user || !profile || EXEMPT_PATHS.has(pathname) || pathname.startsWith("/join/")) return;
     if (profile.onboardingCompletedAt == null) {
-      router.replace("/onboarding");
+      // Come back here afterwards (e.g. the group someone just joined).
+      router.replace(pathname === "/" ? "/onboarding" : `/onboarding?next=${encodeURIComponent(pathname)}`);
     }
   }, [user, profile, pathname, router]);
 

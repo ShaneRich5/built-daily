@@ -170,3 +170,17 @@ export const CatchUp: Story = {
     },
   },
 };
+
+export const TrainingTogether: Story = {
+  name: "Training with someone today (G9)",
+  args: {
+    todayKey: "2026-11-12",
+    together: {
+      label: "Leg day",
+      meta: "6:30 AM · Iron Works Gym",
+      going: "Priya and you are going",
+      planHref: "/groups/g-crew/plans/p-legs",
+      startHref: "/workout?e=squat,rdl,lunge,plank&t=Leg+day",
+    },
+  },
+};
