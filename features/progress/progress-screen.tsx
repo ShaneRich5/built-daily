@@ -48,9 +48,9 @@ export function ProgressScreen() {
       <ProgressView
         todayKey={data.todayKey}
         week={data.week}
-        momentum={data.momentum}
         movementWeek={data.movementWeek}
-        goalStreak={data.goalStreak}
+        weekDays={data.weekDays}
+        consistency={data.consistency}
         heatmap={{
           activity: data.activity,
           activityByDay: data.activityByDay,

@@ -2,6 +2,9 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import { DEFAULT_PROGRESS_SETTINGS, type SavedBodyWeightEntry } from "@/lib/progress-types";
+import type { SavedActivity } from "@/lib/activity-types";
+import type { SessionSummary } from "@/lib/workout-session-repository";
+import { buildHomeConsistency, buildHomeWeek } from "@/features/home/home-model";
 import { GoalsSheet } from "@/features/progress/goals-sheet";
 import { ProgressView } from "@/features/progress/progress-view";
 
@@ -22,6 +25,42 @@ function sampleActivity() {
 }
 
 const { workouts, walks } = sampleActivity();
+
+const WORKOUT_NAMES = ["Push day", "Pull day", "Leg day"];
+
+/** The same sample days as the heatmap, as the sessions and activities Home's card is built from. */
+const summaries: SessionSummary[] = [...workouts.keys()].map((dateKey, i) => ({
+  id: `s-${dateKey}`,
+  status: "completed",
+  workoutDate: dateKey,
+  workoutTime: "07:00",
+  title: WORKOUT_NAMES[i % WORKOUT_NAMES.length]!,
+  planId: null,
+  startedAt: new Date(`${dateKey}T07:00:00`),
+  endedAt: new Date(`${dateKey}T08:00:00`),
+  exerciseCount: 5,
+  setCount: 16,
+  previewExerciseNames: [],
+}));
+
+const walkActivities: SavedActivity[] = [...walks.keys()].map((dateKey) => ({
+  id: `a-${dateKey}`,
+  activity: {
+    activityTypeId: "walk",
+    activityDate: dateKey,
+    activityTime: "18:00",
+    durationMin: 35,
+    distanceMiles: 1.8,
+    locationName: null,
+    notes: null,
+    visibility: "private",
+    source: "manual",
+    startedAt: null,
+    endedAt: null,
+    createdAt: new Date(`${dateKey}T18:00:00`),
+    updatedAt: new Date(`${dateKey}T18:00:00`),
+  },
+}));
 
 const weights: SavedBodyWeightEntry[] = Array.from({ length: 12 }, (_, i) => ({
   id: String(i),
@@ -49,16 +88,9 @@ const meta = {
   args: {
     todayKey: TODAY,
     week: { weekStartKey: "2026-11-08", target: 3, completed: 1, met: false },
-    momentum: {
-      status: "on_track",
-      title: "On track · 4-week run",
-      detail: "2 workouts left · 4 days including today.",
-      bankedStreak: 4,
-      remainingWorkouts: 2,
-      daysLeft: 4,
-    },
     movementWeek: { weekStartKey: "2026-11-08", target: 5, completed: 2, met: false },
-    goalStreak: { current: 4, longest: 6 },
+    weekDays: buildHomeWeek(TODAY, summaries, walkActivities, []),
+    consistency: buildHomeConsistency(TODAY, summaries, walkActivities, [], 3),
     heatmap: { activity: workouts, activityByDay: walks, dayDetails: new Map() },
     lifts: [
       lift("bench", "Barbell bench press", 145, 6, "2026-11-05"),
@@ -86,16 +118,9 @@ export const NewUser: Story = {
   name: "New user",
   args: {
     week: { weekStartKey: "2026-11-08", target: 3, completed: 0, met: false },
-    momentum: {
-      status: "starting",
-      title: "Fresh week",
-      detail: "3 workouts this week keeps you consistent. No pressure to go every day.",
-      bankedStreak: 0,
-      remainingWorkouts: 3,
-      daysLeft: 4,
-    },
     movementWeek: { weekStartKey: "2026-11-08", target: 5, completed: 0, met: false },
-    goalStreak: { current: 0, longest: 0 },
+    weekDays: buildHomeWeek(TODAY, [], [], []),
+    consistency: buildHomeConsistency(TODAY, [], [], [], 3),
     heatmap: { activity: new Map(), activityByDay: new Map(), dayDetails: new Map() },
     lifts: [],
     weights: [],

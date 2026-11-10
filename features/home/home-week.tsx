@@ -72,15 +72,21 @@ export function HomeWeek({ todayKey, days, goal, consistency }: HomeWeekProps) {
   );
 }
 
-function WeekGoal({
+/** "1 of 3 workouts", the streak pill, goal segments and one encouraging line. Also used on Progress. */
+export function WeekGoal({
   todayKey,
   goal,
   streak,
+  linkStreak = true,
 }: {
   todayKey: string;
   goal: HomeWeekGoal;
   streak: number;
+  /** The pill links to Progress; turn off where it would link to the page you're on. */
+  linkStreak?: boolean;
 }) {
+  const pillClass =
+    "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300";
   return (
     <div className="flex flex-col gap-2 px-0.5">
       <div className="flex items-center justify-between gap-2">
@@ -93,13 +99,17 @@ function WeekGoal({
           </span>
         </p>
         {streak > 0 ? (
-          <Link
-            href="/progress"
-            className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"
-          >
-            <Flame className="size-3.5" aria-hidden />
-            {streak}-week streak
-          </Link>
+          linkStreak ? (
+            <Link href="/progress" className={cn(pillClass, "hover:bg-emerald-100 dark:hover:bg-emerald-950")}>
+              <Flame className="size-3.5" aria-hidden />
+              {streak}-week streak
+            </Link>
+          ) : (
+            <span className={pillClass}>
+              <Flame className="size-3.5" aria-hidden />
+              {streak}-week streak
+            </span>
+          )
         ) : null}
       </div>
       <div
@@ -127,7 +137,7 @@ function WeekGoal({
 }
 
 /** Tapping a planned day starts it; any other day opens the planner. */
-function WeekDays({ days }: { days: HomeWeekDay[] }) {
+export function WeekDays({ days }: { days: HomeWeekDay[] }) {
   return (
     <ol className="grid grid-cols-7 gap-1">
       {days.map((day) => (
@@ -169,7 +179,15 @@ function isTappable(day: HomeChartDay): boolean {
   return day === "workout" || day === "activity" || day === "rest" || day === "today";
 }
 
-function ConsistencyChart({ consistency }: { consistency: HomeConsistency }) {
+/** The last 16 weeks, one square per day; tap a past day or today to see what was logged. */
+export function ConsistencyChart({
+  consistency,
+  showProgressLink = true,
+}: {
+  consistency: HomeConsistency;
+  /** The "Progress" link under the legend; off on the Progress page itself. */
+  showProgressLink?: boolean;
+}) {
   const { weeks, longest, label, dayItems } = consistency;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const selectedDay = selectedKey
@@ -243,9 +261,11 @@ function ConsistencyChart({ consistency }: { consistency: HomeConsistency }) {
             Goal hit
           </span>
         </div>
-        <Link href="/progress" className={cn(linkClass, "inline-flex min-h-8 items-center")}>
-          Progress
-        </Link>
+        {showProgressLink ? (
+          <Link href="/progress" className={cn(linkClass, "inline-flex min-h-8 items-center")}>
+            Progress
+          </Link>
+        ) : null}
       </div>
     </div>
   );
