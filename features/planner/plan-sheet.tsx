@@ -46,6 +46,8 @@ type PlanSheetProps = {
   todayKey: string;
   /** The day selected on the calendar when the sheet opened. */
   initialDateKey: string;
+  /** Start on "Later" (Unscheduled) instead of a day. */
+  initialLater?: boolean;
   plans: SavedWorkoutPlan[];
   onPlan: (input: NewScheduledWorkoutInput) => Promise<void>;
 };
@@ -54,9 +56,19 @@ const chip =
   "h-10 rounded-full border px-3.5 text-[13px] font-medium transition-colors";
 
 /** Pick a day and a template (or just a reminder) and put it on the calendar. */
-export function PlanSheet({ open, onOpenChange, todayKey, initialDateKey, plans, onPlan }: PlanSheetProps) {
+export function PlanSheet({
+  open,
+  onOpenChange,
+  todayKey,
+  initialDateKey,
+  initialLater = false,
+  plans,
+  onPlan,
+}: PlanSheetProps) {
   const options = planOptions(plans);
   const [dateKey, setDateKey] = useState(initialDateKey < todayKey ? todayKey : initialDateKey);
+  /** No day yet: goes to the planner's Unscheduled tray. */
+  const [later, setLater] = useState(initialLater);
   const [picked, setPicked] = useState<string>(options[0]?.id ?? REMINDER_ID);
   const [reminder, setReminder] = useState("");
   const [saving, setSaving] = useState(false);
@@ -67,7 +79,7 @@ export function PlanSheet({ open, onOpenChange, todayKey, initialDateKey, plans,
     { key: tomorrowKey, label: "Tomorrow" },
     ...(initialDateKey > tomorrowKey ? [{ key: initialDateKey, label: agendaHeading(initialDateKey, todayKey) }] : []),
   ];
-  const customDay = !dayChips.some((c) => c.key === dateKey);
+  const customDay = !later && !dayChips.some((c) => c.key === dateKey);
   const option = options.find((o) => o.id === picked);
   const dayName = agendaHeading(dateKey, todayKey).replace(/^(Today|Tomorrow) · /, "");
   const label = option ? option.name : reminder.trim() || "Workout";
@@ -76,7 +88,7 @@ export function PlanSheet({ open, onOpenChange, todayKey, initialDateKey, plans,
     setSaving(true);
     try {
       await onPlan({
-        dateKey,
+        dateKey: later ? null : dateKey,
         label: label.slice(0, NOTE_LIMITS.title),
         planId: option?.planId ?? null,
         exerciseIds: option?.exerciseIds ?? [],
@@ -99,7 +111,13 @@ export function PlanSheet({ open, onOpenChange, todayKey, initialDateKey, plans,
           onClick={() => void submit()}
           className="h-12 w-full rounded-lg bg-emerald-700 text-[15px] font-semibold text-white hover:bg-emerald-800 disabled:opacity-60 dark:bg-emerald-600"
         >
-          {saving ? "Planning…" : option ? `Plan ${option.name} for ${dayName}` : `Add reminder for ${dayName}`}
+          {saving
+            ? "Planning…"
+            : later
+              ? `Add ${option ? option.name : "idea"} to Unscheduled`
+              : option
+                ? `Plan ${option.name} for ${dayName}`
+                : `Add reminder for ${dayName}`}
         </button>
       }
     >
@@ -111,11 +129,14 @@ export function PlanSheet({ open, onOpenChange, todayKey, initialDateKey, plans,
               <button
                 key={c.key}
                 type="button"
-                aria-pressed={dateKey === c.key}
-                onClick={() => setDateKey(c.key)}
+                aria-pressed={!later && dateKey === c.key}
+                onClick={() => {
+                  setDateKey(c.key);
+                  setLater(false);
+                }}
                 className={cn(
                   chip,
-                  dateKey === c.key
+                  !later && dateKey === c.key
                     ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
                     : "border-zinc-200 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300",
                 )}
@@ -137,11 +158,28 @@ export function PlanSheet({ open, onOpenChange, todayKey, initialDateKey, plans,
                 type="date"
                 min={todayKey}
                 value={dateKey}
-                onChange={(e) => e.target.value && setDateKey(e.target.value)}
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  setDateKey(e.target.value);
+                  setLater(false);
+                }}
                 className="absolute inset-0 cursor-pointer opacity-0"
                 aria-label="Pick a date"
               />
             </label>
+            <button
+              type="button"
+              aria-pressed={later}
+              onClick={() => setLater(true)}
+              className={cn(
+                chip,
+                later
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                  : "border-dashed border-zinc-300 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300",
+              )}
+            >
+              Later
+            </button>
           </div>
         </fieldset>
 

@@ -218,7 +218,7 @@ Types: [`lib/planner-types.ts`](../lib/planner-types.ts). Owners may create, upd
 
 | Field | Type | Notes |
 |-------|------|--------|
-| `dateKey` | `string` | Local calendar `YYYY-MM-DD`; changing it reschedules the entry |
+| `dateKey` | `string \| null` | Local calendar `YYYY-MM-DD`; changing it reschedules the entry. `null` = **Unscheduled** (an idea or leftover with no day yet; date-range queries never return it) |
 | `label` | `string` | Non-empty, max 200 |
 | `planId` | `string \| null` | Firestore plan id, starter id (`starter-*`), or null for reminder-only |
 | `exerciseIds` | `string[]` | For `/workout` `e` param; empty array when note-only (max 40) |
@@ -472,6 +472,7 @@ These are rebuilt from sessions, activities, and settings — they are not Fires
 - **Recent sessions** (typical): `users/{uid}/sessions` where `status` in `completed` / `in_progress`, order by `endedAt` desc (in-progress rows sort to the top in the client).
 - **Plans**: `users/{uid}/plans` order by `updatedAt` desc.
 - **Planner year window**: `users/{uid}/scheduledWorkouts` where `dateKey` between `YYYY-01-01` and `YYYY-12-31` (client subscribes per visible year).
+- **Unscheduled tray**: `users/{uid}/scheduledWorkouts` where `dateKey == null` (single-field index, no composite needed).
 - **Recent activities**: `users/{uid}/activities` order by `activityDate` desc.
 - **Activities by type** (suggestions): `activityTypeId` == id, order by `activityDate` desc.
 - **Body weight**: `users/{uid}/bodyWeight` order by `dateKey` asc.
@@ -656,7 +657,7 @@ Table plan_lines {
 Table scheduled_workouts {
   entryId string [pk]
   userId string [not null]
-  dateKey string [not null, note: 'YYYY-MM-DD']
+  dateKey string [note: 'YYYY-MM-DD; null = Unscheduled']
   label string [not null, note: 'max 200']
   planId string [note: 'plan id, starter-*, or null']
   exerciseIds json [not null, note: 'string[], empty if reminder-only']
