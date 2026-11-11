@@ -16,7 +16,8 @@ function Message({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ProgressScreen() {
+/** `redesign` comes from the `progress-redesign` flag, evaluated on the server. */
+export function ProgressScreen({ redesign }: { redesign: boolean }) {
   const data = useProgressData();
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [goalsKey, setGoalsKey] = useState(0);
@@ -47,7 +48,10 @@ export function ProgressScreen() {
     <>
       <ProgressView
         todayKey={data.todayKey}
+        redesign={redesign}
         week={data.week}
+        momentum={data.momentum}
+        goalStreak={data.goalStreak}
         movementWeek={data.movementWeek}
         weekDays={data.weekDays}
         consistency={data.consistency}
