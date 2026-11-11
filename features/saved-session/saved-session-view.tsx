@@ -130,7 +130,7 @@ export function SavedSessionView({
           </button>
           {musclesOpen ? (
             <div className="px-3 pb-3">
-              <WorkoutSessionMuscles exercises={exercises} />
+              <WorkoutSessionMuscles exercises={exercises} showHeader={false} />
             </div>
           ) : null}
         </section>

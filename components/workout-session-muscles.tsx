@@ -19,9 +19,12 @@ export function WorkoutSessionMuscles({
   emptyLabel = "Add exercises to fill in the map",
   filterGroup = null,
   onFilterGroupChange,
+  showHeader = true,
 }: {
   exercises: CatalogExercise[];
   emptyLabel?: string;
+  /** False when the parent already has its own title and open/close control. */
+  showHeader?: boolean;
   filterGroup?: MuscleGroup | null;
   onFilterGroupChange?: (group: MuscleGroup | null) => void;
 }) {
@@ -49,34 +52,36 @@ export function WorkoutSessionMuscles({
 
   return (
     <section className="shrink-0 overflow-hidden rounded-xl bg-[#0b1220]">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left"
-        aria-expanded={open}
-      >
-        <span className="min-w-0">
-          <span className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
-            This session
+      {showHeader ? (
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left"
+          aria-expanded={open}
+        >
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold uppercase tracking-wide text-slate-400">
+              This session
+            </span>
+            <span className="mt-0.5 block truncate text-sm text-slate-200">
+              {empty
+                ? emptyLabel
+                : filterGroup
+                  ? `${stats.shown} of ${stats.total} shown`
+                  : summary}
+            </span>
           </span>
-          <span className="mt-0.5 block truncate text-sm text-slate-200">
-            {empty
-              ? emptyLabel
-              : filterGroup
-                ? `${stats.shown} of ${stats.total} shown`
-                : summary}
-          </span>
-        </span>
-        <ChevronDown
-          className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
-            open ? "rotate-180" : ""
-          }`}
-          aria-hidden
-        />
-      </button>
+          <ChevronDown
+            className={`mt-0.5 size-4 shrink-0 text-slate-400 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
+            aria-hidden
+          />
+        </button>
+      ) : null}
 
-      {open ? (
-        <div className="px-2 pb-3">
+      {open || !showHeader ? (
+        <div className={showHeader ? "px-2 pb-3" : "px-2 py-3"}>
           <MuscleTargetDiagram
             exercises={exercises}
             focus={focus}
