@@ -531,6 +531,9 @@ export function WorkoutSessionDetail({
         metric: line.metric,
         targetSets: Math.max(1, line.sets.length),
         notes: previewDoc.exerciseNotesByLineId?.[line.lineId] ?? null,
+        // Keep maybes and any alternates picked up mid-workout.
+        ...(line.section ? { section: line.section } : {}),
+        ...(line.alternates?.length ? { alternates: line.alternates } : {}),
       })),
     };
 

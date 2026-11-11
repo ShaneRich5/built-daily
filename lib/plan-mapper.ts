@@ -1,6 +1,7 @@
 import { Timestamp } from "firebase/firestore";
 import type { ExerciseMetric } from "@/lib/exercise-catalog";
 import { getCatalogExerciseById } from "@/lib/exercise-catalog";
+import { lineGroupingToFirestore, parseAlternates, parseLineSection } from "@/lib/line-grouping";
 import { NOTE_LIMITS, type PlanLine, type PlanRestPreferences, type PlanSource, type WorkoutPlanDoc } from "@/lib/workout-types";
 
 function newLineId(): string {
@@ -118,6 +119,9 @@ function parsePlanLine(raw: unknown): PlanLine | null {
   };
   if (targetSets !== undefined) line.targetSets = targetSets;
   if (notes !== undefined) line.notes = notes;
+  if (parseLineSection(o.section) === "maybe") line.section = "maybe";
+  const alternates = parseAlternates(o.alternates);
+  if (alternates.length > 0) line.alternates = alternates;
   return line;
 }
 
@@ -160,6 +164,7 @@ export function workoutPlanDocToFirestore(doc: WorkoutPlanDoc): Record<string, u
       metric: line.metric,
       targetSets: line.targetSets ?? null,
       notes: line.notes ?? null,
+      ...lineGroupingToFirestore(line.section, line.alternates),
     })),
   };
   if (doc.restPreferences) {

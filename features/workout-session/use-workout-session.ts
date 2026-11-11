@@ -19,6 +19,7 @@ import {
 } from "@/features/workout-session/exercise-suggestions";
 import { sessionReducer } from "@/features/workout-session/session-reducer";
 import {
+  finishState,
   initialSessionState,
   toFinishSnapshot,
   type WorkoutSessionInitialData,
@@ -45,6 +46,17 @@ export function useWorkoutSession(
   const buildSnapshot = useCallback(
     () =>
       toFinishSnapshot(state, {
+        activeDurationMs,
+        sessionStartedAtMs: startedAtMs,
+        planId,
+      }),
+    [state, activeDurationMs, startedAtMs, planId],
+  );
+
+  /** What Finish saves: maybes you never started are left out. */
+  const buildFinishSnapshot = useCallback(
+    () =>
+      toFinishSnapshot(finishState(state), {
         activeDurationMs,
         sessionStartedAtMs: startedAtMs,
         planId,
@@ -124,6 +136,7 @@ export function useWorkoutSession(
     startedAtMs,
     planId,
     buildSnapshot,
+    buildFinishSnapshot,
     history,
     historyLoading: !recent.loaded,
     suggestions,

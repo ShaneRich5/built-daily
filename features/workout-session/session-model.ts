@@ -3,6 +3,7 @@ import {
   combineToTotalSeconds,
   splitTotalSeconds,
 } from "@/lib/duration-input";
+import type { LineSection } from "@/lib/line-grouping";
 import { formatSetSummary } from "@/lib/workout-journal-export";
 import {
   emptyUiSetRow,
@@ -21,6 +22,10 @@ export type SessionExercise = {
   exercise: CatalogExercise;
   sets: SetRow[];
   note: string;
+  /** "plan" = doing it today; "maybe" = only if there's time. */
+  section: LineSection;
+  /** Other exercises that fill this slot (whichever machine is free). */
+  alternates: CatalogExercise[];
 };
 
 export type ExerciseProgress = "not_started" | "in_progress" | "done";
@@ -111,6 +116,11 @@ export function exerciseProgress(sets: SetRow[]): ExerciseProgress {
   if (sets.length > 0 && doneCount === sets.length) return "done";
   if (doneCount > 0 || sets.some(setRowHasMeasurements)) return "in_progress";
   return "not_started";
+}
+
+/** A maybe nobody touched never counts: not in the header, not in the saved workout. */
+export function isUntouchedMaybe(item: SessionExercise): boolean {
+  return item.section === "maybe" && exerciseProgress(item.sets) === "not_started";
 }
 
 export function countDoneSets(exercises: SessionExercise[]): number {

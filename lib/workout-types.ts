@@ -4,7 +4,9 @@
  */
 
 import type { ExerciseMetric } from "@/lib/exercise-catalog";
+import type { AlternateExercise, LineSection } from "@/lib/line-grouping";
 export type { ExerciseMetric } from "@/lib/exercise-catalog";
+export type { AlternateExercise, LineSection } from "@/lib/line-grouping";
 
 /** Max lengths aligned with UI / rules validation. */
 export const NOTE_LIMITS = {
@@ -56,6 +58,10 @@ export type SessionLine = {
   nameSnapshot: string;
   metric: ExerciseMetric;
   sets: SetLog[];
+  /** "maybe" = only if there's time. Absent means "plan". */
+  section?: LineSection;
+  /** Stand-ins for this slot (machine taken). Absent means none. */
+  alternates?: AlternateExercise[];
 };
 
 /** Embedded plan line (no performed sets). */
@@ -67,6 +73,10 @@ export type PlanLine = {
   targetSets?: number | null;
   /** Optional default note when instantiating a session (future). */
   notes?: string | null;
+  /** "maybe" = only if there's time. Absent means "plan". */
+  section?: LineSection;
+  /** Stand-ins for this slot (machine taken). Absent means none. */
+  alternates?: AlternateExercise[];
 };
 
 /** Reusable workout template under `users/{uid}/plans/{planId}`. */

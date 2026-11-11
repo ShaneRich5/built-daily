@@ -14,24 +14,32 @@ import {
 } from "@/lib/workout-session-mapper";
 import type { ExerciseHistoryEntry } from "@/lib/workout-session-repository";
 import { AddExerciseFooter } from "@/features/workout-session/add-exercise-footer";
+import { AlternateChips } from "@/features/workout-session/alternate-chips";
 import { ExerciseCard } from "@/features/workout-session/exercise-card";
 import { ExerciseDetailsSheet } from "@/features/workout-session/exercise-details-sheet";
 import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-sheet";
 import { copyText, downloadTextFile } from "@/features/workout-session/journal-actions";
+import { AddMaybeButton, MaybeSection } from "@/features/workout-session/maybe-section";
 import { MoveExerciseSheet } from "@/features/workout-session/move-exercise-sheet";
 import { ReorderSheet } from "@/features/workout-session/reorder-sheet";
 import { SessionActionBar } from "@/features/workout-session/session-action-bar";
 import { SessionHeader } from "@/features/workout-session/session-header";
 import {
   countDoneSets,
+  exerciseProgress,
+  isUntouchedMaybe,
   MAX_SESSION_EXERCISES,
   rowsFromHistory,
   setRowHasMeasurements,
   setRowIsBlank,
   type SetRow,
 } from "@/features/workout-session/session-model";
-import { nextUnfinishedAfter } from "@/features/workout-session/session-reducer";
+import {
+  fullIndexForSectionMove,
+  nextUnfinishedAfter,
+} from "@/features/workout-session/session-reducer";
 import type { WorkoutSessionInitialData } from "@/features/workout-session/session-snapshot";
+import { SwapExerciseSheet } from "@/features/workout-session/swap-exercise-sheet";
 import { useWorkoutSession } from "@/features/workout-session/use-workout-session";
 import { WorkoutDetailsSheet } from "@/features/workout-session/workout-details-sheet";
 
@@ -44,7 +52,16 @@ export type WorkoutSessionScreenProps = WorkoutSessionInitialData & {
 };
 
 /** Which sheet is showing. Sheets stay mounted so they can animate closed. */
-type Panel = "add" | "replace" | "details" | "move" | "reorder" | "workout" | null;
+type Panel =
+  | "add"
+  | "addMaybe"
+  | "swap"
+  | "swapSearch"
+  | "details"
+  | "move"
+  | "reorder"
+  | "workout"
+  | null;
 
 /** The active workout: quick cards for logging, sheets for everything else. */
 export function WorkoutSessionScreen({
@@ -64,9 +81,15 @@ export function WorkoutSessionScreen({
   const [journalCopied, setJournalCopied] = useState(false);
 
   const exercises = state.exercises;
-  const focusIndex = exercises.findIndex((item) => item.lineId === focusLineId);
-  const focusItem = focusIndex >= 0 ? exercises[focusIndex] : undefined;
-  const setCount = exercises.reduce((total, item) => total + item.sets.length, 0);
+  const planItems = exercises.filter((item) => item.section === "plan");
+  const maybeItems = exercises.filter((item) => item.section === "maybe");
+  const focusItem = exercises.find((item) => item.lineId === focusLineId);
+  /** The plan or the maybes, whichever the focused exercise is in. */
+  const focusSection = focusItem?.section === "maybe" ? maybeItems : planItems;
+  const focusIndex = focusItem ? focusSection.indexOf(focusItem) : -1;
+  // Untouched maybes don't count toward the workout until you start one.
+  const counted = exercises.filter((item) => !isUntouchedMaybe(item));
+  const setCount = counted.reduce((total, item) => total + item.sets.length, 0);
   const atLimit = exercises.length >= MAX_SESSION_EXERCISES;
   const title = resolveWorkoutTitle(
     state.title,
@@ -86,7 +109,7 @@ export function WorkoutSessionScreen({
     if (!open) setPanel(null);
   };
 
-  const openSearch = (kind: "add" | "replace") => {
+  const openSearch = (kind: "add" | "addMaybe" | "swapSearch") => {
     setSearchKey((key) => key + 1);
     setPanel(kind);
   };
@@ -96,25 +119,44 @@ export function WorkoutSessionScreen({
     setPanel("details");
   };
 
-  const addExercises = (picked: CatalogExercise[]) => {
-    dispatch({ type: "addExercises", exercises: picked });
+  const addExercises = (picked: CatalogExercise[], section: "plan" | "maybe" = "plan") => {
+    dispatch({ type: "addExercises", exercises: picked, section });
     setPanel(null);
   };
 
-  const replaceExercise = (next: CatalogExercise) => {
-    if (!focusItem) return;
-    const metricChanges = focusItem.exercise.metric !== next.metric;
+  /** Machine taken: put `next` in this slot. The old exercise stays one tap away as an alternate. */
+  const swapExercise = (lineId: string, next: CatalogExercise) => {
+    const item = exercises.find((candidate) => candidate.lineId === lineId);
+    if (!item) return;
+    const metricChanges = item.exercise.metric !== next.metric;
     if (
       metricChanges &&
-      focusItem.sets.some(setRowHasMeasurements) &&
+      item.sets.some(setRowHasMeasurements) &&
       !window.confirm(
-        `${next.name} is logged differently than ${focusItem.exercise.name}. Clear the sets you already logged?`,
+        `${next.name} is logged differently than ${item.exercise.name}. Clear the sets you already logged?`,
       )
     ) {
       return;
     }
-    dispatch({ type: "replaceExercise", lineId: focusItem.lineId, exercise: next });
-    dispatch({ type: "openExercise", lineId: focusItem.lineId });
+    dispatch({ type: "swapExercise", lineId, exercise: next });
+    if (item.section === "plan") dispatch({ type: "openExercise", lineId });
+    setPanel(null);
+  };
+
+  const moveWithinSection = (lineId: string, toIndex: number) =>
+    dispatch({
+      type: "moveExercise",
+      lineId,
+      toIndex: fullIndexForSectionMove(exercises, lineId, toIndex),
+    });
+
+  const toggleSection = () => {
+    if (!focusItem) return;
+    dispatch({
+      type: "setSection",
+      lineId: focusItem.lineId,
+      section: focusItem.section === "maybe" ? "plan" : "maybe",
+    });
     setPanel(null);
   };
 
@@ -181,9 +223,9 @@ export function WorkoutSessionScreen({
     <div className="flex flex-1 flex-col gap-5 pb-[calc(5rem+env(safe-area-inset-bottom))]">
       <SessionHeader
         title={title}
-        exerciseCount={exercises.length}
+        exerciseCount={counted.length}
         setCount={setCount}
-        doneSetCount={countDoneSets(exercises)}
+        doneSetCount={countDoneSets(counted)}
         onOpenWorkoutDetails={() => setPanel("workout")}
       />
 
@@ -193,9 +235,9 @@ export function WorkoutSessionScreen({
             id="exercises-heading"
             className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
           >
-            Exercises
+            {maybeItems.length > 0 ? "Plan" : "Exercises"}
           </h2>
-          {exercises.length > 1 ? (
+          {planItems.length > 1 ? (
             <button
               type="button"
               onClick={() => setPanel("reorder")}
@@ -207,14 +249,15 @@ export function WorkoutSessionScreen({
           ) : null}
         </div>
 
-        {exercises.length === 0 ? (
+        {planItems.length === 0 ? (
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Add your first exercise below, or finish without details if you just want to log
-            that you showed up.
+            {maybeItems.length > 0
+              ? "Nothing in the plan yet. Tap Do it on a maybe, or add an exercise below."
+              : "Add your first exercise below, or finish without details if you just want to log that you showed up."}
           </p>
         ) : (
           <ol className="flex flex-col gap-2">
-            {exercises.map((item) => (
+            {planItems.map((item) => (
               <li key={item.lineId} id={`exercise-${item.lineId}`} className="scroll-mt-4 scroll-mb-28">
                 <ExerciseCard
                   item={item}
@@ -240,6 +283,14 @@ export function WorkoutSessionScreen({
                     dispatch({ type: "openNextExercise", afterLineId: item.lineId })
                   }
                 />
+                {state.openLineId !== item.lineId &&
+                exerciseProgress(item.sets) === "not_started" ? (
+                  <AlternateChips
+                    currentName={item.exercise.name}
+                    alternates={item.alternates}
+                    onSwap={(next) => swapExercise(item.lineId, next)}
+                  />
+                ) : null}
               </li>
             ))}
           </ol>
@@ -254,12 +305,29 @@ export function WorkoutSessionScreen({
         />
       </section>
 
+      {maybeItems.length > 0 ? (
+        <MaybeSection
+          items={maybeItems}
+          lastTimeById={Object.fromEntries(
+            maybeItems.map((item) => [item.exercise.id, history[item.exercise.id]?.[0]?.line.sets]),
+          )}
+          canAdd={!atLimit}
+          onDoIt={(lineId) =>
+            dispatch({ type: "setSection", lineId, section: "plan", open: true })
+          }
+          onOpenDetails={openDetails}
+          onAddMaybe={() => openSearch("addMaybe")}
+        />
+      ) : planItems.length > 0 && !atLimit ? (
+        <AddMaybeButton quiet onClick={() => openSearch("addMaybe")} />
+      ) : null}
+
       <SessionActionBar
         hasExercises={exercises.length > 0}
         canAdd={!atLimit}
         journalCopied={journalCopied}
         onAddExercise={() => openSearch("add")}
-        onFinish={() => void onFinish?.(session.buildSnapshot())}
+        onFinish={() => void onFinish?.(session.buildFinishSnapshot())}
         onOpenWorkoutDetails={() => setPanel("workout")}
         onReorder={() => setPanel("reorder")}
         onCopyJournal={() => void copyJournal()}
@@ -269,21 +337,24 @@ export function WorkoutSessionScreen({
 
       <ExerciseSearchSheet
         key={searchKey}
-        open={panel === "add" || panel === "replace"}
+        open={panel === "add" || panel === "addMaybe" || panel === "swapSearch"}
         onOpenChange={closePanel}
         mode={
-          panel === "replace" && focusItem
+          panel === "swapSearch" && focusItem
             ? { kind: "replace", currentName: focusItem.exercise.name }
             : {
                 kind: "add",
-                afterName: exercises[exercises.length - 1]?.exercise.name ?? null,
+                afterName:
+                  panel === "addMaybe"
+                    ? null
+                    : (planItems[planItems.length - 1]?.exercise.name ?? null),
                 room: MAX_SESSION_EXERCISES - exercises.length,
               }
         }
         suggested={session.suggestedForSearch}
         recent={session.recentExercises}
-        onAdd={addExercises}
-        onReplace={replaceExercise}
+        onAdd={(picked) => addExercises(picked, panel === "addMaybe" ? "maybe" : "plan")}
+        onReplace={(next) => focusItem && swapExercise(focusItem.lineId, next)}
       />
 
       {focusItem ? (
@@ -293,7 +364,7 @@ export function WorkoutSessionScreen({
           onOpenChange={closePanel}
           item={focusItem}
           position={focusIndex + 1}
-          total={exercises.length}
+          total={focusSection.length}
           history={history[focusItem.exercise.id] ?? []}
           historyLoading={session.historyLoading}
           onUpdateSet={(setIndex, patch) =>
@@ -308,9 +379,21 @@ export function WorkoutSessionScreen({
           onNoteChange={(note) =>
             dispatch({ type: "setExerciseNote", lineId: focusItem.lineId, note })
           }
-          onChangeExercise={() => openSearch("replace")}
+          onSwapExercise={() => setPanel("swap")}
           onMoveExercise={() => setPanel("move")}
+          onToggleSection={toggleSection}
           onRemoveExercise={removeExercise}
+        />
+      ) : null}
+
+      {focusItem ? (
+        <SwapExerciseSheet
+          key={`swap-${focusItem.lineId}`}
+          open={panel === "swap"}
+          onOpenChange={closePanel}
+          item={focusItem}
+          onSwap={(next) => swapExercise(focusItem.lineId, next)}
+          onSearchAll={() => openSearch("swapSearch")}
         />
       ) : null}
 
@@ -318,17 +401,17 @@ export function WorkoutSessionScreen({
         <MoveExerciseSheet
           open={panel === "move"}
           onOpenChange={closePanel}
-          exercises={exercises}
+          exercises={focusSection}
           lineId={focusItem.lineId}
-          onMove={(lineId, toIndex) => dispatch({ type: "moveExercise", lineId, toIndex })}
+          onMove={moveWithinSection}
         />
       ) : null}
 
       <ReorderSheet
         open={panel === "reorder"}
         onOpenChange={closePanel}
-        exercises={exercises}
-        onMove={(lineId, toIndex) => dispatch({ type: "moveExercise", lineId, toIndex })}
+        exercises={planItems}
+        onMove={moveWithinSection}
       />
 
       <WorkoutDetailsSheet
