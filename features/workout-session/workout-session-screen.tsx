@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CatalogExercise } from "@/lib/exercise-catalog";
 import { resolveWorkoutTitle } from "@/lib/workout-date";
 import {
@@ -49,6 +49,11 @@ export type WorkoutSessionScreenProps = WorkoutSessionInitialData & {
   onFinish?: (snapshot: ActiveWorkoutFinishSnapshot) => void | Promise<void>;
   /** Delete this session (only for workouts that are already saved). */
   onDiscard?: () => void | Promise<void>;
+  /**
+   * Editing a finished workout: the header gets Cancel, the green button says
+   * "Save changes" and calls `onFinish`, and nothing autosaves.
+   */
+  editing?: { onCancel: () => void };
 };
 
 /** Which sheet is showing. Sheets stay mounted so they can animate closed. */
@@ -68,6 +73,7 @@ export function WorkoutSessionScreen({
   onPersist,
   onFinish,
   onDiscard,
+  editing,
   ...data
 }: WorkoutSessionScreenProps) {
   const session = useWorkoutSession(data, onPersist);
@@ -79,6 +85,12 @@ export function WorkoutSessionScreen({
   /** Bumped on every open so the search sheet starts fresh. */
   const [searchKey, setSearchKey] = useState(0);
   const [journalCopied, setJournalCopied] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+
+  // Editing a finished workout: compare against what was loaded to show "Unsaved".
+  const snapshotKey = JSON.stringify({ ...session.buildSnapshot(), sessionStartedAtMs: 0 });
+  const [loadedKey] = useState(snapshotKey);
+  const dirty = useMemo(() => snapshotKey !== loadedKey, [snapshotKey, loadedKey]);
 
   const exercises = state.exercises;
   const planItems = exercises.filter((item) => item.section === "plan");
@@ -207,6 +219,17 @@ export function WorkoutSessionScreen({
     downloadTextFile(workoutJournalFilename(doc), text);
   };
 
+  const finish = async () => {
+    if (!onFinish || finishing) return;
+    setFinishing(true);
+    try {
+      // Maybes you never started are left out of what gets saved.
+      await onFinish(session.buildFinishSnapshot());
+    } finally {
+      setFinishing(false);
+    }
+  };
+
   const deleteWorkout = onDiscard
     ? async () => {
         if (
@@ -227,6 +250,18 @@ export function WorkoutSessionScreen({
         setCount={setCount}
         doneSetCount={countDoneSets(counted)}
         onOpenWorkoutDetails={() => setPanel("workout")}
+        editing={
+          editing
+            ? {
+                dirty,
+                onCancel: () => {
+                  if (!dirty || window.confirm("Discard your changes to this workout?")) {
+                    editing.onCancel();
+                  }
+                },
+              }
+            : undefined
+        }
       />
 
       <section aria-labelledby="exercises-heading" className="flex flex-col gap-2">
@@ -318,7 +353,8 @@ export function WorkoutSessionScreen({
           onOpenDetails={openDetails}
           onAddMaybe={() => openSearch("addMaybe")}
         />
-      ) : planItems.length > 0 && !atLimit ? (
+      ) : planItems.length > 0 && !atLimit && !editing ? (
+        // Not while editing a finished workout: a maybe you never start isn't saved.
         <AddMaybeButton quiet onClick={() => openSearch("addMaybe")} />
       ) : null}
 
@@ -327,7 +363,9 @@ export function WorkoutSessionScreen({
         canAdd={!atLimit}
         journalCopied={journalCopied}
         onAddExercise={() => openSearch("add")}
-        onFinish={() => void onFinish?.(session.buildFinishSnapshot())}
+        onFinish={() => void finish()}
+        finishLabel={editing ? (finishing ? "Saving…" : "Save changes") : undefined}
+        finishDisabled={finishing || (editing !== undefined && !dirty)}
         onOpenWorkoutDetails={() => setPanel("workout")}
         onReorder={() => setPanel("reorder")}
         onCopyJournal={() => void copyJournal()}

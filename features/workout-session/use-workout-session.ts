@@ -87,17 +87,20 @@ export function useWorkoutSession(
     loaded: boolean;
     sessions: SavedWorkoutSession[];
   }>({ loaded: false, sessions: [] });
+  const excludeId = data.historyExcludeSessionId;
   useEffect(() => {
     let cancelled = false;
     getRecentCompletedSessions()
       .catch(() => [])
       .then((sessions) => {
-        if (!cancelled) setRecent({ loaded: true, sessions });
+        if (!cancelled) {
+          setRecent({ loaded: true, sessions: sessions.filter((s) => s.id !== excludeId) });
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [excludeId]);
 
   // Only recompute history when the exercise list itself changes, not on every keystroke.
   const exerciseKey = exercises

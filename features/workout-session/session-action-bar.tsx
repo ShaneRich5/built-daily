@@ -30,6 +30,9 @@ type SessionActionBarProps = {
   onDownloadJournal: () => void;
   /** Omitted when the workout is not saved yet (nothing to delete). */
   onDelete?: () => void;
+  /** Overrides the green button's label (editing a finished workout says "Save changes"). */
+  finishLabel?: string;
+  finishDisabled?: boolean;
 };
 
 const iconButton =
@@ -47,6 +50,8 @@ export function SessionActionBar({
   onCopyJournal,
   onDownloadJournal,
   onDelete,
+  finishLabel,
+  finishDisabled = false,
 }: SessionActionBarProps) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-zinc-50/95 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
@@ -110,9 +115,10 @@ export function SessionActionBar({
         <button
           type="button"
           onClick={onFinish}
-          className="h-11 min-w-0 flex-1 rounded-lg bg-emerald-700 text-sm font-semibold text-white hover:bg-emerald-800 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
+          disabled={finishDisabled}
+          className="h-11 min-w-0 flex-1 rounded-lg bg-emerald-700 disabled:opacity-60 text-sm font-semibold text-white hover:bg-emerald-800 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
         >
-          {hasExercises ? "Finish workout" : "Finish without details"}
+          {finishLabel ?? (hasExercises ? "Finish workout" : "Finish without details")}
         </button>
       </div>
     </div>
