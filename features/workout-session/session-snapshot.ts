@@ -1,10 +1,17 @@
 import type { CatalogExercise } from "@/lib/exercise-catalog";
-import { alternateFromExercise, type LineSection } from "@/lib/line-grouping";
+import {
+  alternateFromExercise,
+  exerciseFromAlternate,
+  type LineSection,
+} from "@/lib/line-grouping";
 import {
   createLineId,
+  emptyUiSetRow,
+  setLogToUiSetRow,
   type ActiveWorkoutFinishSnapshot,
 } from "@/lib/workout-session-mapper";
-import { localDateKeyFromMs } from "@/lib/workout-date";
+import { isDefaultWorkoutTitle, localDateKeyFromMs } from "@/lib/workout-date";
+import type { WorkoutSessionDoc } from "@/lib/workout-types";
 import {
   emptySetRow,
   exerciseProgress,
@@ -39,6 +46,8 @@ export type WorkoutSessionInitialData = {
   initialActiveDurationMs?: number;
   /** Original session start time. */
   sessionStartedAtMs?: number;
+  /** Editing a saved workout: leave it out of "last time" values and suggestions. */
+  historyExcludeSessionId?: string;
 };
 
 export function initialSessionState(
@@ -110,4 +119,44 @@ export function toFinishSnapshot(
 /** What Finish saves: everything except maybes that were never started. */
 export function finishState(state: SessionState): SessionState {
   return { ...state, exercises: state.exercises.filter((item) => !isUntouchedMaybe(item)) };
+}
+
+/** Load a saved session (finished or in progress) into the session screen. */
+export function initialDataFromSavedSession(session: WorkoutSessionDoc): WorkoutSessionInitialData {
+  const exerciseNotesById: Record<string, string> = {};
+  for (const line of session.lines) {
+    const note = session.exerciseNotesByLineId?.[line.lineId];
+    if (note) exerciseNotesById[line.exerciseId] = note;
+  }
+  return {
+    title: session.title,
+    titleIsCustom: !isDefaultWorkoutTitle(
+      session.title,
+      session.workoutDate,
+      session.startedAt.getTime(),
+    ),
+    exercises: session.lines.map((line) => ({
+      id: line.exerciseId,
+      name: line.nameSnapshot,
+      metric: line.metric,
+    })),
+    planId: session.planId,
+    initialLineIds: session.lines.map((line) => line.lineId),
+    initialSections: session.lines.map((line) => line.section ?? "plan"),
+    initialAlternates: session.lines.map((line) =>
+      (line.alternates ?? []).map(exerciseFromAlternate),
+    ),
+    initialSetsByExercise: session.lines.map((line) =>
+      line.sets.length > 0 ? line.sets.map(setLogToUiSetRow) : [emptyUiSetRow()],
+    ),
+    initialWorkoutNote: session.workoutNote ?? "",
+    initialExerciseNotesById: exerciseNotesById,
+    initialWorkoutDate: session.workoutDate,
+    initialWorkoutTime: session.workoutTime,
+    initialActiveDurationMs:
+      session.activeDurationSec != null && session.activeDurationSec > 0
+        ? session.activeDurationSec * 1000
+        : 0,
+    sessionStartedAtMs: session.startedAt.getTime(),
+  };
 }
