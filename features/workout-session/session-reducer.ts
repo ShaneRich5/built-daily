@@ -1,4 +1,5 @@
 import type { CatalogExercise } from "@/lib/exercise-catalog";
+import { MAX_ALTERNATES, type LineSection } from "@/lib/line-grouping";
 import { createLineId } from "@/lib/workout-session-mapper";
 import {
   copySetRow,
@@ -30,8 +31,14 @@ export type SessionAction =
   | { type: "openExercise"; lineId: string | null }
   /** Open the next exercise (after this one, wrapping) that still has work left. */
   | { type: "openNextExercise"; afterLineId: string }
-  | { type: "addExercises"; exercises: CatalogExercise[] }
-  | { type: "replaceExercise"; lineId: string; exercise: CatalogExercise }
+  | { type: "addExercises"; exercises: CatalogExercise[]; section?: LineSection }
+  /**
+   * Swap in a different exercise for this slot (machine taken). The one it
+   * replaces becomes an alternate, so swapping back is one tap.
+   */
+  | { type: "swapExercise"; lineId: string; exercise: CatalogExercise }
+  /** Move between plan and maybe. `open` opens the card (for "Do it"). */
+  | { type: "setSection"; lineId: string; section: LineSection; open?: boolean }
   | { type: "removeExercise"; lineId: string }
   | { type: "moveExercise"; lineId: string; toIndex: number }
   | { type: "setExerciseNote"; lineId: string; note: string }
@@ -72,14 +79,26 @@ function updateSets(
   }));
 }
 
-/** The next exercise after `lineId` (wrapping around) that is not done yet. */
+/** The next planned exercise after `lineId` (wrapping around) that is not done yet. Maybes wait to be picked. */
 export function nextUnfinishedAfter(exercises: SessionExercise[], lineId: string): string | null {
   const start = exercises.findIndex((item) => item.lineId === lineId);
   for (let step = 1; step < exercises.length; step++) {
     const candidate = exercises[(start + step) % exercises.length]!;
-    if (exerciseProgress(candidate.sets) !== "done") return candidate.lineId;
+    if (candidate.section === "plan" && exerciseProgress(candidate.sets) !== "done") {
+      return candidate.lineId;
+    }
   }
   return null;
+}
+
+/** The old exercise first, without the new one or duplicates, capped. */
+function alternatesAfterSwap(item: SessionExercise, next: CatalogExercise): CatalogExercise[] {
+  const out: CatalogExercise[] = [];
+  for (const candidate of [item.exercise, ...item.alternates]) {
+    if (candidate.id === next.id || out.some((alt) => alt.id === candidate.id)) continue;
+    out.push(candidate);
+  }
+  return out.slice(0, MAX_ALTERNATES);
 }
 
 export function sessionReducer(
@@ -102,6 +121,7 @@ export function sessionReducer(
     case "addExercises": {
       const room = MAX_SESSION_EXERCISES - state.exercises.length;
       if (room <= 0 || action.exercises.length === 0) return state;
+      const section = action.section ?? "plan";
       const added: SessionExercise[] = action.exercises
         .slice(0, room)
         .map((exercise) => ({
@@ -109,24 +129,42 @@ export function sessionReducer(
           exercise,
           sets: [emptySetRow()],
           note: "",
+          section,
+          alternates: [],
         }));
       return {
         ...state,
         exercises: [...state.exercises, ...added],
-        openLineId: added[0]!.lineId,
+        // A maybe waits until you pick it; a planned exercise opens right away.
+        openLineId: section === "plan" ? added[0]!.lineId : state.openLineId,
       };
     }
 
-    case "replaceExercise":
+    case "swapExercise":
       return updateExercise(state, action.lineId, (item) => {
+        if (item.exercise.id === action.exercise.id) return item;
         const metricChanged = item.exercise.metric !== action.exercise.metric;
         return {
           ...item,
           exercise: action.exercise,
+          alternates: alternatesAfterSwap(item, action.exercise),
           // Different metrics log different fields, so old values would not fit.
           sets: metricChanged ? [emptySetRow()] : item.sets,
         };
       });
+
+    case "setSection": {
+      const moved = updateExercise(state, action.lineId, (item) => ({
+        ...item,
+        section: action.section,
+      }));
+      if (action.open) return { ...moved, openLineId: action.lineId };
+      // A card that moves to maybe closes; maybes show as compact rows.
+      if (action.section === "maybe" && state.openLineId === action.lineId) {
+        return { ...moved, openLineId: null };
+      }
+      return moved;
+    }
 
     case "removeExercise": {
       const index = state.exercises.findIndex((item) => item.lineId === action.lineId);
@@ -190,4 +228,24 @@ export function sessionReducer(
         action.sets.length > 0 ? action.sets : [emptySetRow()],
       );
   }
+}
+
+/**
+ * Reorder and Move show one section at a time. Turn "slot `toIndex` among the
+ * other exercises in this section" into the index `moveExercise` expects
+ * (a position in the full list without the moving exercise).
+ */
+export function fullIndexForSectionMove(
+  all: SessionExercise[],
+  lineId: string,
+  toIndex: number,
+): number {
+  const moving = all.find((item) => item.lineId === lineId);
+  if (!moving) return toIndex;
+  const rest = all.filter((item) => item.lineId !== lineId);
+  const sectionRest = rest.filter((item) => item.section === moving.section);
+  if (sectionRest.length === 0) return 0;
+  const anchor = sectionRest[Math.min(toIndex, sectionRest.length - 1)]!;
+  const anchorIndex = rest.findIndex((item) => item.lineId === anchor.lineId);
+  return toIndex < sectionRest.length ? anchorIndex : anchorIndex + 1;
 }

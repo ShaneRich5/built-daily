@@ -39,8 +39,16 @@ export function sessionExercise(
   exerciseId: string,
   sets: SetRow[],
   note = "",
+  grouping: Partial<Pick<SessionExercise, "section" | "alternates">> = {},
 ): SessionExercise {
-  return { lineId, exercise: catalog(exerciseId), sets, note };
+  return {
+    lineId,
+    exercise: catalog(exerciseId),
+    sets,
+    note,
+    section: grouping.section ?? "plan",
+    alternates: grouping.alternates ?? [],
+  };
 }
 
 /** A push day partway through: two done, one in progress, one not started. */
