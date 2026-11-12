@@ -85,8 +85,24 @@ const lift = (exerciseId: string, exerciseName: string, weight: number, reps: nu
 const meta = {
   title: "Progress/Screen",
   component: ProgressView,
+  argTypes: {
+    redesign: {
+      control: "boolean",
+      description: "The `progress-redesign` flag (Vercel Flags) on the real page: on = new design, off = old.",
+    },
+  },
   args: {
     todayKey: TODAY,
+    redesign: true,
+    momentum: {
+      status: "on_track",
+      title: "On track · 4-week run",
+      detail: "2 workouts left · 4 days including today.",
+      bankedStreak: 4,
+      remainingWorkouts: 2,
+      daysLeft: 4,
+    },
+    goalStreak: { current: 4, longest: 6 },
     week: { weekStartKey: "2026-11-08", target: 3, completed: 1, met: false },
     movementWeek: { weekStartKey: "2026-11-08", target: 5, completed: 2, met: false },
     weekDays: buildHomeWeek(TODAY, summaries, walkActivities, []),
@@ -112,7 +128,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const MidWeek: Story = { name: "Mid-week, on track" };
+export const MidWeek: Story = { name: "Mid-week · new design (flag on)" };
+
+export const OldDesign: Story = {
+  name: "Mid-week · old design (flag off)",
+  args: { redesign: false },
+};
 
 export const NewUser: Story = {
   name: "New user",

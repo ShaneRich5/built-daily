@@ -1,6 +1,13 @@
 import { Timestamp } from "firebase/firestore";
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
 import {
+  lineGroupingToFirestore,
+  parseAlternates,
+  parseLineSection,
+  type AlternateExercise,
+  type LineSection,
+} from "@/lib/line-grouping";
+import {
   normalizeWorkoutDate,
   normalizeWorkoutTime,
   resolveWorkoutTitle,
@@ -61,6 +68,10 @@ export type ActiveWorkoutFinishSnapshot = {
   planId?: string | null;
   /** Stable line ids parallel to `exercises` (required for updates). */
   lineIds: string[];
+  /** Plan or maybe, parallel to `exercises`. Missing means all plan. */
+  sections?: LineSection[];
+  /** Stand-ins per exercise, parallel to `exercises`. Missing means none. */
+  alternatesByExercise?: AlternateExercise[][];
 };
 
 function trimToNull(s: string, max: number): string | null {
@@ -219,13 +230,17 @@ export function buildWorkoutSessionDoc(
     const lineId = lineIds[i] && lineIds[i]!.length > 0 ? lineIds[i]! : newLineId();
     const rows = snap.setsByExercise[i] ?? [];
     const sets = rows.map((row) => uiSetRowToSetLog(row, ex.metric));
-    return {
+    const line: SessionLine = {
       lineId,
       exerciseId: ex.id,
       nameSnapshot: ex.name,
       metric: ex.metric,
       sets,
     };
+    if (snap.sections?.[i] === "maybe") line.section = "maybe";
+    const alternates = snap.alternatesByExercise?.[i] ?? [];
+    if (alternates.length > 0) line.alternates = alternates;
+    return line;
   });
 
   const exerciseNotesByLineId: Record<string, string> = {};
@@ -300,6 +315,7 @@ export function sessionDocToFirestore(
         note: s.note,
         ...(s.done !== undefined ? { done: s.done } : {}),
       })),
+      ...lineGroupingToFirestore(line.section, line.alternates),
     })),
     exerciseCount: doc.exerciseCount,
     setCount: doc.setCount,
@@ -387,7 +403,11 @@ function parseSessionLine(raw: unknown): SessionLine | null {
     const set = parseSetLog(item);
     if (set) sets.push(set);
   }
-  return { lineId, exerciseId, nameSnapshot, metric, sets };
+  const line: SessionLine = { lineId, exerciseId, nameSnapshot, metric, sets };
+  if (parseLineSection(o.section) === "maybe") line.section = "maybe";
+  const alternates = parseAlternates(o.alternates);
+  if (alternates.length > 0) line.alternates = alternates;
+  return line;
 }
 
 function parseExerciseNotesMap(

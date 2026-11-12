@@ -2,6 +2,7 @@ import { Target } from "lucide-react";
 import type { ComponentProps } from "react";
 import { ProgressHeatmap } from "@/components/progress-heatmap";
 import type { MovementGoalStatus } from "@/lib/movement-insights";
+import type { WeekMomentum } from "@/lib/progress-insights";
 import type {
   Milestone,
   PersonalRecord,
@@ -11,11 +12,21 @@ import type {
 import { BodyWeightCard } from "@/features/progress/body-weight-card";
 import type { HomeConsistency, HomeWeekDay } from "@/features/home/home-model";
 import { MilestonesRow, StrengthCard, ThisWeekCard } from "@/features/progress/progress-cards";
+import { ClassicStreakTiles, ClassicThisWeekCard } from "@/features/progress/progress-cards-classic";
 
 export type ProgressViewProps = {
   todayKey: string;
+  /**
+   * From the `progress-redesign` flag. New: Home's This week card (streak pill,
+   * 16-week chart). Old: the original This week card, streak tiles and year heatmap.
+   */
+  redesign: boolean;
   week: WeekGoalStatus;
   movementWeek: MovementGoalStatus;
+  /** Old design: the headline under the weekly count. */
+  momentum: WeekMomentum;
+  /** Old design: the two streak tiles. */
+  goalStreak: { current: number; longest: number };
   /** Sun–Sat circles, same as Home. */
   weekDays: HomeWeekDay[];
   /** Streak and the last 16 weeks, same as Home. */
@@ -29,7 +40,7 @@ export type ProgressViewProps = {
   onLogWeight?: (dateKey: string, weightLbs: number) => Promise<unknown>;
 };
 
-/** Am I showing up? This week (with streak and 16-week chart) first, then the year heatmap, strength, weight, milestones. */
+/** Am I showing up? This week (new or old design, per the flag), then strength, weight, milestones. */
 export function ProgressView(props: ProgressViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -48,15 +59,21 @@ export function ProgressView(props: ProgressViewProps) {
         </button>
       </header>
 
-      <ThisWeekCard
-        todayKey={props.todayKey}
-        week={props.week}
-        movement={props.movementWeek}
-        days={props.weekDays}
-        consistency={props.consistency}
-      />
-      {/* The old Consistency heatmap stays below the new card for now, to compare the two. */}
-      <ProgressHeatmap {...props.heatmap} todayKey={props.todayKey} />
+      {props.redesign ? (
+        <ThisWeekCard
+          todayKey={props.todayKey}
+          week={props.week}
+          movement={props.movementWeek}
+          days={props.weekDays}
+          consistency={props.consistency}
+        />
+      ) : (
+        <>
+          <ClassicThisWeekCard week={props.week} momentum={props.momentum} movement={props.movementWeek} />
+          <ClassicStreakTiles current={props.goalStreak.current} longest={props.goalStreak.longest} />
+          <ProgressHeatmap {...props.heatmap} todayKey={props.todayKey} />
+        </>
+      )}
       <StrengthCard lifts={props.lifts} todayKey={props.todayKey} />
       <BodyWeightCard
         entries={props.weights}

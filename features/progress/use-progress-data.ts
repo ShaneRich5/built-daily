@@ -18,6 +18,7 @@ import {
   buildDayActivityDetails,
   computeMilestones,
   computePersonalRecords,
+  computeWeekMomentum,
   goalWeekStreak,
   strongestLifts,
   weekGoalStatus,
@@ -104,6 +105,8 @@ export function useProgressData() {
       ),
       week: weekGoalStatus(activity, settings.weeklyGoal, todayKey),
       movementWeek: movementGoalStatus(movementDays, settings.movementGoalDays, todayKey),
+      // Old design only (progress-redesign flag off).
+      momentum: computeWeekMomentum(activity, settings.weeklyGoal, todayKey),
       goalStreak,
       weekDays: buildHomeWeek(todayKey, summaries, acts, entries),
       consistency: buildHomeConsistency(todayKey, summaries, acts, entries, settings.weeklyGoal),

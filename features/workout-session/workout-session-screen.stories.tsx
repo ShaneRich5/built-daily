@@ -39,6 +39,22 @@ export const MidWorkout: Story = {
   },
 };
 
+export const PlanAndMaybe: Story = {
+  name: "Plan + Maybe, alternates on a slot",
+  args: {
+    title: "Push day",
+    exercises: [
+      catalog("bench"),
+      catalog("cable-fly"),
+      catalog("triceps-pushdown-machine"),
+      catalog("cable-face-pull"),
+      catalog("lateral-raise-machine"),
+    ],
+    initialSections: ["plan", "plan", "plan", "maybe", "maybe"],
+    initialAlternates: [[], [catalog("pec-deck"), catalog("db-fly")], [], [], []],
+  },
+};
+
 export const FromTemplate: Story = {
   name: "Just started from a template",
   args: {

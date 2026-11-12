@@ -9,6 +9,16 @@ const nextConfig: NextConfig = {
     "@musclemap/core",
     "@musclemap/assets",
   ],
+  webpack: (config) => {
+    // @vercel/flags-core (Vercel Flags) optionally imports @vercel/flags-definitions
+    // (bundled flag definitions from `vercel flags prepare`) and handles it being
+    // missing. Turbopack skips it; webpack warns. Silence only that warning.
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      { module: /@vercel[\\/]flags-core/, message: /@vercel\/flags-definitions/ },
+    ];
+    return config;
+  },
 };
 
 export default withSentryConfig(nextConfig, {

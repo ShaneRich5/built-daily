@@ -105,7 +105,8 @@ export const ExerciseDetails: Story = {
           onRemoveSet={() => {}}
           onUseHistory={() => {}}
           onNoteChange={(note) => setItem((it) => ({ ...it, note }))}
-          onChangeExercise={() => {}}
+          onSwapExercise={() => {}}
+          onToggleSection={() => {}}
           onMoveExercise={() => {}}
           onRemoveExercise={() => {}}
         />

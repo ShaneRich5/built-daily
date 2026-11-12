@@ -20,6 +20,11 @@ import {
   type ActiveWorkoutFinishSnapshot,
   type UiSetRow,
 } from "@/lib/workout-session-mapper";
+import {
+  alternateFromExercise,
+  exerciseFromAlternate,
+  type LineSection,
+} from "@/lib/line-grouping";
 import { getWorkoutPlan } from "@/lib/workout-plan-repository";
 import {
   createInProgressWorkoutSession,
@@ -49,6 +54,8 @@ type ResumeBundle = {
   exercises: CatalogExercise[];
   lineIds: string[];
   setsByExercise: UiSetRow[][];
+  sections: LineSection[];
+  alternates: CatalogExercise[][];
   workoutNote: string;
   exerciseNotesById: Record<string, string>;
   activeDurationMs: number;
@@ -69,6 +76,10 @@ function sessionToResumeBundle(
   const setsByExercise = session.lines.map((line) =>
     line.sets.length > 0 ? line.sets.map(setLogToUiSetRow) : [emptyUiSetRow()],
   );
+  const sections = session.lines.map((line): LineSection => line.section ?? "plan");
+  const alternates = session.lines.map((line) =>
+    (line.alternates ?? []).map(exerciseFromAlternate),
+  );
   const exerciseNotesById: Record<string, string> = {};
   for (const line of session.lines) {
     const n = session.exerciseNotesByLineId?.[line.lineId];
@@ -88,6 +99,8 @@ function sessionToResumeBundle(
     exercises,
     lineIds,
     setsByExercise,
+    sections,
+    alternates,
     workoutNote: session.workoutNote ?? "",
     exerciseNotesById,
     activeDurationMs:
@@ -220,15 +233,19 @@ export function ActiveWorkoutFromUrl() {
   const planDefaults = useMemo(() => {
     const plan = needsPlanFetch ? planLoad?.doc : null;
     const notes: Record<string, string> = {};
-    const setsByExercise = (urlExercises ?? []).map((exercise) => {
-      const line = plan?.lines.find(
-        (candidate) => candidate.exerciseId === exercise.id,
-      );
+    const lines = (urlExercises ?? []).map((exercise) =>
+      plan?.lines.find((candidate) => candidate.exerciseId === exercise.id),
+    );
+    const setsByExercise = (urlExercises ?? []).map((exercise, i) => {
+      const line = lines[i];
       if (line?.notes) notes[exercise.id] = line.notes;
       const targetSets = Math.max(1, Math.min(99, line?.targetSets ?? 1));
       return Array.from({ length: targetSets }, emptyUiSetRow);
     });
-    return { notes, setsByExercise };
+    // Templates can mark exercises as maybes and list alternates for a slot.
+    const sections = lines.map((line): LineSection => line?.section ?? "plan");
+    const alternates = lines.map((line) => (line?.alternates ?? []).map(exerciseFromAlternate));
+    return { notes, setsByExercise, sections, alternates };
   }, [needsPlanFetch, planLoad, urlExercises]);
 
   useEffect(() => {
@@ -253,6 +270,10 @@ export function ActiveWorkoutFromUrl() {
       sessionStartedAtMs: startedAtMs,
       planId,
       lineIds,
+      sections: planDefaults.sections,
+      alternatesByExercise: planDefaults.alternates.map((alts) =>
+        alts.map(alternateFromExercise),
+      ),
     };
 
     void createInProgressWorkoutSession(snap)
@@ -427,6 +448,8 @@ export function ActiveWorkoutFromUrl() {
           planId={resume.planId}
           initialLineIds={resume.lineIds}
           initialSetsByExercise={resume.setsByExercise}
+          initialSections={resume.sections}
+          initialAlternates={resume.alternates}
           initialWorkoutNote={resume.workoutNote}
           initialExerciseNotesById={resume.exerciseNotesById}
           initialActiveDurationMs={resume.activeDurationMs}
@@ -479,6 +502,8 @@ export function ActiveWorkoutFromUrl() {
         exercises={urlExercises}
         planId={planId}
         initialSetsByExercise={planDefaults.setsByExercise}
+        initialSections={planDefaults.sections}
+        initialAlternates={planDefaults.alternates}
         initialExerciseNotesById={planDefaults.notes}
         onPersist={liveSessionId ? handlePersist : undefined}
         onFinish={handleFinish}

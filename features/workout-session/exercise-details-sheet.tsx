@@ -5,6 +5,8 @@ import {
   ArrowUpDown,
   Check,
   ChevronLeft,
+  CircleDashed,
+  CircleDot,
   Copy,
   NotebookText,
   Plus,
@@ -43,8 +45,11 @@ type ExerciseDetailsSheetProps = {
   onRemoveSet: (setIndex: number) => void;
   onUseHistory: (entry: ExerciseHistoryEntry) => void;
   onNoteChange: (note: string) => void;
-  onChangeExercise: () => void;
+  /** Machine taken: pick an alternate or something similar. */
+  onSwapExercise: () => void;
   onMoveExercise: () => void;
+  /** Flip between plan and maybe. */
+  onToggleSection: () => void;
   onRemoveExercise: () => void;
 };
 
@@ -75,8 +80,9 @@ export function ExerciseDetailsSheet({
   onRemoveSet,
   onUseHistory,
   onNoteChange,
-  onChangeExercise,
+  onSwapExercise,
   onMoveExercise,
+  onToggleSection,
   onRemoveExercise,
 }: ExerciseDetailsSheetProps) {
   const { exercise, sets, lineId } = item;
@@ -125,10 +131,10 @@ export function ExerciseDetailsSheet({
             {muscles ? `${muscles} · ` : ""}
             {metricLabel(exercise.metric)}
           </p>
-          <div className="mt-3.5 grid grid-cols-3 gap-2">
-            <button type="button" className={actionTile} onClick={onChangeExercise}>
+          <div className="mt-3.5 grid grid-cols-4 gap-2">
+            <button type="button" className={actionTile} onClick={onSwapExercise}>
               <ArrowLeftRight className="size-[18px]" aria-hidden />
-              Change
+              Swap
             </button>
             <button
               type="button"
@@ -138,6 +144,14 @@ export function ExerciseDetailsSheet({
             >
               <ArrowUpDown className="size-[18px]" aria-hidden />
               Move…
+            </button>
+            <button type="button" className={actionTile} onClick={onToggleSection}>
+              {item.section === "maybe" ? (
+                <CircleDot className="size-[18px]" aria-hidden />
+              ) : (
+                <CircleDashed className="size-[18px]" aria-hidden />
+              )}
+              {item.section === "maybe" ? "To plan" : "To maybe"}
             </button>
             <button
               type="button"
