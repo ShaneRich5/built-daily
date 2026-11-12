@@ -41,6 +41,8 @@ export type HomePlanned = {
   dateKey: string;
   label: string;
   dayLabel: string;
+  /** Template id when the plan came from one; null for note-only or starter plans. */
+  planId: string | null;
   startHref: string | null;
 };
 
@@ -169,6 +171,7 @@ export function pickNextPlanned(
     dateKey: next.dateKey,
     label: next.label.trim() || "Workout",
     dayLabel: next.dateKey === todayKey ? "Today" : shortDayLabel(next.dateKey),
+    planId: next.planId,
     startHref: buildWorkoutHref(next.label, next.planId, next.exerciseIds),
   };
 }
@@ -293,18 +296,57 @@ export function buildWeekGoal(
 }
 
 /** "today", "tomorrow", "Thu", or "Thu, Nov 19" for a planned day. */
-function plannedWhen(dateKey: string, todayKey: string): string {
+export function plannedWhen(dateKey: string, todayKey: string): string {
   if (dateKey === todayKey) return "today";
   if (dateKey === addDaysToDateKey(todayKey, 1)) return "tomorrow";
   const label = shortDayLabel(dateKey);
   return dateKey <= addDaysToDateKey(todayKey, 6) ? (label.split(",")[0] ?? label) : label;
 }
 
-/** The start card's headline and one line under it. The weekly count lives in This week. */
+export type HomeSuggestedStart = {
+  name: string;
+  meta: string;
+  href: string;
+  /** The template it came from, so the menu can leave it out. */
+  templateId: string | null;
+};
+
+/**
+ * What the big Start button starts: today's planned workout if there is one,
+ * otherwise the template done longest ago (never-done counts as longest ago),
+ * so the rotation keeps moving. Null means the button starts an empty workout.
+ */
+export function pickSuggestedStart(
+  planned: HomePlanned | null,
+  templates: HomeTemplate[],
+  todayKey: string,
+): HomeSuggestedStart | null {
+  if (planned && planned.dateKey === todayKey && planned.startHref) {
+    const template = templates.find((t) => t.id === planned.planId);
+    return {
+      name: planned.label,
+      meta: template?.meta ?? "Planned today",
+      href: planned.startHref,
+      templateId: template?.id ?? null,
+    };
+  }
+  // Templates arrive most recently used first, so the last startable one is the oldest.
+  const startable = templates.filter((t) => t.startHref);
+  const oldest = startable[startable.length - 1];
+  if (!oldest?.startHref) return null;
+  return { name: oldest.name, meta: oldest.meta, href: oldest.startHref, templateId: oldest.id };
+}
+
+/**
+ * The start card's headline and one line under it. The weekly count lives in This week.
+ * `redesign` is the `home-start-redesign` flag: the split button suggests a template,
+ * the old card lists them.
+ */
 export function startCopy(
   planned: HomePlanned | null,
   hasTemplates: boolean,
   todayKey: string,
+  redesign: boolean,
 ): { headline: string; detail: string } {
   if (planned) {
     return {
@@ -314,7 +356,11 @@ export function startCopy(
   }
   return {
     headline: "Ready when you are",
-    detail: hasTemplates ? "Pick a template or start empty." : "Start an empty workout, or make a template.",
+    detail: !hasTemplates
+      ? "Start an empty workout, or make a template."
+      : redesign
+        ? "Next up in your rotation, or pick another."
+        : "Pick a template or start empty.",
   };
 }
 

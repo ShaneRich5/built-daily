@@ -1,19 +1,29 @@
 import Link from "next/link";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, List, Plus, SquarePlus } from "lucide-react";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  pickSuggestedStart,
+  plannedWhen,
   startCopy,
   type HomeInProgress,
   type HomePlanned,
+  type HomeSuggestedStart,
   type HomeTemplate,
 } from "@/features/home/home-model";
 
-/** How many templates home lists before "All". */
-const TEMPLATE_LIMIT = 3;
+/** How many other templates the Start menu lists before "Manage templates". */
+const MENU_TEMPLATE_LIMIT = 5;
 
-const sectionLabel =
-  "text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400";
 const secondaryButton =
-  "inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-zinc-200 bg-white text-[13px] font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900";
+  "inline-flex h-11 items-center justify-center rounded-lg border border-zinc-200 bg-white text-[13px] font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900";
 
 type HomeStartCardProps = {
   todayKey: string;
@@ -33,7 +43,11 @@ export function HomeStartCard({
 }: HomeStartCardProps) {
   if (inProgress) return <ResumeCard workout={inProgress} />;
 
-  const copy = startCopy(planned, templates.length > 0, todayKey);
+  const copy = startCopy(planned, templates.length > 0, todayKey, true);
+  const suggested = pickSuggestedStart(planned, templates, todayKey);
+  const plannedTag =
+    planned?.planId ? { planId: planned.planId, label: `Planned ${plannedWhen(planned.dateKey, todayKey)}` } : null;
+
   return (
     <section
       aria-labelledby="home-start-heading"
@@ -46,85 +60,134 @@ export function HomeStartCard({
         <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">{copy.detail}</p>
       </div>
 
-      <Link
-        href="/workout"
-        className="flex h-13 items-center justify-center gap-2 rounded-xl bg-emerald-700 text-base font-semibold text-white hover:bg-emerald-800 active:scale-[0.99] dark:bg-emerald-600 dark:hover:bg-emerald-500"
-      >
-        <Plus className="size-[18px]" aria-hidden />
-        Start empty workout
-      </Link>
-
-      <div className="flex flex-col gap-1.5">
-        {templates.length > 0 ? (
-          <>
-            <div className="flex items-center justify-between">
-              <h3 className={sectionLabel}>Or start from a template</h3>
-              <Link
-                href="/planner#templates"
-                className="text-[13px] font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                All
-              </Link>
-            </div>
-            <ul className="flex flex-col gap-1.5">
-              {templates.slice(0, TEMPLATE_LIMIT).map((template) => (
-                <li key={template.id}>
-                  <TemplateRow template={template} />
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-        <div className="flex gap-2 pt-0.5">
-          <Link
-            href="/templates/new"
-            className={`${secondaryButton} border-dashed border-zinc-300 dark:border-zinc-700`}
-          >
-            + New template
-          </Link>
-          <button type="button" onClick={onLogActivity} className={secondaryButton}>
-            Log activity
-          </button>
-        </div>
+      <div className="flex h-14 overflow-hidden rounded-xl bg-emerald-700 dark:bg-emerald-600">
+        <MainStartLink suggested={suggested} />
+        <StartMenu
+          suggested={suggested}
+          templates={templates}
+          plannedTag={plannedTag}
+        />
       </div>
+
+      <button type="button" onClick={onLogActivity} className={secondaryButton}>
+        Log activity
+      </button>
     </section>
   );
 }
 
-function TemplateRow({ template }: { template: HomeTemplate }) {
-  const body = (
-    <>
+/** The big side of the split button: one tap starts the suggestion, or an empty workout. */
+function MainStartLink({ suggested }: { suggested: HomeSuggestedStart | null }) {
+  const className =
+    "flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-4 text-white hover:bg-emerald-800 active:bg-emerald-900 dark:hover:bg-emerald-500";
+  if (!suggested) {
+    return (
+      <Link href="/workout" className={`${className} flex-row items-center justify-center gap-2`}>
+        <Plus className="size-[18px]" aria-hidden />
+        <span className="text-base font-semibold">Start empty workout</span>
+      </Link>
+    );
+  }
+  return (
+    <Link href={suggested.href} className={className}>
+      <span className="truncate text-base font-semibold">Start {suggested.name}</span>
+      <span className="truncate text-xs text-emerald-100">{suggested.meta}</span>
+    </Link>
+  );
+}
+
+/** The chevron: every other way to start, plus making and managing templates. */
+function StartMenu({
+  suggested,
+  templates,
+  plannedTag,
+}: {
+  suggested: HomeSuggestedStart | null;
+  templates: HomeTemplate[];
+  plannedTag: { planId: string; label: string } | null;
+}) {
+  const others = templates.filter((t) => t.id !== suggested?.templateId).slice(0, MENU_TEMPLATE_LIMIT);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Start a different workout"
+            className="inline-flex w-14 shrink-0 items-center justify-center border-l border-white/30 text-white hover:bg-emerald-800 data-[popup-open]:bg-emerald-900 dark:hover:bg-emerald-500 dark:data-[popup-open]:bg-emerald-800"
+          />
+        }
+      >
+        <ChevronDown className="size-5" aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-[min(20rem,calc(100vw-2rem))]">
+        {others.length > 0 ? (
+          <>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="px-2.5 pt-2 pb-1 text-xs font-medium tracking-wide uppercase">
+                Start something else
+              </DropdownMenuLabel>
+              {others.map((template) => (
+                <TemplateItem
+                  key={template.id}
+                  template={template}
+                  plannedLabel={plannedTag?.planId === template.id ? plannedTag.label : null}
+                />
+              ))}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
+        {suggested ? (
+          <DropdownMenuItem className="min-h-12 gap-2.5 px-2.5" render={<Link href="/workout" />}>
+            <Plus className="size-4" aria-hidden />
+            Empty workout
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem className="min-h-12 gap-2.5 px-2.5" render={<Link href="/templates/new" />}>
+          <SquarePlus className="size-4" aria-hidden />
+          New template
+        </DropdownMenuItem>
+        {templates.length > 0 ? (
+          <DropdownMenuItem
+            className="min-h-12 gap-2.5 px-2.5 text-zinc-700 dark:text-zinc-300"
+            render={<Link href="/planner#templates" />}
+          >
+            <List className="size-4" aria-hidden />
+            Manage templates
+          </DropdownMenuItem>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function TemplateItem({ template, plannedLabel }: { template: HomeTemplate; plannedLabel: string | null }) {
+  // A template with no exercises can't start anything yet, so it opens the editor.
+  const href = template.startHref ?? template.editHref;
+  return (
+    <DropdownMenuItem
+      className="min-h-14 gap-2.5 px-2.5"
+      render={<Link href={href} aria-label={`${template.startHref ? "Start" : "Edit"} ${template.name}`} />}
+    >
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
           {template.name}
         </span>
         <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{template.meta}</span>
       </span>
-      {template.startHref ? (
-        <span className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-emerald-700 dark:text-emerald-400">
-          Start
-          <ChevronRight className="size-3.5" aria-hidden />
+      {plannedLabel ? (
+        <span className="shrink-0 rounded-full border-[1.5px] border-emerald-700 px-2 py-px text-[11px] font-semibold text-emerald-700 dark:border-emerald-400 dark:text-emerald-400">
+          {plannedLabel}
         </span>
-      ) : (
-        <span className="text-[13px] font-medium text-zinc-500">Edit</span>
-      )}
-    </>
-  );
-  const className =
-    "flex min-h-14 items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900/60 dark:hover:bg-zinc-900";
-  // A template with no exercises can't start anything yet, so it opens the editor.
-  return template.startHref ? (
-    <Link href={template.startHref} className={className} aria-label={`Start ${template.name}`}>
-      {body}
-    </Link>
-  ) : (
-    <Link href={template.editHref} className={className} aria-label={`Edit ${template.name}`}>
-      {body}
-    </Link>
+      ) : !template.startHref ? (
+        <span className="shrink-0 text-[13px] font-medium text-zinc-500">Edit</span>
+      ) : null}
+    </DropdownMenuItem>
   );
 }
 
-function ResumeCard({ workout }: { workout: HomeInProgress }) {
+export function ResumeCard({ workout }: { workout: HomeInProgress }) {
   return (
     <section
       aria-labelledby="home-resume-heading"

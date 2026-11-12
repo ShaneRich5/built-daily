@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { HomeCatchUp } from "@/features/home/home-catch-up";
 import { HomeRecent } from "@/features/home/home-recent";
 import { HomeStartCard } from "@/features/home/home-start-card";
+import { HomeStartCardClassic } from "@/features/home/home-start-card-classic";
 import { HomeTogetherCard, type HomeTogether } from "@/features/home/home-together-card";
 import { HomeWeek } from "@/features/home/home-week";
 import { dateFromLocalDateKey } from "@/lib/workout-date";
@@ -29,6 +30,11 @@ export type HomeViewProps = {
   week: HomeWeekDay[];
   recent: HomeRecentItem[];
   onLogActivity: () => void;
+  /**
+   * From the `home-start-redesign` flag. New: the split Start button with a
+   * Start something else menu. Old: Start empty workout plus a template list.
+   */
+  startRedesign: boolean;
   /** Today's plan together, if any (G9). */
   together?: HomeTogether | null;
   /** A planned workout that slid past, with ways to fit it back in. */
@@ -79,6 +85,7 @@ function HomeSkeleton() {
 
 /** Home, signed in: start or resume, this week (goal, streak, last 16 weeks), recent. */
 export function HomeView(props: HomeViewProps) {
+  const StartCard = props.startRedesign ? HomeStartCard : HomeStartCardClassic;
   return (
     <div className="flex flex-1 flex-col gap-5">
       <HomeHeader todayKey={props.todayKey} account={props.account} />
@@ -88,7 +95,7 @@ export function HomeView(props: HomeViewProps) {
             <HomeCatchUp todayKey={props.todayKey} {...props.catchUp} />
           ) : null}
           {props.together && !props.inProgress ? <HomeTogetherCard together={props.together} /> : null}
-          <HomeStartCard
+          <StartCard
             todayKey={props.todayKey}
             planned={props.planned}
             inProgress={props.inProgress}
