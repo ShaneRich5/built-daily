@@ -11,8 +11,11 @@ import { HomeHeader, HomeView } from "@/features/home/home-view";
 import { useHomeData } from "@/features/home/use-home-data";
 import { useTogetherToday } from "@/features/home/use-together-today";
 
-/** Home wired to Firestore. Signed out, it's a short pitch and a sign-in link. */
-export function HomeScreen() {
+/**
+ * Home wired to Firestore. Signed out, it's a short pitch and a sign-in link.
+ * `startRedesign` comes from the `home-start-redesign` flag, evaluated on the server.
+ */
+export function HomeScreen({ startRedesign }: { startRedesign: boolean }) {
   const { user, loading, firebaseReady, signOutUser } = useAuth();
   const home = useHomeData();
   const [logOpen, setLogOpen] = useState(false);
@@ -78,6 +81,7 @@ export function HomeScreen() {
       <HomeView
         {...home}
         together={together}
+        startRedesign={startRedesign}
         loaded={home.loaded}
         account={
           <AccountMenu email={user?.email ?? null} onSignOut={() => void signOutUser()} />

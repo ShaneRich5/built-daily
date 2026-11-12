@@ -43,7 +43,7 @@ export function HomeStartCard({
 }: HomeStartCardProps) {
   if (inProgress) return <ResumeCard workout={inProgress} />;
 
-  const copy = startCopy(planned, templates.length > 0, todayKey);
+  const copy = startCopy(planned, templates.length > 0, todayKey, true);
   const suggested = pickSuggestedStart(planned, templates, todayKey);
   const plannedTag =
     planned?.planId ? { planId: planned.planId, label: `Planned ${plannedWhen(planned.dateKey, todayKey)}` } : null;
@@ -187,7 +187,7 @@ function TemplateItem({ template, plannedLabel }: { template: HomeTemplate; plan
   );
 }
 
-function ResumeCard({ workout }: { workout: HomeInProgress }) {
+export function ResumeCard({ workout }: { workout: HomeInProgress }) {
   return (
     <section
       aria-labelledby="home-resume-heading"

@@ -24,3 +24,17 @@ export const progressRedesignFlag = flag<boolean>({
   ],
   adapter: vercelAdapter,
 });
+
+/** Home's split Start button (H7) instead of the old Start card with its template list. */
+export const homeStartRedesignFlag = flag<boolean>({
+  key: "home-start-redesign",
+  description:
+    "Home Start card: the new split button (one-tap suggested start, chevron menu for everything else) or the old card (Start empty workout plus a list of up to 3 templates).",
+  // Off: the design production shows today.
+  defaultValue: false,
+  options: [
+    { value: false, label: "Old design" },
+    { value: true, label: "New design" },
+  ],
+  adapter: vercelAdapter,
+});

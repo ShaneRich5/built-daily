@@ -337,11 +337,16 @@ export function pickSuggestedStart(
   return { name: oldest.name, meta: oldest.meta, href: oldest.startHref, templateId: oldest.id };
 }
 
-/** The start card's headline and one line under it. The weekly count lives in This week. */
+/**
+ * The start card's headline and one line under it. The weekly count lives in This week.
+ * `redesign` is the `home-start-redesign` flag: the split button suggests a template,
+ * the old card lists them.
+ */
 export function startCopy(
   planned: HomePlanned | null,
   hasTemplates: boolean,
   todayKey: string,
+  redesign: boolean,
 ): { headline: string; detail: string } {
   if (planned) {
     return {
@@ -351,7 +356,11 @@ export function startCopy(
   }
   return {
     headline: "Ready when you are",
-    detail: hasTemplates ? "Next up in your rotation, or pick another." : "Start an empty workout, or make a template.",
+    detail: !hasTemplates
+      ? "Start an empty workout, or make a template."
+      : redesign
+        ? "Next up in your rotation, or pick another."
+        : "Pick a template or start empty.",
   };
 }
 

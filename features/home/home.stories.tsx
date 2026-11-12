@@ -99,7 +99,14 @@ const planned = { dateKey: "2026-11-10", label: "Leg day", dayLabel: "Tue, Nov 1
 const meta = {
   title: "Home/Screen",
   component: HomeView,
+  argTypes: {
+    startRedesign: {
+      control: "boolean",
+      description: "The `home-start-redesign` flag (Vercel Flags) on the real page: on = split Start button, off = old Start card.",
+    },
+  },
   args: {
+    startRedesign: true,
     todayKey: "2026-11-08",
     account: <AccountMenu email="sam@example.com" onSignOut={() => {}} />,
     loaded: true,
@@ -129,6 +136,11 @@ export const MidWeek: Story = {
     planned: { ...planned, dateKey: "2026-11-12", label: "Push day", dayLabel: "Thu, Nov 12", planId: "push" },
     week: weekFrom(["empty", "workout", "empty", "empty", "planned", "empty", "empty"], 3),
   },
+};
+
+export const MidWeekOldStart: Story = {
+  name: "Mid-week · old Start card (flag off)",
+  args: { ...MidWeek.args, startRedesign: false },
 };
 
 export const GoalMet: Story = {
