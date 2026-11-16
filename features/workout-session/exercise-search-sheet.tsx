@@ -21,7 +21,9 @@ import { metricLabel } from "@/features/workout-session/session-model";
 
 export type ExerciseSearchMode =
   | { kind: "add"; afterName: string | null; room: number }
-  | { kind: "replace"; currentName: string };
+  | { kind: "replace"; currentName: string }
+  /** Pick one stand-in for a template line (it goes back through `onReplace`). */
+  | { kind: "alternate"; forName: string };
 
 type Filter = "suggested" | "recent" | "all" | MuscleGroup;
 
@@ -33,7 +35,7 @@ type ExerciseSearchSheetProps = {
   recent: CatalogExercise[];
   /** Add mode: the picked exercises, in the order they were tapped. */
   onAdd: (exercises: CatalogExercise[]) => void;
-  /** Replace mode: the single replacement. */
+  /** Replace and alternate modes: the single exercise picked. */
   onReplace: (exercise: CatalogExercise) => void;
 };
 
@@ -56,7 +58,8 @@ export function ExerciseSearchSheet({
   onAdd,
   onReplace,
 }: ExerciseSearchSheetProps) {
-  const isReplace = mode.kind === "replace";
+  // Replace and alternate both pick one exercise and return it right away.
+  const isReplace = mode.kind !== "add";
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>(
     suggested.length > 0 ? "suggested" : recent.length > 0 ? "recent" : "all",
@@ -112,12 +115,16 @@ export function ExerciseSearchSheet({
     setQuery("");
   };
 
-  const title = isReplace ? "Change exercise" : "Add exercises";
-  const description = isReplace
-    ? `Pick a replacement for ${mode.currentName}`
-    : mode.afterName
-      ? `Added after ${mode.afterName}, in the order you pick`
-      : "Added in the order you pick";
+  const title =
+    mode.kind === "replace" ? "Change exercise" : mode.kind === "alternate" ? "Add an alternate" : "Add exercises";
+  const description =
+    mode.kind === "replace"
+      ? `Pick a replacement for ${mode.currentName}`
+      : mode.kind === "alternate"
+        ? `Offered as a quick swap for ${mode.forName} when it’s taken`
+        : mode.afterName
+          ? `Added after ${mode.afterName}, in the order you pick`
+          : "Added in the order you pick";
 
   const footer = isReplace ? null : (
     <button
