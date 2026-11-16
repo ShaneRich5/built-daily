@@ -18,7 +18,16 @@ import { AlternateChips } from "@/features/workout-session/alternate-chips";
 import { ExerciseCard } from "@/features/workout-session/exercise-card";
 import { ExerciseDetailsSheet } from "@/features/workout-session/exercise-details-sheet";
 import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-sheet";
+import { FinishLeftoversSheet } from "@/features/workout-session/finish-leftovers-sheet";
 import { copyText, downloadTextFile } from "@/features/workout-session/journal-actions";
+import {
+  buildLeftoverPlan,
+  defaultLeftoverChoice,
+  untouchedExercises,
+  type LeftoverChoice,
+  type LeftoverPlanner,
+  type NextPlannedDay,
+} from "@/features/workout-session/leftovers";
 import { AddMaybeButton, MaybeSection } from "@/features/workout-session/maybe-section";
 import { MoveExerciseSheet } from "@/features/workout-session/move-exercise-sheet";
 import { ReorderSheet } from "@/features/workout-session/reorder-sheet";
@@ -54,7 +63,18 @@ export type WorkoutSessionScreenProps = WorkoutSessionInitialData & {
    * "Save changes" and calls `onFinish`, and nothing autosaves.
    */
   editing?: { onCancel: () => void };
+  /**
+   * Where leftovers can go on Finish (next planned day, Unscheduled). When set,
+   * Finish with untouched exercises asks first (E3); without it Finish saves right away.
+   */
+  leftoverPlanner?: LeftoverPlanner;
 };
+
+/** "3 exercises · 11 sets" */
+function doneSummary(exerciseCount: number, setCount: number): string {
+  const exercisesPart = `${exerciseCount} ${exerciseCount === 1 ? "exercise" : "exercises"}`;
+  return `${exercisesPart} · ${setCount} ${setCount === 1 ? "set" : "sets"}`;
+}
 
 /** Which sheet is showing. Sheets stay mounted so they can animate closed. */
 type Panel =
@@ -74,6 +94,7 @@ export function WorkoutSessionScreen({
   onFinish,
   onDiscard,
   editing,
+  leftoverPlanner,
   ...data
 }: WorkoutSessionScreenProps) {
   const session = useWorkoutSession(data, onPersist);
@@ -86,6 +107,12 @@ export function WorkoutSessionScreen({
   const [searchKey, setSearchKey] = useState(0);
   const [journalCopied, setJournalCopied] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  /** The leftovers sheet: what it lists, where "Next time" points, and each choice. */
+  const [leftovers, setLeftovers] = useState<{
+    open: boolean;
+    next: NextPlannedDay | null | "loading";
+    choices: Record<string, LeftoverChoice>;
+  }>({ open: false, next: null, choices: {} });
 
   // Editing a finished workout: compare against what was loaded to show "Unsaved".
   const snapshotKey = JSON.stringify({ ...session.buildSnapshot(), sessionStartedAtMs: 0 });
@@ -219,12 +246,52 @@ export function WorkoutSessionScreen({
     downloadTextFile(workoutJournalFilename(doc), text);
   };
 
+  const saveFinished = async () => {
+    if (!onFinish) return;
+    // Maybes you never started are left out of what gets saved.
+    await onFinish(session.buildFinishSnapshot());
+  };
+
+  const leftoverItems = untouchedExercises(exercises);
+
   const finish = async () => {
     if (!onFinish || finishing) return;
+    // Something left undone? Ask where it goes before saving (not while editing a past workout).
+    if (leftoverPlanner && !editing && leftoverItems.length > 0) {
+      openLeftovers(leftoverPlanner);
+      return;
+    }
     setFinishing(true);
     try {
-      // Maybes you never started are left out of what gets saved.
-      await onFinish(session.buildFinishSnapshot());
+      await saveFinished();
+    } finally {
+      setFinishing(false);
+    }
+  };
+
+  const openLeftovers = (planner: LeftoverPlanner) => {
+    const defaults = (hasNext: boolean) =>
+      Object.fromEntries(leftoverItems.map((item) => [item.lineId, defaultLeftoverChoice(item, hasNext)]));
+    const planId = data.planId;
+    setLeftovers({ open: true, next: planId ? "loading" : null, choices: defaults(false) });
+    if (!planId) return;
+    void planner
+      .findNext(planId)
+      .catch(() => null)
+      .then((next) => setLeftovers((prev) => ({ ...prev, next, choices: defaults(next !== null) })));
+  };
+
+  const finishWithLeftovers = async () => {
+    if (!leftoverPlanner || finishing || leftovers.next === "loading") return;
+    setFinishing(true);
+    try {
+      // Not awaited: offline, Firestore queues the planner writes and only resolves once
+      // they reach the server. The workout itself must always save right away.
+      void leftoverPlanner
+        .save(buildLeftoverPlan(leftoverItems, leftovers.choices, leftovers.next, title))
+        .catch(() => {});
+      setLeftovers((prev) => ({ ...prev, open: false }));
+      await saveFinished();
     } finally {
       setFinishing(false);
     }
@@ -460,6 +527,23 @@ export function WorkoutSessionScreen({
         exercises={exercises.map((item) => item.exercise)}
         onMetaChange={(patch) => dispatch({ type: "updateMeta", patch })}
       />
+
+      {leftoverPlanner ? (
+        <FinishLeftoversSheet
+          open={leftovers.open}
+          onOpenChange={(open) => setLeftovers((prev) => ({ ...prev, open }))}
+          workoutTitle={title}
+          doneSummary={doneSummary(exercises.length - leftoverItems.length, countDoneSets(exercises))}
+          items={leftoverItems}
+          next={leftovers.next}
+          choices={leftovers.choices}
+          onChoose={(lineId, choice) =>
+            setLeftovers((prev) => ({ ...prev, choices: { ...prev.choices, [lineId]: choice } }))
+          }
+          finishing={finishing}
+          onFinish={() => void finishWithLeftovers()}
+        />
+      ) : null}
     </div>
   );
 }

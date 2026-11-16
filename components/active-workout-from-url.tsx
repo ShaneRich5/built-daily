@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { firestoreLeftoverPlanner } from "@/features/workout-session/leftover-planner";
 import { WorkoutSessionScreen } from "@/features/workout-session/workout-session-screen";
 import { useAuth } from "@/components/auth-provider";
 import { FinishConfetti } from "@/components/finish-confetti";
@@ -456,6 +457,7 @@ export function ActiveWorkoutFromUrl() {
           sessionStartedAtMs={resume.sessionStartedAtMs}
           onPersist={handlePersist}
           onFinish={handleFinish}
+          leftoverPlanner={user ? firestoreLeftoverPlanner : undefined}
           onDiscard={liveSessionId ? handleDiscard : undefined}
         />
       );
@@ -507,6 +509,7 @@ export function ActiveWorkoutFromUrl() {
         initialExerciseNotesById={planDefaults.notes}
         onPersist={liveSessionId ? handlePersist : undefined}
         onFinish={handleFinish}
+        leftoverPlanner={user ? firestoreLeftoverPlanner : undefined}
         onDiscard={liveSessionId ? handleDiscard : undefined}
       />
     );

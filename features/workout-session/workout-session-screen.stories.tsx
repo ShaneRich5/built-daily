@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { AddExerciseFooter } from "@/features/workout-session/add-exercise-footer";
 import { SessionActionBar } from "@/features/workout-session/session-action-bar";
 import { SessionHeader } from "@/features/workout-session/session-header";
+import type { LeftoverPlanner } from "@/features/workout-session/leftovers";
 import { catalog, pushDay, suggested } from "@/features/workout-session/story-fixtures";
 import { WorkoutSessionScreen } from "@/features/workout-session/workout-session-screen";
 
@@ -52,6 +53,26 @@ export const PlanAndMaybe: Story = {
     ],
     initialSections: ["plan", "plan", "plan", "maybe", "maybe"],
     initialAlternates: [[], [catalog("pec-deck"), catalog("db-fly")], [], [], []],
+  },
+};
+
+/** Pretends next Monday has Push day planned, after a short lookup. */
+const fakeLeftoverPlanner: LeftoverPlanner = {
+  findNext: () =>
+    new Promise((resolve) =>
+      window.setTimeout(() => resolve({ entryId: "next", label: "Push day", dateKey: "2026-11-23" }), 400),
+    ),
+  save: async () => {},
+};
+
+export const FinishWithLeftovers: Story = {
+  name: "Finish with leftovers (tap Finish)",
+  args: {
+    ...PlanAndMaybe.args,
+    planId: "push",
+    initialSetsByExercise: [pushDay[0]!.sets, pushDay[1]!.sets, [], [], []],
+    onFinish: () => {},
+    leftoverPlanner: fakeLeftoverPlanner,
   },
 };
 

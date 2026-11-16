@@ -306,6 +306,45 @@ export async function deleteScheduledWorkout(entryId: string): Promise<boolean> 
   return true;
 }
 
+/**
+ * The next open planned day for a template, strictly after `afterDateKey`.
+ * Filters in memory (one equality query) so it needs no composite index.
+ */
+export async function findNextPlannedForPlan(
+  planId: string,
+  afterDateKey: string,
+): Promise<ScheduledWorkoutEntry | null> {
+  const col = scheduledCollectionRef();
+  if (!col || !planId) return null;
+  const snap = await getDocs(query(col, where("planId", "==", planId)));
+  let next: ScheduledWorkoutEntry | null = null;
+  for (const d of snap.docs) {
+    const entry = parseScheduledEntry(d.id, d.data() as Record<string, unknown>);
+    if (!entry || entry.status !== "planned" || entry.dateKey <= afterDateKey) continue;
+    if (!next || entry.dateKey < next.dateKey) next = entry;
+  }
+  return next;
+}
+
+/** Adds exercises to an open planner entry, skipping ones it already has (max 40). */
+export async function appendExercisesToScheduledWorkout(
+  entryId: string,
+  exerciseIds: string[],
+): Promise<boolean> {
+  const col = scheduledCollectionRef();
+  if (!col || !entryId || exerciseIds.length === 0) return false;
+  const ref = doc(col, entryId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return false;
+  const existing = (snap.data() as Record<string, unknown>).exerciseIds;
+  const current = Array.isArray(existing) ? existing.filter((x): x is string => typeof x === "string") : [];
+  const merged = [...current, ...exerciseIds.filter((id) => !current.includes(id))].slice(0, 40);
+  // status/sessionId backfill entries created before those fields existed (rules need them).
+  await updateDoc(ref, { exerciseIds: merged, status: "planned", sessionId: null });
+  afterPlannerWrite();
+  return true;
+}
+
 /** The signed-in user's planner entries linked to one plan together. */
 export async function findEntriesForSharedPlan(sharedPlanId: string): Promise<string[]> {
   const col = scheduledCollectionRef();
