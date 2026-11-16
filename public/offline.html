@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fafafa">
+<title>Offline · Built Daily</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fafafa; --fg: #18181b; --muted: #52525b; --line: #e4e4e7; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0a0a0a; --fg: #fafafa; --muted: #a1a1aa; --line: #27272a; } }
+  body { margin: 0; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 24px; box-sizing: border-box; }
+  main { max-width: 22rem; text-align: center; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  img { width: 56px; height: 56px; }
+  h1 { margin: 0; font-size: 20px; }
+  p { margin: 0; color: var(--muted); font-size: 15px; }
+  button { margin-top: 8px; height: 48px; padding: 0 20px; border-radius: 12px; border: 0;
+    background: #047857; color: #fff; font: inherit; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <img src="/icons/icon-192.png" alt="">
+  <h1>You're offline</h1>
+  <p>This page hasn't been opened on this device yet, so it isn't saved for offline use. Pages you've visited before still work, and workouts you log sync when you're back online.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+</body>
+</html>

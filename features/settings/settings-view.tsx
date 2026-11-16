@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import { ConnectClaudeCard, type ConnectClaudeCardProps } from "@/features/settings/connect-claude-card";
+import { InstallAppCard } from "@/features/settings/install-app-card";
 import { PublicProfileCard, type PublicProfileCardProps } from "@/features/settings/public-profile-card";
 import { SettingsSection, secondaryButton } from "@/features/settings/settings-ui";
 
@@ -67,12 +68,13 @@ export type SettingsViewProps = {
   connect: ConnectClaudeCardProps;
 };
 
-/** Account, then sharing, then the Claude connector. */
+/** Account, installing the app (when the browser can), sharing, then the Claude connector. */
 export function SettingsView({ email, onSignOut, profile, connect }: SettingsViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-5">
       <SettingsHeader />
       <AccountCard email={email} onSignOut={onSignOut} />
+      <InstallAppCard />
       <PublicProfileCard {...profile} />
       <ConnectClaudeCard {...connect} />
     </div>

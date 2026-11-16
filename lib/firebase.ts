@@ -1,6 +1,12 @@
 import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -43,7 +49,26 @@ export function getFirebaseAuth(): Auth | null {
   return a ? getAuth(a) : null;
 }
 
+let db: Firestore | null = null;
+
+/**
+ * Firestore with its offline cache kept in IndexedDB, so data you've loaded is
+ * there with no signal (the gym basement) and writes made offline are queued and
+ * survive closing the app. Browsers without IndexedDB (some private windows) fall
+ * back to the in-memory cache on their own.
+ */
 export function getFirestoreDb(): Firestore | null {
   const a = getFirebaseApp();
-  return a ? getFirestore(a) : null;
+  if (!a) return null;
+  if (!db) {
+    try {
+      db = initializeFirestore(a, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      });
+    } catch {
+      // Already initialized (e.g. after a hot reload): use that instance.
+      db = getFirestore(a);
+    }
+  }
+  return db;
 }

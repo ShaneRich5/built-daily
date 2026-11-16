@@ -4,6 +4,18 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Dev-only badge. Bottom-left covered the workout screen's "More actions" button.
   devIndicators: { position: "bottom-right" },
+  // The service worker must never be served stale, or fixes to it can't reach installed apps.
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+        ],
+      },
+    ];
+  },
   transpilePackages: [
     "@musclemap/react",
     "@musclemap/core",
