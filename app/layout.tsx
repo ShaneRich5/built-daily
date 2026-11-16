@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppShell } from "@/components/app-shell";
 import { AuthProvider } from "@/components/auth-provider";
 import { OnboardingGate } from "@/components/onboarding-gate";
+import { PwaSetup } from "@/components/pwa-setup";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -60,6 +61,7 @@ export default function RootLayout({
         className={`${geistSans.className} min-h-full bg-background text-foreground text-base leading-normal subpixel-antialiased`}
         suppressHydrationWarning
       >
+        <PwaSetup />
         <AuthProvider>
           <OnboardingGate />
           <AppShell>{children}</AppShell>
