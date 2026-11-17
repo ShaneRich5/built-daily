@@ -1,7 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowDown, ArrowUp, Minus, MoreVertical, NotebookText, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowDownToLine,
+  ArrowUp,
+  ArrowUpToLine,
+  Minus,
+  MoreVertical,
+  NotebookText,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,24 +20,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MAX_ALTERNATES } from "@/lib/line-grouping";
 import { NOTE_LIMITS, type PlanLine } from "@/lib/workout-types";
-import { lineMeta, targetSetsOf } from "@/features/templates/template-model";
+import { lineMeta, sectionOf, targetSetsOf } from "@/features/templates/template-model";
 
 type TemplateLineRowProps = {
   line: PlanLine;
+  /** Position within its section (Plan and Maybe each count from 1). */
   position: number;
   isFirst: boolean;
   isLast: boolean;
   onTargetSetsChange: (n: number) => void;
   onNoteChange: (note: string) => void;
   onMove: (delta: -1 | 1) => void;
+  /** Plan ⇄ Maybe. */
+  onToggleSection: () => void;
+  onAddAlternate: () => void;
+  onRemoveAlternate: (exerciseId: string) => void;
   onRemove: () => void;
 };
 
 const stepButton =
   "inline-flex h-10 w-9 items-center justify-center text-zinc-600 hover:bg-zinc-100 disabled:opacity-30 dark:text-zinc-300 dark:hover:bg-zinc-900";
 
-/** One exercise in a template: name, a sets stepper, and a menu for note / move / remove. */
+/**
+ * One exercise in a template: name, a sets stepper, and a menu for note / move /
+ * Plan ⇄ Maybe / remove. Plan lines also list their alternates ("or …").
+ */
 export function TemplateLineRow({
   line,
   position,
@@ -35,11 +55,15 @@ export function TemplateLineRow({
   onTargetSetsChange,
   onNoteChange,
   onMove,
+  onToggleSection,
+  onAddAlternate,
+  onRemoveAlternate,
   onRemove,
 }: TemplateLineRowProps) {
   const [noteOpen, setNoteOpen] = useState(Boolean(line.notes?.trim()));
   const sets = targetSetsOf(line);
   const noteId = `template-note-${line.lineId}`;
+  const isMaybe = sectionOf(line) === "maybe";
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
@@ -105,6 +129,14 @@ export function TemplateLineRow({
               <ArrowDown className="size-4" aria-hidden />
               Move down
             </DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11 gap-2" onClick={onToggleSection}>
+              {isMaybe ? (
+                <ArrowUpToLine className="size-4" aria-hidden />
+              ) : (
+                <ArrowDownToLine className="size-4" aria-hidden />
+              )}
+              {isMaybe ? "Move to plan" : "Move to maybe"}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" className="min-h-11 gap-2" onClick={onRemove}>
               <Trash2 className="size-4" aria-hidden />
@@ -113,6 +145,9 @@ export function TemplateLineRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      {isMaybe ? null : (
+        <AlternateRow line={line} onAdd={onAddAlternate} onRemove={onRemoveAlternate} />
+      )}
       {noteOpen ? (
         <div className="border-t border-zinc-100 px-3 py-2.5 dark:border-zinc-800">
           <label htmlFor={noteId} className="sr-only">
@@ -127,6 +162,54 @@ export function TemplateLineRow({
             className="h-10 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-base text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-zinc-900/10 sm:text-sm dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
         </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** "or Smith bench · DB bench  + alternate": stand-ins offered as one-tap swaps in the session. */
+function AlternateRow({
+  line,
+  onAdd,
+  onRemove,
+}: {
+  line: PlanLine;
+  onAdd: () => void;
+  onRemove: (exerciseId: string) => void;
+}) {
+  const alternates = line.alternates ?? [];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pr-3 pb-2.5 pl-[42px]">
+      {alternates.length > 0 ? (
+        <span className="text-xs text-zinc-500 dark:text-zinc-400" aria-hidden>
+          or
+        </span>
+      ) : null}
+      {alternates.map((alt) => (
+        <span
+          key={alt.exerciseId}
+          className="inline-flex h-8 items-center rounded-full border border-zinc-200 bg-zinc-50 pl-3 text-xs font-medium text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        >
+          {alt.nameSnapshot}
+          <button
+            type="button"
+            aria-label={`Remove ${alt.nameSnapshot} as an alternate`}
+            onClick={() => onRemove(alt.exerciseId)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            <X className="size-3" aria-hidden />
+          </button>
+        </span>
+      ))}
+      {alternates.length < MAX_ALTERNATES ? (
+        <button
+          type="button"
+          aria-label={`Add an alternate for ${line.nameSnapshot}`}
+          onClick={onAdd}
+          className="inline-flex h-8 items-center rounded-full border border-dashed border-zinc-300 bg-white px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+        >
+          + alternate
+        </button>
       ) : null}
     </div>
   );
