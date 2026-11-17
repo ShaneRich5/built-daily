@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Check, Copy, Download } from "lucide-react";
+import { Check, Copy, Download, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { ActivityTypeIcon } from "@/components/activity-type-icon";
+import { HistoryDeleteSheet, selectionLabel } from "@/components/history-delete-sheet";
 import { LogActivitySheet } from "@/components/log-activity-sheet";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { getActivityTypeById } from "@/lib/activity-catalog";
 import { subscribeRecentActivities } from "@/lib/activity-repository";
 import type { SavedActivity } from "@/lib/activity-types";
 import { startOfWeekDateKey } from "@/lib/calendar-views";
+import { deleteHistoryItems } from "@/lib/history-delete";
 import {
   dateFromLocalDateKey,
   formatSessionJournalMeta,
@@ -53,6 +55,11 @@ type TimelineItem =
       href: string;
       icon: NonNullable<ReturnType<typeof getActivityTypeById>>["icon"];
     };
+
+/** Select-mode key: workouts and activities live in different collections. */
+function selectionKey(kind: TimelineItem["kind"], id: string): string {
+  return `${kind}:${id}`;
+}
 
 function sessionDateKey(s: SessionSummary): string {
   if (s.workoutDate) return s.workoutDate;
@@ -244,6 +251,10 @@ export function HomeTimeline() {
   const [exporting, setExporting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  /** Shown after a bulk delete, e.g. "Deleted 3 workouts". */
+  const [deletedMessage, setDeletedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!firebaseReady || loading || !user) {
@@ -274,6 +285,24 @@ export function HomeTimeline() {
       ),
     [groups],
   );
+  const allKeys = useMemo(
+    () => groups.flatMap((group) => group.items.map((item) => selectionKey(item.kind, item.id))),
+    [groups],
+  );
+  /** Selected workouts in timeline order (exports and deletes use these). */
+  const selectedWorkoutIds = useMemo(
+    () => workoutIds.filter((id) => selectedIds.has(selectionKey("workout", id))),
+    [workoutIds, selectedIds],
+  );
+  const selectedActivityIds = useMemo(
+    () =>
+      groups.flatMap((group) =>
+        group.items
+          .filter((item) => item.kind === "activity" && selectedIds.has(selectionKey("activity", item.id)))
+          .map((item) => item.id),
+      ),
+    [groups, selectedIds],
+  );
 
   const exitSelectMode = useCallback(() => {
     setSelecting(false);
@@ -292,27 +321,26 @@ export function HomeTimeline() {
     setExportError(null);
   }, []);
 
-  const selectAllWorkouts = useCallback(() => {
-    setSelectedIds(new Set(workoutIds));
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(allKeys));
     setExportError(null);
-  }, [workoutIds]);
+  }, [allKeys]);
 
-  const clearAllWorkouts = useCallback(() => {
+  const clearAll = useCallback(() => {
     setSelectedIds(new Set());
     setExportError(null);
     setCopied(false);
   }, []);
 
   const loadSelectedJournal = useCallback(async () => {
-    const orderedIds = workoutIds.filter((id) => selectedIds.has(id));
-    if (orderedIds.length === 0) return null;
-    const rows = await getWorkoutSessions(orderedIds);
+    if (selectedWorkoutIds.length === 0) return null;
+    const rows = await getWorkoutSessions(selectedWorkoutIds);
     if (rows.length === 0) {
       setExportError("Couldn’t load those workouts. Try again.");
       return null;
     }
     return formatWorkoutJournalBundle(rows.map((row) => row.session));
-  }, [selectedIds, workoutIds]);
+  }, [selectedWorkoutIds]);
 
   const handleCopySelected = useCallback(async () => {
     if (exporting) return;
@@ -343,7 +371,7 @@ export function HomeTimeline() {
       const text = await loadSelectedJournal();
       if (!text) return;
       downloadTextFile(
-        workoutJournalBundleFilename(selectedIds.size),
+        workoutJournalBundleFilename(selectedWorkoutIds.length),
         text,
       );
     } catch {
@@ -351,7 +379,29 @@ export function HomeTimeline() {
     } finally {
       setExporting(false);
     }
-  }, [exporting, loadSelectedJournal, selectedIds.size]);
+  }, [exporting, loadSelectedJournal, selectedWorkoutIds.length]);
+
+  const handleDelete = useCallback(async () => {
+    if (deleting) return;
+    setDeleting(true);
+    const what = selectionLabel(selectedWorkoutIds.length, selectedActivityIds.length);
+    try {
+      const ok = await deleteHistoryItems({
+        sessionIds: selectedWorkoutIds,
+        activityIds: selectedActivityIds,
+      });
+      setConfirmDelete(false);
+      if (!ok) {
+        setExportError("Couldn’t delete everything. Check your connection and try again.");
+        return;
+      }
+      exitSelectMode();
+      setDeletedMessage(`Deleted ${what}.`);
+      window.setTimeout(() => setDeletedMessage(null), 4000);
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleting, selectedWorkoutIds, selectedActivityIds, exitSelectMode]);
 
   if (!firebaseReady) {
     return (
@@ -394,22 +444,22 @@ export function HomeTimeline() {
           id="timeline-heading"
           className="text-sm font-semibold uppercase tracking-wide text-zinc-500"
         >
-          {selecting ? "Select workouts" : "Workouts & activities"}
+          {selecting ? "Select to export or delete" : "Workouts & activities"}
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           {selecting ? (
             <>
               <button
                 type="button"
-                onClick={selectAllWorkouts}
-                disabled={workoutIds.length === 0}
+                onClick={selectAll}
+                disabled={allKeys.length === 0}
                 className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
               >
                 Select all
               </button>
               <button
                 type="button"
-                onClick={clearAllWorkouts}
+                onClick={clearAll}
                 disabled={selectedIds.size === 0}
                 className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
               >
@@ -425,16 +475,17 @@ export function HomeTimeline() {
             </>
           ) : (
             <>
-              {workoutIds.length > 0 ? (
+              {allKeys.length > 0 ? (
                 <button
                   type="button"
                   onClick={() => {
                     setSelecting(true);
                     setExportError(null);
+                    setDeletedMessage(null);
                   }}
                   className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900"
                 >
-                  Export
+                  Select
                 </button>
               ) : null}
               <button
@@ -451,8 +502,17 @@ export function HomeTimeline() {
 
       {selecting ? (
         <p className="text-sm text-zinc-500">
-          Tap workouts to include them in a journal copy or download. Activities
-          stay in the list but aren’t exported.
+          Tap workouts and activities to select them. Copy and download export the
+          selected workouts as a journal; activities aren’t exported.
+        </p>
+      ) : null}
+
+      {deletedMessage ? (
+        <p
+          role="status"
+          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+        >
+          {deletedMessage}
         </p>
       ) : null}
 
@@ -481,45 +541,22 @@ export function HomeTimeline() {
                         status={item.status}
                         href={selecting ? undefined : item.href}
                         selectable={selecting}
-                        selected={selectedIds.has(item.id)}
-                        onToggleSelect={() => toggleSelected(item.id)}
+                        selected={selectedIds.has(selectionKey("workout", item.id))}
+                        onToggleSelect={() => toggleSelected(selectionKey("workout", item.id))}
                       />
+                    ) : selecting ? (
+                      <ActivitySelectRow
+                        selected={selectedIds.has(selectionKey("activity", item.id))}
+                        onToggle={() => toggleSelected(selectionKey("activity", item.id))}
+                      >
+                        <ActivityRowBody item={item} showDate={group.showItemDate} />
+                      </ActivitySelectRow>
                     ) : (
                       <Link
                         href={item.href}
-                        className={`flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-left transition hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900 ${
-                          selecting ? "pointer-events-none opacity-50" : ""
-                        }`}
-                        tabIndex={selecting ? -1 : undefined}
-                        aria-disabled={selecting || undefined}
+                        className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-left transition hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
                       >
-                        <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
-                          <ActivityTypeIcon
-                            icon={item.icon}
-                            className="size-4"
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="flex flex-wrap items-baseline justify-between gap-2">
-                            <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-                              {item.title}
-                            </span>
-                            {group.showItemDate || item.time ? (
-                              <span className="text-xs tabular-nums text-zinc-400">
-                                {group.showItemDate
-                                  ? formatShortDayLabel(item.dateKey)
-                                  : null}
-                                {group.showItemDate && item.time ? " · " : null}
-                                {item.time
-                                  ? formatWorkoutTimeLabel(item.time)
-                                  : null}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="mt-0.5 block text-xs text-zinc-500">
-                            Activity · {item.meta}
-                          </span>
-                        </span>
+                        <ActivityRowBody item={item} showDate={group.showItemDate} />
                       </Link>
                     )}
                   </li>
@@ -538,10 +575,10 @@ export function HomeTimeline() {
                 {exportError}
               </p>
             ) : (
-              <p className="text-center text-xs text-zinc-500">
+              <p className="text-center text-xs text-zinc-500" aria-live="polite">
                 {selectedIds.size === 0
-                  ? "Select at least one workout to export."
-                  : `${selectedIds.size} workout${selectedIds.size === 1 ? "" : "s"} selected`}
+                  ? "Select workouts or activities."
+                  : `${selectionLabel(selectedWorkoutIds.length, selectedActivityIds.length)} selected`}
               </p>
             )}
             <div className="flex gap-2">
@@ -549,7 +586,7 @@ export function HomeTimeline() {
                 type="button"
                 variant="outline"
                 className="h-11 flex-1 gap-2 rounded-xl"
-                disabled={selectedIds.size === 0 || exporting}
+                disabled={selectedWorkoutIds.length === 0 || exporting}
                 onClick={() => void handleCopySelected()}
               >
                 {copied ? (
@@ -567,19 +604,111 @@ export function HomeTimeline() {
               <Button
                 type="button"
                 className="h-11 flex-1 gap-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-600/90 dark:bg-emerald-500 dark:hover:bg-emerald-500/90"
-                disabled={selectedIds.size === 0 || exporting}
+                disabled={selectedWorkoutIds.length === 0 || exporting}
                 onClick={() => void handleDownloadSelected()}
               >
                 <Download className="size-4" />
                 {exporting ? "Exporting…" : "Download .txt"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                aria-label={`Delete ${selectionLabel(selectedWorkoutIds.length, selectedActivityIds.length)}`}
+                className="h-11 shrink-0 gap-2 rounded-xl border-red-200 px-3.5 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40"
+                disabled={selectedIds.size === 0 || deleting}
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 className="size-4" aria-hidden />
+                Delete
               </Button>
             </div>
           </div>
         </div>
       ) : null}
 
+      <HistoryDeleteSheet
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        workouts={selectedWorkoutIds.length}
+        activities={selectedActivityIds.length}
+        deleting={deleting}
+        onConfirm={() => void handleDelete()}
+      />
       <LogActivitySheet open={logOpen} onClose={() => setLogOpen(false)} />
     </div>
+  );
+}
+
+type ActivityItem = Extract<TimelineItem, { kind: "activity" }>;
+
+/** Icon, name, day/time and details of an activity row (normal and select mode). */
+function ActivityRowBody({ item, showDate }: { item: ActivityItem; showDate: boolean }) {
+  return (
+    <>
+      <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
+          <ActivityTypeIcon
+            icon={item.icon}
+            className="size-4"
+          />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+              {item.title}
+            </span>
+            {showDate || item.time ? (
+              <span className="text-xs tabular-nums text-zinc-400">
+                {showDate
+                  ? formatShortDayLabel(item.dateKey)
+                  : null}
+                {showDate && item.time ? " · " : null}
+                {item.time
+                  ? formatWorkoutTimeLabel(item.time)
+                  : null}
+              </span>
+            ) : null}
+          </span>
+          <span className="mt-0.5 block text-xs text-zinc-500">
+            Activity · {item.meta}
+          </span>
+        </span>
+    </>
+  );
+}
+
+/** An activity row in select mode, matching WorkoutCard's selectable style. */
+function ActivitySelectRow({
+  selected,
+  onToggle,
+  children,
+}: {
+  selected: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={selected}
+      className={`flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition active:scale-[0.99] ${
+        selected
+          ? "border-emerald-600 bg-emerald-50/80 dark:border-emerald-500 dark:bg-emerald-950/30"
+          : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950"
+      }`}
+    >
+      <span
+        className={`mt-1.5 flex size-6 shrink-0 items-center justify-center rounded-md border ${
+          selected
+            ? "border-emerald-600 bg-emerald-600 text-white dark:border-emerald-500 dark:bg-emerald-500"
+            : "border-zinc-300 bg-white text-transparent dark:border-zinc-600 dark:bg-zinc-950"
+        }`}
+        aria-hidden
+      >
+        <Check className="size-3.5" />
+      </span>
+      {children}
+    </button>
   );
 }
 
