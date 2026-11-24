@@ -168,6 +168,7 @@ Prefer feature-oriented organization over strict technical separation.
 
 Example:
 
+```
 src/
   features/
     workouts/
@@ -178,6 +179,7 @@ src/
   lib/
   hooks/
   app/
+```
 
 ---
 

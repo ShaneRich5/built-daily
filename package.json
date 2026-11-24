@@ -5,15 +5,36 @@
   "overrides": {
     "jwks-rsa": "^3.1.0"
   },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/vitest.mjs run",
+    "test:watch": "node scripts/vitest.mjs",
+    "test:coverage": "node scripts/vitest.mjs run --coverage",
     "test:e2e": "playwright test",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run test",
     "mcp": "tsx mcp/server.ts",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mts,mjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -43,16 +64,26 @@
     "@storybook/addon-docs": "10.6.3",
     "@storybook/nextjs-vite": "10.6.3",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.13",
+    "@types/node": "^24.19.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.1.1",
     "dotenv": "^18.0.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "jsdom": "^31.0.1",
+    "lint-staged": "^17.6.2",
+    "prettier": "^3.10.1",
     "storybook": "10.6.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5",
-    "vite": "8.3.5"
+    "vite": "8.3.5",
+    "vitest": "^5.1.1"
   }
 }

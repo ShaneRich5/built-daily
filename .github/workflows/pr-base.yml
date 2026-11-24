@@ -1,0 +1,27 @@
+# Fails a PR whose base branch isn't main.
+#
+# Stacked PRs (#71, #82) were merged into a feature branch that had already
+# landed, so their work never reached main even though GitHub said MERGED.
+# Stacking is still fine while you work: this check just stays red until the
+# PR is retargeted to main, which is the step that kept getting missed.
+name: PR targets main
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  base-is-main:
+    name: Base branch is main
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check base branch
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          if [ "$BASE" != "main" ]; then
+            echo "::error::This PR targets '$BASE'. Change the base to 'main' before merging, or the work won't ship."
+            exit 1
+          fi
