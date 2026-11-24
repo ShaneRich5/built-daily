@@ -3,6 +3,8 @@ import { AccountMenu } from "@/features/home/account-menu";
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import type { HomeChartDay, HomeConsistency, HomeRecentItem, HomeWeekDay } from "@/features/home/home-model";
 import { HomeView } from "@/features/home/home-view";
+import { StepChallengeCard } from "@/features/step-challenge/step-challenge-card";
+import { cardView, challenge, daysHit, syncedWeek } from "@/features/step-challenge/story-fixtures";
 
 /** Sun Nov 8 – Sat Nov 14, 2026, seen from Sunday. */
 function weekFrom(states: HomeWeekDay["state"][], todayIndex: number): HomeWeekDay[] {
@@ -216,5 +218,30 @@ export const TrainingTogether: Story = {
       planHref: "/groups/g-crew/plans/p-legs",
       startHref: "/workout?e=squat,rdl,lunge,plank&t=Leg+day",
     },
+  },
+};
+
+export const WithStepChallenge: Story = {
+  name: "With a step challenge",
+  args: {
+    todayKey: "2026-11-24",
+    challenge: (
+      <StepChallengeCard
+        view={cardView(challenge(daysHit), syncedWeek)}
+        onStart={() => {}}
+        onLogDay={() => {}}
+        onEdit={() => {}}
+        onRepeat={() => {}}
+      />
+    ),
+  },
+};
+
+export const StepChallengeEntry: Story = {
+  name: "Step challenge not started",
+  args: {
+    challenge: (
+      <StepChallengeCard view={null} onStart={() => {}} onLogDay={() => {}} onEdit={() => {}} onRepeat={() => {}} />
+    ),
   },
 };
