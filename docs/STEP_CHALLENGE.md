@@ -6,7 +6,15 @@ metrics later (active minutes, distance, sleep, weight) from manual entry,
 the MCP server, an iOS Shortcut, and eventually Apple Health (HealthKit) and
 Android Health Connect.
 
-**Status: in progress.** Phase 1 is being built on `feat/step-challenge`.
+**Status: phase 1 built on `feat/step-challenge`, not yet merged.** Shipped:
+the `dailyMetrics` docs and shared resolve rule, personal challenges (all
+three rules, `days_hit` by default), the Home card with its start and
+log-steps sheets, `POST /api/health/daily`, the `log_daily_metric` MCP tool,
+Firestore rules, and unit tests for resolve and the rule evaluators. Not
+shipped: group challenges (B, C), the iOS Shortcut bridge, native
+HealthKit / Health Connect, a "disconnect a source" control, the
+week-detail screen from the prototype, and deploying the new Firestore rules
+(writes to the new collections are denied until they're deployed).
 The design was explored on 2026-11-24. Two private Claude Artifacts show it
 visually (ask Shane for access):
 
