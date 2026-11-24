@@ -27,9 +27,12 @@ const chartCell: Record<HomeChartDay, string> = {
   workout: "bg-emerald-700 dark:bg-emerald-500",
   activity: "bg-blue-400 dark:bg-blue-600",
   rest: "bg-zinc-100 dark:bg-zinc-800",
-  today: "border-[1.5px] border-zinc-900 bg-white dark:border-zinc-100 dark:bg-zinc-950",
-  planned: "border-[1.5px] border-emerald-700 bg-white dark:border-emerald-500 dark:bg-zinc-950",
-  ahead: "border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950",
+  today:
+    "border-[1.5px] border-zinc-900 bg-white dark:border-zinc-100 dark:bg-zinc-950",
+  planned:
+    "border-[1.5px] border-emerald-700 bg-white dark:border-emerald-500 dark:bg-zinc-950",
+  ahead:
+    "border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950",
 };
 
 const goalBar: Record<HomeChartWeek["goal"], string> = {
@@ -51,7 +54,10 @@ type HomeWeekProps = {
 /** This week's goal and streak, the Sun–Sat days, and the last 16 weeks. */
 export function HomeWeek({ todayKey, days, goal, consistency }: HomeWeekProps) {
   return (
-    <section aria-labelledby="home-week-heading" className="flex flex-col gap-2">
+    <section
+      aria-labelledby="home-week-heading"
+      className="flex flex-col gap-2"
+    >
       <div className="flex items-center justify-between">
         <h2
           id="home-week-heading"
@@ -100,7 +106,13 @@ export function WeekGoal({
         </p>
         {streak > 0 ? (
           linkStreak ? (
-            <Link href="/progress" className={cn(pillClass, "hover:bg-emerald-100 dark:hover:bg-emerald-950")}>
+            <Link
+              href="/progress"
+              className={cn(
+                pillClass,
+                "hover:bg-emerald-100 dark:hover:bg-emerald-950",
+              )}
+            >
               <Flame className="size-3.5" aria-hidden />
               {streak}-week streak
             </Link>
@@ -115,7 +127,9 @@ export function WeekGoal({
       <div
         aria-hidden
         className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${goal.target}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${goal.target}, minmax(0, 1fr))`,
+        }}
       >
         {Array.from({ length: goal.target }, (_, i) => (
           <span
@@ -176,7 +190,9 @@ export function WeekDays({ days }: { days: HomeWeekDay[] }) {
 
 /** Past days and today open their details; days ahead aren't tappable. */
 function isTappable(day: HomeChartDay): boolean {
-  return day === "workout" || day === "activity" || day === "rest" || day === "today";
+  return (
+    day === "workout" || day === "activity" || day === "rest" || day === "today"
+  );
 }
 
 /** The last 16 weeks, one square per day; tap a past day or today to see what was logged. */
@@ -191,9 +207,11 @@ export function ConsistencyChart({
   const { weeks, longest, label, dayItems } = consistency;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const selectedDay = selectedKey
-    ? weeks.flatMap((w) => w.days.map((day, i) => ({ day, dateKey: w.dateKeys[i] }))).find(
-        (d) => d.dateKey === selectedKey,
-      )
+    ? weeks
+        .flatMap((w) =>
+          w.days.map((day, i) => ({ day, dateKey: w.dateKeys[i] })),
+        )
+        .find((d) => d.dateKey === selectedKey)
     : undefined;
   return (
     <div className="flex flex-col gap-2.5 border-t border-zinc-100 px-0.5 pt-3 dark:border-zinc-800">
@@ -204,21 +222,29 @@ export function ConsistencyChart({
         {longest > 0 ? (
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
             Longest streak{" "}
-            <span className="font-mono text-zinc-900 dark:text-zinc-50">{longest} wk</span>
+            <span className="font-mono text-zinc-900 dark:text-zinc-50">
+              {longest} wk
+            </span>
           </span>
         ) : null}
       </div>
       <p className="sr-only">{label}</p>
       <div
         className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))`,
+        }}
       >
         {weeks.map((week) => (
           <div key={week.startKey} className="flex flex-col gap-1">
             {week.days.map((day, i) => {
               const dateKey = week.dateKeys[i] ?? "";
-              const className = cn("aspect-square rounded-[3px]", chartCell[day]);
-              if (!isTappable(day)) return <span key={dateKey} className={className} />;
+              const className = cn(
+                "aspect-square rounded-[3px]",
+                chartCell[day],
+              );
+              if (!isTappable(day))
+                return <span key={dateKey} className={className} />;
               const selected = dateKey === selectedKey;
               return (
                 <button
@@ -230,7 +256,8 @@ export function ConsistencyChart({
                   className={cn(
                     className,
                     "hover:ring-2 hover:ring-zinc-400/60 focus-visible:ring-2 focus-visible:ring-zinc-500 focus-visible:outline-none",
-                    selected && "ring-2 ring-zinc-700 hover:ring-zinc-700 dark:ring-zinc-200",
+                    selected &&
+                      "ring-2 ring-zinc-700 hover:ring-zinc-700 dark:ring-zinc-200",
                   )}
                 />
               );
@@ -247,7 +274,10 @@ export function ConsistencyChart({
         />
       ) : null}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2.5 text-[11px] text-zinc-500 dark:text-zinc-400" aria-hidden>
+        <div
+          className="flex flex-wrap gap-2.5 text-[11px] text-zinc-500 dark:text-zinc-400"
+          aria-hidden
+        >
           <span className="inline-flex items-center gap-1">
             <span className="size-2.5 rounded-[2px] bg-emerald-700 dark:bg-emerald-500" />
             Workout
@@ -262,7 +292,10 @@ export function ConsistencyChart({
           </span>
         </div>
         {showProgressLink ? (
-          <Link href="/progress" className={cn(linkClass, "inline-flex min-h-8 items-center")}>
+          <Link
+            href="/progress"
+            className={cn(linkClass, "inline-flex min-h-8 items-center")}
+          >
             Progress
           </Link>
         ) : null}
@@ -319,13 +352,24 @@ function DayDetails({
                       : "bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300",
                   )}
                 >
-                  {item.kind === "workout" ? <Dumbbell className="size-3.5" /> : <Activity className="size-3.5" />}
+                  {item.kind === "workout" ? (
+                    <Dumbbell className="size-3.5" />
+                  ) : (
+                    <Activity className="size-3.5" />
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{item.title}</span>
-                  <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{item.meta}</span>
+                  <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                    {item.title}
+                  </span>
+                  <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    {item.meta}
+                  </span>
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden />
+                <ChevronRight
+                  className="size-4 shrink-0 text-zinc-400"
+                  aria-hidden
+                />
               </Link>
             </li>
           ))}

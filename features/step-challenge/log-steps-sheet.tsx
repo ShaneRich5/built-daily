@@ -4,9 +4,15 @@ import { useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { DAILY_METRICS } from "@/lib/daily-metric-types";
 import { cn } from "@/lib/utils";
-import type { LogStepsDay, StepDayCell } from "@/features/step-challenge/step-challenge-model";
+import type {
+  LogStepsDay,
+  StepDayCell,
+} from "@/features/step-challenge/step-challenge-model";
 import { StepDayDots } from "@/features/step-challenge/step-day-dots";
-import { ghostButton, primaryButton } from "@/features/step-challenge/step-challenge-ui";
+import {
+  ghostButton,
+  primaryButton,
+} from "@/features/step-challenge/step-challenge-ui";
 
 const QUICK_ADDS = [500, 1000, 2500];
 const { max: MAX_STEPS } = DAILY_METRICS.steps;
@@ -25,14 +31,31 @@ type LogStepsSheetProps = {
 };
 
 /** Type a day's steps, or nudge it with +500 / +1,000 / +2,500. */
-export function LogStepsSheet({ open, onOpenChange, week, day, onPickDay, onSave, onUseSynced }: LogStepsSheetProps) {
+export function LogStepsSheet({
+  open,
+  onOpenChange,
+  week,
+  day,
+  onPickDay,
+  onSave,
+  onUseSynced,
+}: LogStepsSheetProps) {
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} title={day.title}>
       {open ? (
         <div className="flex flex-col gap-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <StepDayDots days={week} selectedKey={day.dateKey} onPickDay={onPickDay} />
+          <StepDayDots
+            days={week}
+            selectedKey={day.dateKey}
+            onPickDay={onPickDay}
+          />
           {/* Keyed by day so switching days starts from that day's number. */}
-          <LogStepsForm key={day.dateKey} day={day} onSave={onSave} onUseSynced={onUseSynced} />
+          <LogStepsForm
+            key={day.dateKey}
+            day={day}
+            onSave={onSave}
+            onUseSynced={onUseSynced}
+          />
         </div>
       ) : null}
     </BottomSheet>
@@ -55,7 +78,9 @@ function LogStepsForm({
 }) {
   // Start from the typed number only. Prefilling the synced one would turn it
   // into a typed number on save and stop that day from syncing.
-  const [text, setText] = useState(day.manual != null ? day.manual.toLocaleString("en-US") : "");
+  const [text, setText] = useState(
+    day.manual != null ? day.manual.toLocaleString("en-US") : "",
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const base = parseSteps(text) ?? day.synced?.value ?? 0;
@@ -64,7 +89,8 @@ function LogStepsForm({
     setBusy(true);
     setError(null);
     try {
-      if (!(await write())) setError("Couldn’t save. Check your connection and try again.");
+      if (!(await write()))
+        setError("Couldn’t save. Check your connection and try again.");
     } catch {
       setError("Couldn’t save. Check your connection and try again.");
     } finally {
@@ -75,7 +101,10 @@ function LogStepsForm({
   const save = () => {
     const steps = parseSteps(text);
     if (steps == null) return setError("Type the day’s steps.");
-    if (steps > MAX_STEPS) return setError(`That’s more than ${MAX_STEPS.toLocaleString("en-US")}. Check the number?`);
+    if (steps > MAX_STEPS)
+      return setError(
+        `That’s more than ${MAX_STEPS.toLocaleString("en-US")}. Check the number?`,
+      );
     void run(() => onSave(day.dateKey, steps));
   };
 
@@ -91,7 +120,8 @@ function LogStepsForm({
         <div className="rounded-xl bg-sky-50 px-3.5 py-3 text-[13px] text-zinc-800 dark:bg-sky-950/50 dark:text-zinc-200">
           <p>
             <span className="font-semibold text-sky-700 dark:text-sky-300">
-              Synced from {day.synced.source}: {day.synced.value.toLocaleString("en-US")}.
+              Synced from {day.synced.source}:{" "}
+              {day.synced.value.toLocaleString("en-US")}.
             </span>{" "}
             {day.manual != null
               ? `You typed ${day.manual.toLocaleString("en-US")} for this day, so that’s what counts.`
@@ -101,7 +131,10 @@ function LogStepsForm({
             <button
               type="button"
               disabled={busy}
-              className={cn(ghostButton, "-mx-3 -mb-2 text-sky-700 dark:text-sky-300")}
+              className={cn(
+                ghostButton,
+                "-mx-3 -mb-2 text-sky-700 dark:text-sky-300",
+              )}
               onClick={() => void run(() => onUseSynced(day.dateKey))}
             >
               Use the synced number
@@ -111,13 +144,17 @@ function LogStepsForm({
       ) : null}
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Steps</span>
+        <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+          Steps
+        </span>
         <input
           className="h-14 w-full rounded-xl border border-zinc-200 bg-white px-3 font-mono text-[28px] text-zinc-900 tabular-nums placeholder:text-zinc-300 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-600"
           inputMode="numeric"
           autoComplete="off"
           enterKeyHint="done"
-          placeholder={day.synced ? day.synced.value.toLocaleString("en-US") : "0"}
+          placeholder={
+            day.synced ? day.synced.value.toLocaleString("en-US") : "0"
+          }
           value={text}
           onChange={(e) => {
             setError(null);
@@ -143,7 +180,9 @@ function LogStepsForm({
         ))}
       </div>
 
-      {error ? <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p>
+      ) : null}
 
       <button type="submit" disabled={busy} className={primaryButton}>
         {busy ? "Saving…" : "Save"}

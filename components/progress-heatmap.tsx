@@ -32,8 +32,7 @@ const WORKOUT_LEVEL_CLASS: Record<1 | 2 | 3 | 4, string> = {
 /** Distinct from workout emerald and recovery gray. */
 const ACTIVITY_CELL_CLASS = "bg-blue-300 dark:bg-blue-700/70";
 
-const CELL_OUTLINE =
-  "ring-1 ring-inset ring-zinc-200/90 dark:ring-zinc-700/90";
+const CELL_OUTLINE = "ring-1 ring-inset ring-zinc-200/90 dark:ring-zinc-700/90";
 
 const KIND_CLASS: Record<HeatmapDayKind, string> = {
   workout: "",
@@ -121,45 +120,51 @@ export function ProgressHeatmap({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const activities = activityByDay ?? EMPTY_ACTIVITY_BY_DAY;
 
-  const { weeks, monthLabels, workoutDays, activityDays, recoveryDays, firstKey } =
-    useMemo(() => {
-      const first = earliestMovementKey(activity, activities);
-      const built = buildContributionWeeks(activity, {
-        weekCount: 52,
-        endDateKey: todayKey,
-        startDateKey: first,
-      });
-      let workouts = 0;
-      let acts = 0;
-      let recoveries = 0;
-      for (const week of built) {
-        for (const day of week) {
-          if (!day.inRange) continue;
-          const kind = dayKindFor(
-            day.dateKey,
-            day.count,
-            activities.get(day.dateKey) ?? 0,
-            todayKey,
-            first,
-          );
-          if (kind === "workout") workouts += 1;
-          if (kind === "activity") acts += 1;
-          if (kind === "both") {
-            workouts += 1;
-            acts += 1;
-          }
-          if (kind === "recovery") recoveries += 1;
+  const {
+    weeks,
+    monthLabels,
+    workoutDays,
+    activityDays,
+    recoveryDays,
+    firstKey,
+  } = useMemo(() => {
+    const first = earliestMovementKey(activity, activities);
+    const built = buildContributionWeeks(activity, {
+      weekCount: 52,
+      endDateKey: todayKey,
+      startDateKey: first,
+    });
+    let workouts = 0;
+    let acts = 0;
+    let recoveries = 0;
+    for (const week of built) {
+      for (const day of week) {
+        if (!day.inRange) continue;
+        const kind = dayKindFor(
+          day.dateKey,
+          day.count,
+          activities.get(day.dateKey) ?? 0,
+          todayKey,
+          first,
+        );
+        if (kind === "workout") workouts += 1;
+        if (kind === "activity") acts += 1;
+        if (kind === "both") {
+          workouts += 1;
+          acts += 1;
         }
+        if (kind === "recovery") recoveries += 1;
       }
-      return {
-        weeks: built,
-        monthLabels: contributionMonthLabels(built),
-        workoutDays: workouts,
-        activityDays: acts,
-        recoveryDays: recoveries,
-        firstKey: first,
-      };
-    }, [activity, activities, todayKey]);
+    }
+    return {
+      weeks: built,
+      monthLabels: contributionMonthLabels(built),
+      workoutDays: workouts,
+      activityDays: acts,
+      recoveryDays: recoveries,
+      firstKey: first,
+    };
+  }, [activity, activities, todayKey]);
 
   const selected = selectedKey ? dayDetails.get(selectedKey) : null;
   const selectedKind = selectedKey
@@ -332,7 +337,10 @@ export function ProgressHeatmap({
           Activity
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="relative size-2.5 overflow-hidden rounded-[2px]" aria-hidden>
+          <span
+            className="relative size-2.5 overflow-hidden rounded-[2px]"
+            aria-hidden
+          >
             <span
               className={`absolute inset-0 ${WORKOUT_LEVEL_CLASS[2]}`}
               style={{ clipPath: SPLIT_WORKOUT_CLIP }}

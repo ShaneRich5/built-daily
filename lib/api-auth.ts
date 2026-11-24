@@ -17,7 +17,10 @@ export async function requireUid(request: Request): Promise<string | Response> {
   const header = request.headers.get("authorization") ?? "";
   const idToken = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
   if (!idToken) {
-    return Response.json({ error: "Missing Authorization header" }, { status: 401 });
+    return Response.json(
+      { error: "Missing Authorization header" },
+      { status: 401 },
+    );
   }
 
   let auth: ReturnType<typeof getAdminAuth>;
@@ -35,6 +38,9 @@ export async function requireUid(request: Request): Promise<string | Response> {
     const decoded = await auth.verifyIdToken(idToken);
     return decoded.uid;
   } catch {
-    return Response.json({ error: "Invalid or expired session" }, { status: 401 });
+    return Response.json(
+      { error: "Invalid or expired session" },
+      { status: 401 },
+    );
   }
 }

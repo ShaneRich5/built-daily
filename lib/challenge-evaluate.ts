@@ -76,7 +76,10 @@ export function describeChallengeRule(
 }
 
 /** The date keys from `startDate` to `endDate`, inclusive. */
-export function challengeDateKeys(startDate: string, endDate: string): string[] {
+export function challengeDateKeys(
+  startDate: string,
+  endDate: string,
+): string[] {
   const keys: string[] = [];
   let key = startDate;
   while (key <= endDate && keys.length < MAX_RANGE_DAYS) {
@@ -131,10 +134,20 @@ export function evaluateDaysHit(
   const progress = Math.min(1, hit / daysNeeded);
 
   if (done) {
-    return { ...base, progress, tone: "done", status: "Enough days are in. Anything more is a bonus." };
+    return {
+      ...base,
+      progress,
+      tone: "done",
+      status: "Enough days are in. Anything more is a bonus.",
+    };
   }
   if (ended) {
-    return { ...base, progress, tone: "off", status: `${hit} of ${daysNeeded} days this time. ${FRESH_START}` };
+    return {
+      ...base,
+      progress,
+      tone: "off",
+      status: `${hit} of ${daysNeeded} days this time. ${FRESH_START}`,
+    };
   }
   if (need > open) {
     return {
@@ -145,7 +158,12 @@ export function evaluateDaysHit(
     };
   }
   if (need === open) {
-    return { ...base, progress, tone: "tight", status: `Needs ${need} of the ${plural(open, "day")} left. No spare days.` };
+    return {
+      ...base,
+      progress,
+      tone: "tight",
+      status: `Needs ${need} of the ${plural(open, "day")} left. No spare days.`,
+    };
   }
   return {
     ...base,
@@ -169,17 +187,33 @@ export function evaluateTotal(
   const sum = days.reduce((acc, d) => acc + (d.value ?? 0), 0);
   const done = sum >= target;
   const ended = todayKey > input.endDate;
-  const base = { done, ended, days, current: sum, goal: target, progress: Math.min(1, sum / target) };
+  const base = {
+    done,
+    ended,
+    days,
+    current: sum,
+    goal: target,
+    progress: Math.min(1, sum / target),
+  };
 
   if (done) {
-    return { ...base, tone: "done", status: "Target reached. Anything more is a bonus." };
+    return {
+      ...base,
+      tone: "done",
+      status: "Target reached. Anything more is a bonus.",
+    };
   }
   if (ended) {
-    return { ...base, tone: "off", status: `${fmt(sum)} ${unit} this time. ${FRESH_START}` };
+    return {
+      ...base,
+      tone: "off",
+      status: `${fmt(sum)} ${unit} this time. ${FRESH_START}`,
+    };
   }
   const daysLeft = days.filter((d) => d.isToday || d.isFuture).length;
   const perDay = Math.ceil((target - sum) / Math.max(1, daysLeft) / 100) * 100;
-  const tone: ChallengeTone = perDay > 20_000 ? "off" : perDay > 12_000 ? "tight" : "on";
+  const tone: ChallengeTone =
+    perDay > 20_000 ? "off" : perDay > 12_000 ? "tight" : "on";
   return {
     ...base,
     tone,
@@ -210,13 +244,28 @@ export function evaluateStreak(
   const done = best >= length;
   const ended = todayKey > input.endDate;
   const current = done ? length : run;
-  const base = { done, ended, days, current, goal: length, progress: Math.min(1, current / length) };
+  const base = {
+    done,
+    ended,
+    days,
+    current,
+    goal: length,
+    progress: Math.min(1, current / length),
+  };
 
   if (done) {
-    return { ...base, tone: "done", status: `${length} days in a row. Anything more is a bonus.` };
+    return {
+      ...base,
+      tone: "done",
+      status: `${length} days in a row. Anything more is a bonus.`,
+    };
   }
   if (ended) {
-    return { ...base, tone: "off", status: `Longest run: ${plural(best, "day")}. ${FRESH_START}` };
+    return {
+      ...base,
+      tone: "off",
+      status: `Longest run: ${plural(best, "day")}. ${FRESH_START}`,
+    };
   }
   if (length - run > openDayCount(days)) {
     return {

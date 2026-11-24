@@ -3,7 +3,11 @@ import { AddExerciseFooter } from "@/features/workout-session/add-exercise-foote
 import { SessionActionBar } from "@/features/workout-session/session-action-bar";
 import { SessionHeader } from "@/features/workout-session/session-header";
 import type { LeftoverPlanner } from "@/features/workout-session/leftovers";
-import { catalog, pushDay, suggested } from "@/features/workout-session/story-fixtures";
+import {
+  catalog,
+  pushDay,
+  suggested,
+} from "@/features/workout-session/story-fixtures";
 import { WorkoutSessionScreen } from "@/features/workout-session/workout-session-screen";
 
 /**
@@ -17,7 +21,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Quick cards for logging, new exercises added at the bottom with \"Usually next\" picks, and sheets for search, details, move, reorder and workout details.",
+          'Quick cards for logging, new exercises added at the bottom with "Usually next" picks, and sheets for search, details, move, reorder and workout details.',
       },
     },
   },
@@ -52,7 +56,13 @@ export const PlanAndMaybe: Story = {
       catalog("lateral-raise-machine"),
     ],
     initialSections: ["plan", "plan", "plan", "maybe", "maybe"],
-    initialAlternates: [[], [catalog("pec-deck"), catalog("db-fly")], [], [], []],
+    initialAlternates: [
+      [],
+      [catalog("pec-deck"), catalog("db-fly")],
+      [],
+      [],
+      [],
+    ],
   },
 };
 
@@ -60,7 +70,15 @@ export const PlanAndMaybe: Story = {
 const fakeLeftoverPlanner: LeftoverPlanner = {
   findNext: () =>
     new Promise((resolve) =>
-      window.setTimeout(() => resolve({ entryId: "next", label: "Push day", dateKey: "2026-11-23" }), 400),
+      window.setTimeout(
+        () =>
+          resolve({
+            entryId: "next",
+            label: "Push day",
+            dateKey: "2026-11-23",
+          }),
+        400,
+      ),
     ),
   save: async () => {},
 };

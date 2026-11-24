@@ -27,13 +27,20 @@ export type ConnectClaudeCardProps = {
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function tokenMeta(t: McpTokenSummary): string {
   const created = formatDate(t.createdAt);
   const used = formatDate(t.lastUsedAt);
-  return [created ? `Created ${created}` : null, used ? `Last used ${used}` : "Never used"]
+  return [
+    created ? `Created ${created}` : null,
+    used ? `Last used ${used}` : "Never used",
+  ]
     .filter(Boolean)
     .join(" · ");
 }
@@ -53,8 +60,9 @@ export function ConnectClaudeCard(props: ConnectClaudeCardProps) {
     <SettingsSection id="connect-heading" title="Connect to Claude">
       <div className="flex flex-col gap-4 px-4 py-4">
         <p className="text-[13px] text-zinc-600 dark:text-zinc-400">
-          Ask Claude about your training. It can look up your workouts and exercise history, and log or edit
-          workouts when you ask. It can’t delete anything.
+          Ask Claude about your training. It can look up your workouts and
+          exercise history, and log or edit workouts when you ask. It can’t
+          delete anything.
         </p>
 
         <ol className="flex flex-col gap-4">
@@ -65,12 +73,19 @@ export function ConnectClaudeCard(props: ConnectClaudeCardProps) {
                   Copy it now. You won’t see this token again.
                 </p>
                 <CopyField label="Token" value={props.newToken} wrap />
-                <button type="button" onClick={props.onDismissNewToken} className={`${secondaryButton} self-start`}>
+                <button
+                  type="button"
+                  onClick={props.onDismissNewToken}
+                  className={`${secondaryButton} self-start`}
+                >
                   I’ve copied it
                 </button>
               </div>
             ) : (
-              <form onSubmit={onSubmit} className="flex flex-col gap-2 sm:flex-row">
+              <form
+                onSubmit={onSubmit}
+                className="flex flex-col gap-2 sm:flex-row"
+              >
                 <label htmlFor="token-label" className="sr-only">
                   Token name
                 </label>
@@ -83,7 +98,11 @@ export function ConnectClaudeCard(props: ConnectClaudeCardProps) {
                   disabled={!props.loaded || props.busy}
                   className="h-11 w-full min-w-0 rounded-[10px] sm:flex-1 border border-zinc-200 bg-white px-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-900 focus-visible:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:focus-visible:border-zinc-100"
                 />
-                <button type="submit" disabled={!props.loaded || props.busy} className={primaryButton}>
+                <button
+                  type="submit"
+                  disabled={!props.loaded || props.busy}
+                  className={primaryButton}
+                >
                   <KeyRound className="size-4" aria-hidden />
                   Generate token
                 </button>
@@ -100,11 +119,15 @@ export function ConnectClaudeCard(props: ConnectClaudeCardProps) {
       </div>
 
       <div className="border-t border-zinc-100 px-4 pt-3 pb-1 dark:border-zinc-800">
-        <h3 className="text-[13px] font-medium text-zinc-900 dark:text-zinc-50">Your tokens</h3>
+        <h3 className="text-[13px] font-medium text-zinc-900 dark:text-zinc-50">
+          Your tokens
+        </h3>
         {!props.loaded ? (
           <p className="py-3 text-[13px] text-zinc-500">Loading…</p>
         ) : props.tokens.length === 0 ? (
-          <p className="py-3 text-[13px] text-zinc-500">None yet. Tokens you make show up here.</p>
+          <p className="py-3 text-[13px] text-zinc-500">
+            None yet. Tokens you make show up here.
+          </p>
         ) : (
           <ul className="flex flex-col">
             {props.tokens.map((t) => {
@@ -115,12 +138,20 @@ export function ConnectClaudeCard(props: ConnectClaudeCardProps) {
                   className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-t border-zinc-100 py-2.5 first:border-t-0 dark:border-zinc-800"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{name}</span>
-                    <span className="block text-xs text-zinc-500">{tokenMeta(t)}</span>
+                    <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                      {name}
+                    </span>
+                    <span className="block text-xs text-zinc-500">
+                      {tokenMeta(t)}
+                    </span>
                   </span>
                   {confirmingId === t.id ? (
                     <span className="flex items-center gap-2">
-                      <button type="button" onClick={() => setConfirmingId(null)} className={secondaryButton}>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingId(null)}
+                        className={secondaryButton}
+                      >
                         Cancel
                       </button>
                       <button
@@ -156,7 +187,15 @@ export function ConnectClaudeCard(props: ConnectClaudeCardProps) {
   );
 }
 
-function Step({ n, title, children }: { n: number; title: string; children?: ReactNode }) {
+function Step({
+  n,
+  title,
+  children,
+}: {
+  n: number;
+  title: string;
+  children?: ReactNode;
+}) {
   return (
     <li className="flex gap-3">
       <span
@@ -166,7 +205,9 @@ function Step({ n, title, children }: { n: number; title: string; children?: Rea
         {n}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-2.5">
-        <span className="pt-0.5 text-sm font-medium text-zinc-900 dark:text-zinc-50">{title}</span>
+        <span className="pt-0.5 text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          {title}
+        </span>
         {children}
       </div>
     </li>

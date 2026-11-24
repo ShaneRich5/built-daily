@@ -128,14 +128,16 @@ Prefer:
 - Feature-oriented structure
 - Colocated logic when appropriate
 
-Example structure:
+Current structure (top level, no `src/`):
 
-src/
-  app/
-  components/
-  features/
-  hooks/
-  lib/
+```
+app/          routes (Next.js App Router)
+components/   shared UI, including components/ui (shadcn)
+features/     feature-owned screens and logic
+lib/          data access, mappers, pure helpers
+mcp/          the MCP server
+tests/e2e/    Playwright specs
+```
 
 ---
 
@@ -208,6 +210,46 @@ needs its own branch.
 
 Skip this only when the user explicitly says to work on `main` directly for
 that change.
+
+Open PRs against `main`. If a PR has to be stacked on another branch, change
+its base to `main` before merging: the "PR targets main" check stays red until
+you do. Stacked PRs merged into an already-merged branch never shipped (#71,
+#82).
+
+After a PR merges, confirm it actually reached `main` before calling it done:
+`git merge-base --is-ancestor <merge sha> origin/main`. A MERGED badge alone
+has been wrong before: PR #3's tooling was merged and later disappeared from
+`main`'s history.
+
+## Quality Checks
+
+Run `npm run check` before pushing. It runs, in order:
+
+- `format:check`: Prettier (`npm run format` fixes it)
+- `lint`: ESLint (`npm run lint:fix` fixes what it can)
+- `typecheck`: `tsc --noEmit`
+- `test`: Vitest unit tests
+
+Git hooks (Husky) run these for you: `pre-commit` formats and lints staged
+files, `pre-push` runs typecheck and unit tests. Don't bypass them with
+`--no-verify`; fix the failure instead.
+
+CI (`.github/workflows/ci.yml`) runs the same checks plus Playwright smoke
+tests on every PR. Vercel builds the preview separately.
+
+Tests:
+
+- Unit tests sit next to the code as `*.test.ts(x)` under `app/`,
+  `components/`, `features/`, `lib/` or `mcp/`. Add one when you change logic
+  in `lib/` or fix a bug, so it stays fixed.
+- E2E specs live in `tests/e2e/`. Specs that need a signed-in user skip
+  themselves unless `PLAYWRIGHT_TEST_EMAIL` and `PLAYWRIGHT_TEST_PASSWORD` are
+  set.
+- On Windows, `npm test` goes through `scripts/vitest.mjs`, which works around
+  a drive-letter casing bug. Call `npm test`, not `npx vitest`.
+
+`react-hooks/set-state-in-effect` is set to warn while issue #2 is open. Don't
+add new violations.
 
 ---
 

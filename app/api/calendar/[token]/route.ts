@@ -14,7 +14,10 @@ export const dynamic = "force-dynamic";
  * Calendar apps fetch this on their own schedule with no sign-in, so the
  * secret token in the path is the only credential. Make or reset it in Settings.
  */
-export async function GET(request: Request, ctx: { params: Promise<{ token: string }> }) {
+export async function GET(
+  request: Request,
+  ctx: { params: Promise<{ token: string }> },
+) {
   const { token: raw } = await ctx.params;
   const token = raw.replace(/\.ics$/i, "");
 
@@ -22,7 +25,9 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
     return new Response("Not found", { status: 404 });
   }
   if (!isFirebaseAdminConfigured()) {
-    return new Response("Calendar feeds aren't configured on this server", { status: 503 });
+    return new Response("Calendar feeds aren't configured on this server", {
+      status: 503,
+    });
   }
 
   const uid = await resolveCalendarFeedToken(token);
@@ -33,7 +38,11 @@ export async function GET(request: Request, ctx: { params: Promise<{ token: stri
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
   const entries = await listCalendarFeedEntries(uid, todayKey);
-  const body = buildPlannerIcs({ entries, origin: new URL(request.url).origin, now });
+  const body = buildPlannerIcs({
+    entries,
+    origin: new URL(request.url).origin,
+    now,
+  });
 
   return new Response(body, {
     headers: {

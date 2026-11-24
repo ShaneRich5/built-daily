@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Activity, Bell, ChevronRight, Dumbbell, MoreVertical, Trash2 } from "lucide-react";
+import {
+  Activity,
+  Bell,
+  ChevronRight,
+  Dumbbell,
+  MoreVertical,
+  Trash2,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,13 +33,25 @@ const secondaryButton =
 function RowText({ title, meta }: { title: string; meta: string }) {
   return (
     <span className="min-w-0 flex-1">
-      <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">{title}</span>
-      <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{meta}</span>
+      <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+        {title}
+      </span>
+      <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+        {meta}
+      </span>
     </span>
   );
 }
 
-function RemoveMenu({ id, title, onRemove }: { id: string; title: string; onRemove: (id: string) => void }) {
+function RemoveMenu({
+  id,
+  title,
+  onRemove,
+}: {
+  id: string;
+  title: string;
+  onRemove: (id: string) => void;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -47,7 +66,11 @@ function RemoveMenu({ id, title, onRemove }: { id: string; title: string; onRemo
         <MoreVertical className="size-4" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem variant="destructive" className="min-h-11 gap-2" onClick={() => onRemove(id)}>
+        <DropdownMenuItem
+          variant="destructive"
+          className="min-h-11 gap-2"
+          onClick={() => onRemove(id)}
+        >
           <Trash2 className="size-4" aria-hidden />
           Remove from calendar
         </DropdownMenuItem>
@@ -75,7 +98,9 @@ export function PlannerDayAgenda({
       </h2>
       {items.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-4 text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-          {canPlan ? "Nothing planned. A rest day is part of the plan too." : "Nothing logged this day."}
+          {canPlan
+            ? "Nothing planned. A rest day is part of the plan too."
+            : "Nothing logged this day."}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -100,10 +125,15 @@ export function PlannerDayAgenda({
                     )}
                   </span>
                   <RowText title={item.title} meta={item.meta} />
-                  <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden />
+                  <ChevronRight
+                    className="size-4 shrink-0 text-zinc-400"
+                    aria-hidden
+                  />
                 </Link>
               ) : item.kind === "planned" ? (
-                <div className={`${rowBase} border-[1.5px] border-dashed border-emerald-300 pr-1 dark:border-emerald-800`}>
+                <div
+                  className={`${rowBase} border-[1.5px] border-dashed border-emerald-300 pr-1 dark:border-emerald-800`}
+                >
                   <RowText title={item.title} meta={item.meta} />
                   {item.startHref ? (
                     <Link
@@ -113,15 +143,25 @@ export function PlannerDayAgenda({
                       Start
                     </Link>
                   ) : null}
-                  <RemoveMenu id={item.id} title={item.title} onRemove={onRemovePlanned} />
+                  <RemoveMenu
+                    id={item.id}
+                    title={item.title}
+                    onRemove={onRemovePlanned}
+                  />
                 </div>
               ) : (
-                <div className={`${rowBase} border-zinc-200 pr-1 dark:border-zinc-800`}>
+                <div
+                  className={`${rowBase} border-zinc-200 pr-1 dark:border-zinc-800`}
+                >
                   <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
                     <Bell className="size-4" aria-hidden />
                   </span>
                   <RowText title={item.title} meta={item.meta} />
-                  <RemoveMenu id={item.id} title={item.title} onRemove={onRemovePlanned} />
+                  <RemoveMenu
+                    id={item.id}
+                    title={item.title}
+                    onRemove={onRemovePlanned}
+                  />
                 </div>
               )}
             </li>
@@ -138,7 +178,11 @@ export function PlannerDayAgenda({
             + Plan a workout
           </button>
         ) : null}
-        <button type="button" onClick={onLogActivity} className={secondaryButton}>
+        <button
+          type="button"
+          onClick={onLogActivity}
+          className={secondaryButton}
+        >
           Log activity
         </button>
       </div>

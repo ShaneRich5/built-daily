@@ -40,10 +40,15 @@ function InteractiveCard({
       lastTimeSets={lastTimeSets}
       hasNextExercise={hasNextExercise}
       onToggleOpen={() =>
-        dispatch({ type: "openExercise", lineId: state.openLineId ? null : lineId })
+        dispatch({
+          type: "openExercise",
+          lineId: state.openLineId ? null : lineId,
+        })
       }
       onOpenDetails={() => alert("Opens the details screen")}
-      onUpdateSet={(setIndex, patch) => dispatch({ type: "updateSet", lineId, setIndex, patch })}
+      onUpdateSet={(setIndex, patch) =>
+        dispatch({ type: "updateSet", lineId, setIndex, patch })
+      }
       onToggleSetDone={(setIndex, suggestion) =>
         dispatch({ type: "toggleSetDone", lineId, setIndex, suggestion })
       }
@@ -99,21 +104,32 @@ export const OpenAllDone: Story = {
 
 export const Bodyweight: Story = {
   args: {
-    item: sessionExercise("pullup", "pullup", [row({ reps: "8", done: true }), row()]),
+    item: sessionExercise("pullup", "pullup", [
+      row({ reps: "8", done: true }),
+      row(),
+    ]),
     open: true,
   },
 };
 
 export const HoldTime: Story = {
   args: {
-    item: sessionExercise("plank", "plank", [row({ seconds: "60", done: true }), row()]),
+    item: sessionExercise("plank", "plank", [
+      row({ seconds: "60", done: true }),
+      row(),
+    ]),
     open: true,
   },
 };
 
 export const WithNote: Story = {
   args: {
-    item: sessionExercise("fly", "cable-fly", pushDay[2]!.sets, "Low pulleys taken"),
+    item: sessionExercise(
+      "fly",
+      "cable-fly",
+      pushDay[2]!.sets,
+      "Low pulleys taken",
+    ),
     open: false,
   },
 };

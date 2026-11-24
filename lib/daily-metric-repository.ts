@@ -83,9 +83,13 @@ export async function setManualDailyMetric(
     const normalized = normalizeDailyMetricValue(metric, value);
     if (normalized == null) return false;
     const entry = withSourceValue(null, "manual", normalized, now);
-    await setDoc(ref, dailyMetricEntryToFirestore(dateKey, metric, entry, now), {
-      merge: true,
-    });
+    await setDoc(
+      ref,
+      dailyMetricEntryToFirestore(dateKey, metric, entry, now),
+      {
+        merge: true,
+      },
+    );
     return true;
   }
 
@@ -97,7 +101,10 @@ export async function setManualDailyMetric(
   );
   const entry = withSourceValue(day?.metrics[metric], "manual", null, now);
   const write = dailyMetricEntryToFirestore(dateKey, metric, entry, now);
-  const metrics = write.metrics as Record<string, { sources: Record<string, unknown> }>;
+  const metrics = write.metrics as Record<
+    string,
+    { sources: Record<string, unknown> }
+  >;
   metrics[metric]!.sources.manual = deleteField();
   await setDoc(ref, write, { merge: true });
   return true;

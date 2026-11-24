@@ -1,8 +1,5 @@
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
-import {
-  combineToTotalSeconds,
-  splitTotalSeconds,
-} from "@/lib/duration-input";
+import { combineToTotalSeconds, splitTotalSeconds } from "@/lib/duration-input";
 import type { LineSection } from "@/lib/line-grouping";
 import { formatSetSummary } from "@/lib/workout-journal-export";
 import {
@@ -58,9 +55,7 @@ export function setRowHasMeasurements(row: SetRow): boolean {
 /** Nothing typed at all — safe to remove without asking. */
 export function setRowIsBlank(row: SetRow): boolean {
   return (
-    !setRowHasMeasurements(row) &&
-    !row.timedSetSec.trim() &&
-    !row.note.trim()
+    !setRowHasMeasurements(row) && !row.timedSetSec.trim() && !row.note.trim()
   );
 }
 
@@ -72,7 +67,10 @@ export function copySetRow(row: SetRow): SetRow {
 }
 
 /** Fill any empty measurement with the suggested value (what the user sees greyed out). */
-export function fillFromSuggestion(row: SetRow, suggestion: SetRow | null): SetRow {
+export function fillFromSuggestion(
+  row: SetRow,
+  suggestion: SetRow | null,
+): SetRow {
   if (!suggestion) return row;
   const next = { ...row };
   for (const key of MEASUREMENT_KEYS) {
@@ -120,7 +118,9 @@ export function exerciseProgress(sets: SetRow[]): ExerciseProgress {
 
 /** A maybe nobody touched never counts: not in the header, not in the saved workout. */
 export function isUntouchedMaybe(item: SessionExercise): boolean {
-  return item.section === "maybe" && exerciseProgress(item.sets) === "not_started";
+  return (
+    item.section === "maybe" && exerciseProgress(item.sets) === "not_started"
+  );
 }
 
 export function countDoneSets(exercises: SessionExercise[]): number {
@@ -136,12 +136,17 @@ export function summarizeSetLogs(sets: SetLog[]): string {
   if (parts.length === 0) return "";
   const allSame = parts.every((part) => part === parts[0]);
   if (allSame) {
-    return parts.length === 1 ? parts[0]! : `${parts.length} sets · ${parts[0]}`;
+    return parts.length === 1
+      ? parts[0]!
+      : `${parts.length} sets · ${parts[0]}`;
   }
   return parts.join(", ");
 }
 
-export function summarizeSetRows(sets: SetRow[], metric: ExerciseMetric): string {
+export function summarizeSetRows(
+  sets: SetRow[],
+  metric: ExerciseMetric,
+): string {
   return summarizeSetLogs(
     sets
       .filter(setRowHasMeasurements)
@@ -199,7 +204,10 @@ const minutesField: SetFieldSpec = {
   inputMode: "numeric",
   read: (row) => splitTotalSeconds(row.seconds).minutes,
   write: (row, value) => ({
-    seconds: combineToTotalSeconds(value, splitTotalSeconds(row.seconds).seconds),
+    seconds: combineToTotalSeconds(
+      value,
+      splitTotalSeconds(row.seconds).seconds,
+    ),
   }),
 };
 
@@ -211,9 +219,15 @@ const secondsField: SetFieldSpec = {
   read: (row) => splitTotalSeconds(row.seconds).seconds,
   write: (row, value) => {
     const n = parseInt(value, 10);
-    const clamped = value === "" || !Number.isFinite(n) ? "" : String(Math.min(59, Math.max(0, n)));
+    const clamped =
+      value === "" || !Number.isFinite(n)
+        ? ""
+        : String(Math.min(59, Math.max(0, n)));
     return {
-      seconds: combineToTotalSeconds(splitTotalSeconds(row.seconds).minutes, clamped),
+      seconds: combineToTotalSeconds(
+        splitTotalSeconds(row.seconds).minutes,
+        clamped,
+      ),
     };
   },
 };

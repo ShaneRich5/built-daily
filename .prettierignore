@@ -1,0 +1,14 @@
+.next/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+storybook-static/
+backups/
+.playwright-mcp/
+.claude/
+.codex/
+package-lock.json
+next-env.d.ts
+tsconfig.tsbuildinfo
+public/

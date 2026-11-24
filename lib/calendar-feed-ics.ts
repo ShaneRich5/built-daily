@@ -28,7 +28,11 @@ type BuildFeedInput = {
 
 const CRLF = "\r\n";
 
-export function buildPlannerIcs({ entries, origin, now }: BuildFeedInput): string {
+export function buildPlannerIcs({
+  entries,
+  origin,
+  now,
+}: BuildFeedInput): string {
   const stamp = formatUtcStamp(now);
   const lines = [
     "BEGIN:VCALENDAR",
@@ -52,10 +56,16 @@ export function buildPlannerIcs({ entries, origin, now }: BuildFeedInput): strin
   return lines.map(foldLine).join(CRLF) + CRLF;
 }
 
-function eventLines(entry: CalendarFeedEntry, origin: string, stamp: string): string[] {
+function eventLines(
+  entry: CalendarFeedEntry,
+  origin: string,
+  stamp: string,
+): string[] {
   const done = entry.status === "completed";
   const title = done ? `✓ ${entry.label}` : entry.label;
-  const startHref = done ? null : buildWorkoutHref(entry.label, entry.planId, entry.exerciseIds);
+  const startHref = done
+    ? null
+    : buildWorkoutHref(entry.label, entry.planId, entry.exerciseIds);
   const link = `${origin}${startHref ?? "/planner"}`;
   const description = startHref
     ? `Start this workout in Built Daily: ${link}`
@@ -82,7 +92,10 @@ function compactDate(dateKey: string): string {
 
 /** `20261124T153000Z`, the UTC form DTSTAMP requires. */
 function formatUtcStamp(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 }
 
 /** Escapes a TEXT value (RFC 5545 §3.3.11): backslash, semicolon, comma, newline. */

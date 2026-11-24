@@ -14,5 +14,7 @@ export default async function JoinGroupPage({
 }) {
   const { code } = await params;
   const { plan, auto } = await searchParams;
-  return <JoinScreen code={code} planId={plan?.trim() || null} auto={auto === "1"} />;
+  return (
+    <JoinScreen code={code} planId={plan?.trim() || null} auto={auto === "1"} />
+  );
 }

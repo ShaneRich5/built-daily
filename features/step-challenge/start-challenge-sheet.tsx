@@ -10,7 +10,10 @@ import {
   type ChallengeRule,
 } from "@/lib/challenge-types";
 import { cn } from "@/lib/utils";
-import { primaryButton, sectionLabel } from "@/features/step-challenge/step-challenge-ui";
+import {
+  primaryButton,
+  sectionLabel,
+} from "@/features/step-challenge/step-challenge-ui";
 
 type StartChallengeSheetProps = {
   open: boolean;
@@ -23,15 +26,29 @@ type StartChallengeSheetProps = {
 };
 
 /** Three presets, one tap each, with a simple way to nudge the numbers. */
-export function StartChallengeSheet({ open, onOpenChange, mode, initialRule, onSubmit }: StartChallengeSheetProps) {
+export function StartChallengeSheet({
+  open,
+  onOpenChange,
+  mode,
+  initialRule,
+  onSubmit,
+}: StartChallengeSheetProps) {
   return (
     <BottomSheet
       open={open}
       onOpenChange={onOpenChange}
-      title={mode === "edit" ? "Change the challenge" : "Start a step challenge"}
+      title={
+        mode === "edit" ? "Change the challenge" : "Start a step challenge"
+      }
       description="Runs Sunday to Saturday. Steps already in this week count."
     >
-      {open ? <ChallengeForm mode={mode} initialRule={initialRule} onSubmit={onSubmit} /> : null}
+      {open ? (
+        <ChallengeForm
+          mode={mode}
+          initialRule={initialRule}
+          onSubmit={onSubmit}
+        />
+      ) : null}
     </BottomSheet>
   );
 }
@@ -55,7 +72,8 @@ function ChallengeForm({
     setBusy(true);
     setError(null);
     try {
-      if (!(await onSubmit(rule))) setError("Couldn’t save it. Check your connection and try again.");
+      if (!(await onSubmit(rule)))
+        setError("Couldn’t save it. Check your connection and try again.");
     } catch {
       setError("Couldn’t save it. Check your connection and try again.");
     } finally {
@@ -71,7 +89,11 @@ function ChallengeForm({
         void submit();
       }}
     >
-      <div role="radiogroup" aria-label="Challenge" className="flex flex-col gap-2">
+      <div
+        role="radiogroup"
+        aria-label="Challenge"
+        className="flex flex-col gap-2"
+      >
         {CHALLENGE_PRESETS.map((preset) => {
           const on = rule.kind === preset.kind;
           return (
@@ -91,7 +113,9 @@ function ChallengeForm({
               <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
                 {describeChallengeRule(on ? rule : preset.rule)}
               </span>
-              <span className="mt-0.5 text-[13px] text-zinc-600 dark:text-zinc-400">{preset.hint}</span>
+              <span className="mt-0.5 text-[13px] text-zinc-600 dark:text-zinc-400">
+                {preset.hint}
+              </span>
             </button>
           );
         })}
@@ -102,21 +126,37 @@ function ChallengeForm({
         <RuleSteppers rule={rule} onChange={setRule} />
       </fieldset>
 
-      {error ? <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p>
+      ) : null}
 
       <button type="submit" disabled={busy} className={primaryButton}>
-        {busy ? "Saving…" : mode === "edit" ? "Save changes" : "Start challenge"}
+        {busy
+          ? "Saving…"
+          : mode === "edit"
+            ? "Save changes"
+            : "Start challenge"}
       </button>
     </form>
   );
 }
 
-function clampStep(value: number, delta: number, limits: { min: number; max: number }): number {
+function clampStep(
+  value: number,
+  delta: number,
+  limits: { min: number; max: number },
+): number {
   return Math.min(limits.max, Math.max(limits.min, value + delta));
 }
 
 /** The one or two numbers each rule has, as − / + rows. */
-function RuleSteppers({ rule, onChange }: { rule: ChallengeRule; onChange: (rule: ChallengeRule) => void }) {
+function RuleSteppers({
+  rule,
+  onChange,
+}: {
+  rule: ChallengeRule;
+  onChange: (rule: ChallengeRule) => void;
+}) {
   const steps = CHALLENGE_LIMITS.dailyTarget;
   switch (rule.kind) {
     case "days_hit":
@@ -127,14 +167,28 @@ function RuleSteppers({ rule, onChange }: { rule: ChallengeRule; onChange: (rule
             value={rule.dailyTarget.toLocaleString("en-US")}
             limits={steps}
             current={rule.dailyTarget}
-            onStep={(d) => onChange({ ...rule, dailyTarget: clampStep(rule.dailyTarget, d * steps.step, steps) })}
+            onStep={(d) =>
+              onChange({
+                ...rule,
+                dailyTarget: clampStep(rule.dailyTarget, d * steps.step, steps),
+              })
+            }
           />
           <Stepper
             label="Days needed"
             value={`${rule.daysNeeded} of 7`}
             limits={CHALLENGE_LIMITS.daysNeeded}
             current={rule.daysNeeded}
-            onStep={(d) => onChange({ ...rule, daysNeeded: clampStep(rule.daysNeeded, d, CHALLENGE_LIMITS.daysNeeded) })}
+            onStep={(d) =>
+              onChange({
+                ...rule,
+                daysNeeded: clampStep(
+                  rule.daysNeeded,
+                  d,
+                  CHALLENGE_LIMITS.daysNeeded,
+                ),
+              })
+            }
           />
         </>
       );
@@ -146,7 +200,9 @@ function RuleSteppers({ rule, onChange }: { rule: ChallengeRule; onChange: (rule
           value={rule.target.toLocaleString("en-US")}
           limits={t}
           current={rule.target}
-          onStep={(d) => onChange({ ...rule, target: clampStep(rule.target, d * t.step, t) })}
+          onStep={(d) =>
+            onChange({ ...rule, target: clampStep(rule.target, d * t.step, t) })
+          }
         />
       );
     }
@@ -158,14 +214,28 @@ function RuleSteppers({ rule, onChange }: { rule: ChallengeRule; onChange: (rule
             value={rule.dailyTarget.toLocaleString("en-US")}
             limits={steps}
             current={rule.dailyTarget}
-            onStep={(d) => onChange({ ...rule, dailyTarget: clampStep(rule.dailyTarget, d * steps.step, steps) })}
+            onStep={(d) =>
+              onChange({
+                ...rule,
+                dailyTarget: clampStep(rule.dailyTarget, d * steps.step, steps),
+              })
+            }
           />
           <Stepper
             label="Days running"
             value={`${rule.length}`}
             limits={CHALLENGE_LIMITS.streakLength}
             current={rule.length}
-            onStep={(d) => onChange({ ...rule, length: clampStep(rule.length, d, CHALLENGE_LIMITS.streakLength) })}
+            onStep={(d) =>
+              onChange({
+                ...rule,
+                length: clampStep(
+                  rule.length,
+                  d,
+                  CHALLENGE_LIMITS.streakLength,
+                ),
+              })
+            }
           />
         </>
       );
@@ -189,7 +259,9 @@ function Stepper({
     "inline-flex size-11 items-center justify-center rounded-lg border border-zinc-200 text-zinc-800 hover:bg-zinc-50 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900";
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
+      <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+        {label}
+      </span>
       <div className="flex items-center gap-2">
         <button
           type="button"

@@ -58,12 +58,26 @@ export function SessionActionBar({
       <div className="mx-auto flex w-full max-w-2xl items-center gap-1.5 sm:px-2">
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<button type="button" className={iconButton} aria-label="More actions" />}
+            render={
+              <button
+                type="button"
+                className={iconButton}
+                aria-label="More actions"
+              />
+            }
           >
             <MoreHorizontal className="size-4" aria-hidden />
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-56">
-            <DropdownMenuItem className="min-h-11 gap-2" onClick={onOpenWorkoutDetails}>
+          <DropdownMenuContent
+            side="top"
+            align="start"
+            sideOffset={8}
+            className="w-56"
+          >
+            <DropdownMenuItem
+              className="min-h-11 gap-2"
+              onClick={onOpenWorkoutDetails}
+            >
               <NotebookPen className="size-4" aria-hidden />
               Name &amp; note
             </DropdownMenuItem>
@@ -76,7 +90,10 @@ export function SessionActionBar({
               Reorder exercises
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="min-h-11 gap-2" onClick={onCopyJournal}>
+            <DropdownMenuItem
+              className="min-h-11 gap-2"
+              onClick={onCopyJournal}
+            >
               {journalCopied ? (
                 <Check className="size-4" aria-hidden />
               ) : (
@@ -84,7 +101,10 @@ export function SessionActionBar({
               )}
               {journalCopied ? "Copied" : "Copy journal"}
             </DropdownMenuItem>
-            <DropdownMenuItem className="min-h-11 gap-2" onClick={onDownloadJournal}>
+            <DropdownMenuItem
+              className="min-h-11 gap-2"
+              onClick={onDownloadJournal}
+            >
               <Download className="size-4" aria-hidden />
               Download .txt
             </DropdownMenuItem>
@@ -118,7 +138,8 @@ export function SessionActionBar({
           disabled={finishDisabled}
           className="h-11 min-w-0 flex-1 rounded-lg bg-emerald-700 disabled:opacity-60 text-sm font-semibold text-white hover:bg-emerald-800 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
         >
-          {finishLabel ?? (hasExercises ? "Finish workout" : "Finish without details")}
+          {finishLabel ??
+            (hasExercises ? "Finish workout" : "Finish without details")}
         </button>
       </div>
     </div>

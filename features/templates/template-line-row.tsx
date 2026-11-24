@@ -22,7 +22,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MAX_ALTERNATES } from "@/lib/line-grouping";
 import { NOTE_LIMITS, type PlanLine } from "@/lib/workout-types";
-import { lineMeta, sectionOf, targetSetsOf } from "@/features/templates/template-model";
+import {
+  lineMeta,
+  sectionOf,
+  targetSetsOf,
+} from "@/features/templates/template-model";
 
 type TemplateLineRowProps = {
   line: PlanLine;
@@ -75,7 +79,9 @@ export function TemplateLineRow({
           <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
             {line.nameSnapshot}
           </span>
-          <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{lineMeta(line)}</span>
+          <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+            {lineMeta(line)}
+          </span>
         </span>
         <div
           role="group"
@@ -91,7 +97,10 @@ export function TemplateLineRow({
           >
             <Minus className="size-3.5" aria-hidden />
           </button>
-          <span className="min-w-12 text-center text-[13px] font-medium text-zinc-900 tabular-nums dark:text-zinc-100" aria-live="polite">
+          <span
+            className="min-w-12 text-center text-[13px] font-medium text-zinc-900 tabular-nums dark:text-zinc-100"
+            aria-live="polite"
+          >
             {sets} {sets === 1 ? "set" : "sets"}
           </span>
           <button
@@ -117,19 +126,33 @@ export function TemplateLineRow({
             <MoreVertical className="size-4" aria-hidden />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem className="min-h-11 gap-2" onClick={() => setNoteOpen(true)}>
+            <DropdownMenuItem
+              className="min-h-11 gap-2"
+              onClick={() => setNoteOpen(true)}
+            >
               <NotebookText className="size-4" aria-hidden />
               {line.notes?.trim() ? "Edit note" : "Add note"}
             </DropdownMenuItem>
-            <DropdownMenuItem className="min-h-11 gap-2" disabled={isFirst} onClick={() => onMove(-1)}>
+            <DropdownMenuItem
+              className="min-h-11 gap-2"
+              disabled={isFirst}
+              onClick={() => onMove(-1)}
+            >
               <ArrowUp className="size-4" aria-hidden />
               Move up
             </DropdownMenuItem>
-            <DropdownMenuItem className="min-h-11 gap-2" disabled={isLast} onClick={() => onMove(1)}>
+            <DropdownMenuItem
+              className="min-h-11 gap-2"
+              disabled={isLast}
+              onClick={() => onMove(1)}
+            >
               <ArrowDown className="size-4" aria-hidden />
               Move down
             </DropdownMenuItem>
-            <DropdownMenuItem className="min-h-11 gap-2" onClick={onToggleSection}>
+            <DropdownMenuItem
+              className="min-h-11 gap-2"
+              onClick={onToggleSection}
+            >
               {isMaybe ? (
                 <ArrowUpToLine className="size-4" aria-hidden />
               ) : (
@@ -138,7 +161,11 @@ export function TemplateLineRow({
               {isMaybe ? "Move to plan" : "Move to maybe"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" className="min-h-11 gap-2" onClick={onRemove}>
+            <DropdownMenuItem
+              variant="destructive"
+              className="min-h-11 gap-2"
+              onClick={onRemove}
+            >
               <Trash2 className="size-4" aria-hidden />
               Remove
             </DropdownMenuItem>
@@ -146,7 +173,11 @@ export function TemplateLineRow({
         </DropdownMenu>
       </div>
       {isMaybe ? null : (
-        <AlternateRow line={line} onAdd={onAddAlternate} onRemove={onRemoveAlternate} />
+        <AlternateRow
+          line={line}
+          onAdd={onAddAlternate}
+          onRemove={onRemoveAlternate}
+        />
       )}
       {noteOpen ? (
         <div className="border-t border-zinc-100 px-3 py-2.5 dark:border-zinc-800">

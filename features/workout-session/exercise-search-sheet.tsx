@@ -42,7 +42,9 @@ type ExerciseSearchSheetProps = {
 function exerciseMeta(exercise: CatalogExercise): string {
   const { primary, secondary } = targetingForExercise(exercise);
   const muscles = muscleTargetSummary(primary, secondary);
-  return muscles ? `${muscles} · ${metricLabel(exercise.metric)}` : metricLabel(exercise.metric);
+  return muscles
+    ? `${muscles} · ${metricLabel(exercise.metric)}`
+    : metricLabel(exercise.metric);
 }
 
 /**
@@ -68,7 +70,9 @@ export function ExerciseSearchSheet({
   const room = mode.kind === "add" ? mode.room : 1;
 
   const filters: Array<{ id: Filter; label: string }> = [
-    ...(suggested.length > 0 ? [{ id: "suggested" as const, label: "Suggested" }] : []),
+    ...(suggested.length > 0
+      ? [{ id: "suggested" as const, label: "Suggested" }]
+      : []),
     ...(recent.length > 0 ? [{ id: "recent" as const, label: "Recent" }] : []),
     { id: "all", label: "All" },
     ...CATALOG_MUSCLE_FILTERS,
@@ -82,7 +86,9 @@ export function ExerciseSearchSheet({
     else if (filter === "recent") base = recent;
     else base = EXERCISE_CATALOG;
     const group =
-      filter === "suggested" || filter === "recent" || filter === "all" ? null : filter;
+      filter === "suggested" || filter === "recent" || filter === "all"
+        ? null
+        : filter;
     return group ? filterCatalogByMuscle(base, group) : base;
   }, [query, filter, suggested, recent]);
 
@@ -116,7 +122,11 @@ export function ExerciseSearchSheet({
   };
 
   const title =
-    mode.kind === "replace" ? "Change exercise" : mode.kind === "alternate" ? "Add an alternate" : "Add exercises";
+    mode.kind === "replace"
+      ? "Change exercise"
+      : mode.kind === "alternate"
+        ? "Add an alternate"
+        : "Add exercises";
   const description =
     mode.kind === "replace"
       ? `Pick a replacement for ${mode.currentName}`
@@ -167,7 +177,11 @@ export function ExerciseSearchSheet({
             className="h-12 w-full rounded-xl border border-zinc-200 bg-zinc-50 pr-3 pl-9 text-base text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
           />
         </div>
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1" role="group" aria-label="Filter exercises">
+        <div
+          className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1"
+          role="group"
+          aria-label="Filter exercises"
+        >
           {filters.map((f) => {
             const active = filter === f.id;
             return (
@@ -191,7 +205,10 @@ export function ExerciseSearchSheet({
       </div>
 
       {picked.length > 0 ? (
-        <p className="px-4 pb-2 text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
+        <p
+          className="px-4 pb-2 text-xs text-zinc-500 dark:text-zinc-400"
+          aria-live="polite"
+        >
           Picked: {picked.map((p) => p.name).join(", ")}
         </p>
       ) : null}
@@ -222,7 +239,9 @@ export function ExerciseSearchSheet({
                     )}
                     aria-hidden
                   >
-                    {isPicked ? <Check className="size-3" strokeWidth={3} /> : null}
+                    {isPicked ? (
+                      <Check className="size-3" strokeWidth={3} />
+                    ) : null}
                   </span>
                 )}
                 <span className="min-w-0 flex-1">

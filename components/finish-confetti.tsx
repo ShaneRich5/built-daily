@@ -110,12 +110,7 @@ export function FinishConfetti() {
         ctx.rotate(particle.rotation);
         ctx.globalAlpha = Math.max(0, particle.life);
         ctx.fillStyle = particle.color;
-        ctx.fillRect(
-          -particle.w / 2,
-          -particle.h / 2,
-          particle.w,
-          particle.h,
-        );
+        ctx.fillRect(-particle.w / 2, -particle.h / 2, particle.w, particle.h);
         ctx.restore();
       }
 

@@ -25,8 +25,7 @@ export type DailyMetricInput = {
 };
 
 export type ParsedDailyMetricInput =
-  | { ok: true; input: DailyMetricInput }
-  | { ok: false; error: string };
+  { ok: true; input: DailyMetricInput } | { ok: false; error: string };
 
 /** How far back a source may backfill. */
 export const DAILY_METRIC_MAX_DAYS_BACK = 366;
@@ -51,7 +50,10 @@ export function parseDailyMetricInput(
   todayKey: string,
 ): ParsedDailyMetricInput {
   if (!raw || typeof raw !== "object") {
-    return { ok: false, error: "Expected an object with date, metric, value and source." };
+    return {
+      ok: false,
+      error: "Expected an object with date, metric, value and source.",
+    };
   }
   const { date, metric, value, source } = raw as Record<string, unknown>;
 
@@ -62,18 +64,31 @@ export function parseDailyMetricInput(
     return { ok: false, error: "date is in the future." };
   }
   if (date < addDaysToDateKey(todayKey, -DAILY_METRIC_MAX_DAYS_BACK)) {
-    return { ok: false, error: `date is more than ${DAILY_METRIC_MAX_DAYS_BACK} days ago.` };
+    return {
+      ok: false,
+      error: `date is more than ${DAILY_METRIC_MAX_DAYS_BACK} days ago.`,
+    };
   }
 
   if (!isDailyMetricKey(metric)) {
-    return { ok: false, error: `metric must be one of: ${DAILY_METRIC_KEYS.join(", ")}.` };
+    return {
+      ok: false,
+      error: `metric must be one of: ${DAILY_METRIC_KEYS.join(", ")}.`,
+    };
   }
 
   if (source === "manual") {
-    return { ok: false, error: 'source "manual" is reserved for the app. Use the source that measured it.' };
+    return {
+      ok: false,
+      error:
+        'source "manual" is reserved for the app. Use the source that measured it.',
+    };
   }
   if (!isSyncedDailyMetricSource(source)) {
-    return { ok: false, error: `source must be one of: ${SYNCED_DAILY_METRIC_SOURCES.join(", ")}.` };
+    return {
+      ok: false,
+      error: `source must be one of: ${SYNCED_DAILY_METRIC_SOURCES.join(", ")}.`,
+    };
   }
 
   const normalized = normalizeDailyMetricValue(metric, value);

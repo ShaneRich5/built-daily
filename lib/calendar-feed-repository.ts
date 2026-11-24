@@ -13,6 +13,7 @@ export async function createCalendarFeedUrl(): Promise<string> {
   const res = await authedFetch("/api/calendar-feed", { method: "POST" });
   if (!res.ok) throw new Error(`Calendar feed create failed (${res.status})`);
   const data = (await res.json()) as { url?: unknown };
-  if (typeof data.url !== "string") throw new Error("Calendar feed create returned no url");
+  if (typeof data.url !== "string")
+    throw new Error("Calendar feed create returned no url");
   return data.url;
 }

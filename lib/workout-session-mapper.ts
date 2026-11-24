@@ -105,7 +105,10 @@ function emptyCardioFields(): Pick<
   };
 }
 
-export function uiSetRowToSetLog(row: UiSetRow, metric: ExerciseMetric): SetLog {
+export function uiSetRowToSetLog(
+  row: UiSetRow,
+  metric: ExerciseMetric,
+): SetLog {
   return { ...setFieldsForMetric(row, metric), done: row.done };
 }
 
@@ -200,7 +203,8 @@ export function setLogToUiSetRow(set: SetLog): UiSetRow {
     seconds: set.durationSec != null ? String(set.durationSec) : "",
     timedSetSec: set.timedSetSec != null ? String(set.timedSetSec) : "",
     paceMph: set.paceMph != null ? String(set.paceMph) : "",
-    inclinePercent: set.inclinePercent != null ? String(set.inclinePercent) : "",
+    inclinePercent:
+      set.inclinePercent != null ? String(set.inclinePercent) : "",
     resistanceLevel:
       set.resistanceLevel != null ? String(set.resistanceLevel) : "",
     distanceMiles: set.distanceMiles != null ? String(set.distanceMiles) : "",
@@ -227,7 +231,8 @@ export function buildWorkoutSessionDoc(
 
   const lineIds = snap.lineIds;
   const lines: SessionLine[] = snap.exercises.map((ex, i) => {
-    const lineId = lineIds[i] && lineIds[i]!.length > 0 ? lineIds[i]! : newLineId();
+    const lineId =
+      lineIds[i] && lineIds[i]!.length > 0 ? lineIds[i]! : newLineId();
     const rows = snap.setsByExercise[i] ?? [];
     const sets = rows.map((row) => uiSetRowToSetLog(row, ex.metric));
     const line: SessionLine = {
@@ -410,9 +415,7 @@ function parseSessionLine(raw: unknown): SessionLine | null {
   return line;
 }
 
-function parseExerciseNotesMap(
-  raw: unknown,
-): Record<string, string> | null {
+function parseExerciseNotesMap(raw: unknown): Record<string, string> | null {
   if (raw == null) return null;
   if (!raw || typeof raw !== "object") return null;
   const out: Record<string, string> = {};
@@ -452,8 +455,7 @@ export function firestoreToWorkoutSessionDoc(
         : null;
   const startedAt = asTimestamp(data.startedAt);
   const endedAtRaw = data.endedAt;
-  const endedAt =
-    endedAtRaw == null ? null : asTimestamp(endedAtRaw);
+  const endedAt = endedAtRaw == null ? null : asTimestamp(endedAtRaw);
   if (!status || !title || !startedAt) return null;
   if (status === "completed" && !endedAt) return null;
   if (status === "in_progress" && endedAt != null) {
@@ -472,9 +474,7 @@ export function firestoreToWorkoutSessionDoc(
   if (data.lines.length > 0 && lines.length === 0) return null;
 
   const exerciseCount =
-    typeof data.exerciseCount === "number"
-      ? data.exerciseCount
-      : lines.length;
+    typeof data.exerciseCount === "number" ? data.exerciseCount : lines.length;
   const setCount =
     typeof data.setCount === "number"
       ? data.setCount
@@ -482,9 +482,7 @@ export function firestoreToWorkoutSessionDoc(
 
   const previewRaw = data.previewExerciseNames;
   const previewExerciseNames = Array.isArray(previewRaw)
-    ? previewRaw
-        .filter((x): x is string => typeof x === "string")
-        .slice(0, 5)
+    ? previewRaw.filter((x): x is string => typeof x === "string").slice(0, 5)
     : lines.slice(0, 3).map((l) => l.nameSnapshot);
 
   const workoutNote =

@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { joinSharedPlan } from "@/lib/group-plan-repository";
-import { createAccountabilityGroup, toggleGroupCheer } from "@/lib/group-repository";
+import {
+  createAccountabilityGroup,
+  toggleGroupCheer,
+} from "@/lib/group-repository";
 import { GROUP_LIMITS } from "@/lib/group-types";
 import {
   buildComingUpRow,
@@ -15,8 +18,16 @@ import {
   trainedTodayOthers,
   type PlanRow,
 } from "@/features/groups/groups-model";
-import { ConnectedInviteSheet, JoinCodeSheet } from "@/features/groups/group-sheets";
-import { GroupsHeader, GroupsView, type CompactGroup, type FeaturedGroup } from "@/features/groups/groups-view";
+import {
+  ConnectedInviteSheet,
+  JoinCodeSheet,
+} from "@/features/groups/group-sheets";
+import {
+  GroupsHeader,
+  GroupsView,
+  type CompactGroup,
+  type FeaturedGroup,
+} from "@/features/groups/groups-view";
 import { NewGroupSheet } from "@/features/groups/new-group-sheet";
 import { useGroupsHome } from "@/features/groups/use-group-data";
 
@@ -37,20 +48,40 @@ export function GroupsScreen() {
       const snap = data.byGroup[m.id];
       const members = snap?.members ?? [];
       const name = snap?.group
-        ? groupDisplayName(snap.group.group, members, myUid, m.membership.buddyNickname)
+        ? groupDisplayName(
+            snap.group.group,
+            members,
+            myUid,
+            m.membership.buddyNickname,
+          )
         : m.membership.buddyNickname
           ? `You & ${m.membership.buddyNickname}`
           : m.membership.nameSnapshot;
-      return { id: m.id, snap, members, name, week: buildGroupWeek(members, data.todayKey, myUid) };
+      return {
+        id: m.id,
+        snap,
+        members,
+        name,
+        week: buildGroupWeek(members, data.todayKey, myUid),
+      };
     });
 
     const comingUp: PlanRow[] = groups
-      .flatMap((g) => (g.snap?.plans ?? []).map((p) => buildComingUpRow(p, g.name, g.members, myUid)))
-      .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.meta.localeCompare(b.meta));
+      .flatMap((g) =>
+        (g.snap?.plans ?? []).map((p) =>
+          buildComingUpRow(p, g.name, g.members, myUid),
+        ),
+      )
+      .sort(
+        (a, b) =>
+          a.dateKey.localeCompare(b.dateKey) || a.meta.localeCompare(b.meta),
+      );
 
     const first = groups[0];
     const cheeredByMe = new Set(
-      data.firstCheers.filter((c) => c.cheer.fromUid === myUid).map((c) => c.cheer.toUid),
+      data.firstCheers
+        .filter((c) => c.cheer.fromUid === myUid)
+        .map((c) => c.cheer.toUid),
     );
     const trainedToday = first ? trainedTodayOthers(first.week) : [];
     const featured: FeaturedGroup | null = first
@@ -66,8 +97,12 @@ export function GroupsScreen() {
             trainedToday: m.trainedToday,
             isMe: m.isMe,
           })),
-          cheerNames: trainedToday.filter((m) => !cheeredByMe.has(m.uid)).map((m) => m.name),
-          cheeredAll: trainedToday.length > 0 && trainedToday.every((m) => cheeredByMe.has(m.uid)),
+          cheerNames: trainedToday
+            .filter((m) => !cheeredByMe.has(m.uid))
+            .map((m) => m.name),
+          cheeredAll:
+            trainedToday.length > 0 &&
+            trainedToday.every((m) => cheeredByMe.has(m.uid)),
           code: first.snap?.group?.group.inviteCode ?? "",
         }
       : null;
@@ -84,11 +119,17 @@ export function GroupsScreen() {
   if (!data.firebaseReady || (!data.authLoading && !data.user)) {
     return (
       <div className="flex flex-1 flex-col gap-5">
-        <GroupsHeader onJoin={() => router.push("/login?next=/groups")} onNew={() => router.push("/login?next=/groups")} />
+        <GroupsHeader
+          onJoin={() => router.push("/login?next=/groups")}
+          onNew={() => router.push("/login?next=/groups")}
+        />
         <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-800">
           {data.firebaseReady ? (
             <>
-              <Link href="/login?next=/groups" className="font-semibold text-zinc-900 underline dark:text-zinc-100">
+              <Link
+                href="/login?next=/groups"
+                className="font-semibold text-zinc-900 underline dark:text-zinc-100"
+              >
                 Sign in
               </Link>{" "}
               to train with a buddy or a small group.
@@ -104,9 +145,12 @@ export function GroupsScreen() {
   const imIn = async (row: PlanRow) => {
     setBusyPlanId(row.id);
     try {
-      if (!(await joinSharedPlan(row.groupId, row.id))) throw new Error("not saved");
+      if (!(await joinSharedPlan(row.groupId, row.id)))
+        throw new Error("not saved");
     } catch {
-      window.alert("Couldn’t add you to that plan. Check your connection and try again.");
+      window.alert(
+        "Couldn’t add you to that plan. Check your connection and try again.",
+      );
     } finally {
       setBusyPlanId(null);
     }
@@ -133,7 +177,10 @@ export function GroupsScreen() {
   return (
     <>
       <GroupsView
-        loaded={data.memberships !== null && view.groups.every((g) => g.snap?.group !== undefined)}
+        loaded={
+          data.memberships !== null &&
+          view.groups.every((g) => g.snap?.group !== undefined)
+        }
         comingUp={view.comingUp}
         featured={view.featured}
         others={view.others}
@@ -149,7 +196,9 @@ export function GroupsScreen() {
       <NewGroupSheet
         open={newOpen}
         onOpenChange={setNewOpen}
-        atLimit={(data.memberships?.length ?? 0) >= GROUP_LIMITS.maxGroupsPerUser}
+        atLimit={
+          (data.memberships?.length ?? 0) >= GROUP_LIMITS.maxGroupsPerUser
+        }
         onCreate={async (input) => {
           const created = await createAccountabilityGroup(input.name, {
             kind: input.kind,

@@ -23,11 +23,18 @@ export function HomeTogetherCard({ together }: { together: HomeTogether }) {
         Training with someone today
       </span>
       <Link href={together.planHref} className="block">
-        <h2 id="home-together-heading" className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2
+          id="home-together-heading"
+          className="text-xl font-semibold text-zinc-900 dark:text-zinc-50"
+        >
           {together.label}
         </h2>
-        <p className="mt-0.5 text-[13px] text-zinc-600 dark:text-zinc-300">{together.meta}</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{together.going}</p>
+        <p className="mt-0.5 text-[13px] text-zinc-600 dark:text-zinc-300">
+          {together.meta}
+        </p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          {together.going}
+        </p>
       </Link>
       {together.startHref ? (
         <Link

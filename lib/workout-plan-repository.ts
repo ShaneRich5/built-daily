@@ -48,7 +48,9 @@ export function subscribeUserWorkoutPlans(
     (snap) => {
       const out: SavedWorkoutPlan[] = [];
       for (const d of snap.docs) {
-        const parsed = firestoreToWorkoutPlanDoc(d.data() as Record<string, unknown>);
+        const parsed = firestoreToWorkoutPlanDoc(
+          d.data() as Record<string, unknown>,
+        );
         if (parsed) out.push({ id: d.id, plan: parsed });
       }
       onPlans(out);
@@ -59,19 +61,25 @@ export function subscribeUserWorkoutPlans(
   );
 }
 
-export async function getWorkoutPlan(planId: string): Promise<SavedWorkoutPlan | null> {
+export async function getWorkoutPlan(
+  planId: string,
+): Promise<SavedWorkoutPlan | null> {
   const db = getFirestoreDb();
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid) return null;
   const ref = doc(db, "users", uid, "plans", planId);
   const snap = await getDoc(ref);
   if (!snap.exists()) return null;
-  const plan = firestoreToWorkoutPlanDoc(snap.data() as Record<string, unknown>);
+  const plan = firestoreToWorkoutPlanDoc(
+    snap.data() as Record<string, unknown>,
+  );
   if (!plan) return null;
   return { id: snap.id, plan };
 }
 
-export async function createWorkoutPlan(plan: WorkoutPlanDoc): Promise<string | null> {
+export async function createWorkoutPlan(
+  plan: WorkoutPlanDoc,
+): Promise<string | null> {
   const col = plansCollectionRef();
   if (!col) return null;
   const ref = await addDoc(col, workoutPlanDocToFirestore(plan));

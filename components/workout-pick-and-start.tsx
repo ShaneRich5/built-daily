@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { ChevronDown, Info, Play, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { ExerciseMusclePeek } from "@/components/exercise-muscle-peek";
 import { Switch } from "@/components/ui/switch";
@@ -283,7 +278,10 @@ export function WorkoutPickAndStart() {
                 Clear all
               </button>
             </div>
-            <ul className="flex flex-wrap gap-2" aria-label="Selected exercises">
+            <ul
+              className="flex flex-wrap gap-2"
+              aria-label="Selected exercises"
+            >
               {selectedExercises.map((ex) => (
                 <li key={ex.id}>
                   <button

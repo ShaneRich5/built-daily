@@ -76,7 +76,9 @@ async function main() {
     for (const entry of scheduledSnap.docs) {
       const data = entry.data();
       if (data.status !== undefined && data.sessionId !== undefined) continue;
-      changes.push(`update users/${uid}/scheduledWorkouts/${entry.id} (status)`);
+      changes.push(
+        `update users/${uid}/scheduledWorkouts/${entry.id} (status)`,
+      );
       if (apply) {
         await entry.ref.set(
           {
@@ -120,7 +122,9 @@ async function main() {
     return;
   }
 
-  console.log(`${apply ? "Applied" : "Would apply"} ${changes.length} change(s):`);
+  console.log(
+    `${apply ? "Applied" : "Would apply"} ${changes.length} change(s):`,
+  );
   for (const line of changes) console.log(`  ${line}`);
   if (!apply) console.log("\nRe-run with --apply to write these changes.");
 }

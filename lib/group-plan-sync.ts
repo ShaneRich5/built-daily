@@ -53,11 +53,16 @@ export async function syncUpcomingPlansToGroups(): Promise<void> {
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid) return;
   try {
-    const memberships = await getDocs(collection(db, "users", uid, "groupMemberships"));
+    const memberships = await getDocs(
+      collection(db, "users", uid, "groupMemberships"),
+    );
     if (memberships.empty) return;
 
     const todayKey = localDateKeyFromMs(Date.now());
-    const endKey = addDaysToDateKey(todayKey, GROUP_LIMITS.upcomingPlanDays - 1);
+    const endKey = addDaysToDateKey(
+      todayKey,
+      GROUP_LIMITS.upcomingPlanDays - 1,
+    );
     const [planned, settings] = await Promise.all([
       getDocs(
         query(
@@ -69,19 +74,27 @@ export async function syncUpcomingPlansToGroups(): Promise<void> {
       getDoc(doc(db, "users", uid, "settings", "progress")),
     ]);
     const upcomingPlans = upcomingPlansFromEntries(
-      planned.docs.map((d) => d.data() as { dateKey: unknown; label: unknown; status?: unknown }),
+      planned.docs.map(
+        (d) =>
+          d.data() as { dateKey: unknown; label: unknown; status?: unknown },
+      ),
       todayKey,
     );
     // Member rows written before weeklyGoal existed fail the self-update rule
     // without it, so it rides along.
     const weeklyGoal = firestoreToProgressSettings(
-      settings.exists() ? (settings.data() as Record<string, unknown>) : undefined,
+      settings.exists()
+        ? (settings.data() as Record<string, unknown>)
+        : undefined,
     ).weeklyGoal;
 
     await Promise.all(
       memberships.docs.map(async (m) => {
         try {
-          await updateDoc(doc(db, "groups", m.id, "members", uid), { upcomingPlans, weeklyGoal });
+          await updateDoc(doc(db, "groups", m.id, "members", uid), {
+            upcomingPlans,
+            weeklyGoal,
+          });
         } catch {
           /* best-effort per group */
         }
@@ -107,7 +120,10 @@ export function syncUpcomingPlansToGroupsThrottled(): void {
  * Removes the signed-in user from a shared plan's going list. Used when they
  * delete the linked planner entry, so the group doesn't keep showing them.
  */
-export async function removeSelfFromSharedPlan(groupId: string, planId: string): Promise<void> {
+export async function removeSelfFromSharedPlan(
+  groupId: string,
+  planId: string,
+): Promise<void> {
   const db = getFirestoreDb();
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid || !groupId || !planId) return;

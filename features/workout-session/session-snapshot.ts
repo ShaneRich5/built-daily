@@ -55,7 +55,8 @@ export function initialSessionState(
   startedAtMs: number,
 ): SessionState {
   const lineIdsMatch = data.initialLineIds?.length === data.exercises.length;
-  const setsMatch = data.initialSetsByExercise?.length === data.exercises.length;
+  const setsMatch =
+    data.initialSetsByExercise?.length === data.exercises.length;
 
   const exercises: SessionExercise[] = data.exercises.map((exercise, i) => ({
     lineId: lineIdsMatch ? data.initialLineIds![i]! : createLineId(),
@@ -81,7 +82,8 @@ export function initialSessionState(
     // Resume where you left off: the first planned exercise that still has sets to do.
     openLineId:
       exercises.find(
-        (item) => item.section === "plan" && exerciseProgress(item.sets) !== "done",
+        (item) =>
+          item.section === "plan" && exerciseProgress(item.sets) !== "done",
       )?.lineId ?? null,
   };
 }
@@ -97,7 +99,8 @@ export function toFinishSnapshot(
 ): ActiveWorkoutFinishSnapshot {
   const exerciseNotesByExerciseId: Record<string, string> = {};
   for (const item of state.exercises) {
-    if (item.note.trim()) exerciseNotesByExerciseId[item.exercise.id] = item.note;
+    if (item.note.trim())
+      exerciseNotesByExerciseId[item.exercise.id] = item.note;
   }
   return {
     title: state.title,
@@ -107,7 +110,9 @@ export function toFinishSnapshot(
     setsByExercise: state.exercises.map((item) => item.sets),
     lineIds: state.exercises.map((item) => item.lineId),
     sections: state.exercises.map((item) => item.section),
-    alternatesByExercise: state.exercises.map((item) => item.alternates.map(alternateFromExercise)),
+    alternatesByExercise: state.exercises.map((item) =>
+      item.alternates.map(alternateFromExercise),
+    ),
     workoutNote: state.workoutNote,
     exerciseNotesByExerciseId,
     activeDurationMs: extras.activeDurationMs,
@@ -118,11 +123,16 @@ export function toFinishSnapshot(
 
 /** What Finish saves: everything except maybes that were never started. */
 export function finishState(state: SessionState): SessionState {
-  return { ...state, exercises: state.exercises.filter((item) => !isUntouchedMaybe(item)) };
+  return {
+    ...state,
+    exercises: state.exercises.filter((item) => !isUntouchedMaybe(item)),
+  };
 }
 
 /** Load a saved session (finished or in progress) into the session screen. */
-export function initialDataFromSavedSession(session: WorkoutSessionDoc): WorkoutSessionInitialData {
+export function initialDataFromSavedSession(
+  session: WorkoutSessionDoc,
+): WorkoutSessionInitialData {
   const exerciseNotesById: Record<string, string> = {};
   for (const line of session.lines) {
     const note = session.exerciseNotesByLineId?.[line.lineId];
@@ -147,7 +157,9 @@ export function initialDataFromSavedSession(session: WorkoutSessionDoc): Workout
       (line.alternates ?? []).map(exerciseFromAlternate),
     ),
     initialSetsByExercise: session.lines.map((line) =>
-      line.sets.length > 0 ? line.sets.map(setLogToUiSetRow) : [emptyUiSetRow()],
+      line.sets.length > 0
+        ? line.sets.map(setLogToUiSetRow)
+        : [emptyUiSetRow()],
     ),
     initialWorkoutNote: session.workoutNote ?? "",
     initialExerciseNotesById: exerciseNotesById,

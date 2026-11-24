@@ -49,7 +49,8 @@ function parseEntry(
     if (value == null) continue;
     sources[source] = {
       value,
-      updatedAt: asDate((s as { updatedAt?: unknown }).updatedAt) ?? new Date(0),
+      updatedAt:
+        asDate((s as { updatedAt?: unknown }).updatedAt) ?? new Date(0),
     };
   }
   // Re-resolve on read rather than trusting the stored `value`, so a doc
@@ -68,7 +69,10 @@ export function firestoreToDailyMetricsDoc(
   const rawMetrics = data.metrics;
   if (rawMetrics && typeof rawMetrics === "object") {
     for (const key of DAILY_METRIC_KEYS) {
-      const entry = parseEntry(key, (rawMetrics as Record<string, unknown>)[key]);
+      const entry = parseEntry(
+        key,
+        (rawMetrics as Record<string, unknown>)[key],
+      );
       if (entry) metrics[key] = entry;
     }
   }

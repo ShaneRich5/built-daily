@@ -1,5 +1,8 @@
 import { requireUid } from "@/lib/api-auth";
-import { createCalendarFeedToken, getCalendarFeedToken } from "@/lib/calendar-feed-admin";
+import {
+  createCalendarFeedToken,
+  getCalendarFeedToken,
+} from "@/lib/calendar-feed-admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

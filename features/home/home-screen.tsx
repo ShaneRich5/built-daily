@@ -4,7 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { LogActivitySheet } from "@/components/log-activity-sheet";
-import { moveScheduledWorkouts, updateScheduledWorkout } from "@/lib/planner-repository";
+import {
+  moveScheduledWorkouts,
+  updateScheduledWorkout,
+} from "@/lib/planner-repository";
 import { AccountMenu } from "@/features/home/account-menu";
 import { MoveSheet } from "@/features/planner/move-sheet";
 import { HomeHeader, HomeView } from "@/features/home/home-view";
@@ -47,9 +50,12 @@ export function HomeScreen() {
           }
         />
         <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-[17px] font-semibold">A workout journal that keeps you showing up</h2>
+          <h2 className="text-[17px] font-semibold">
+            A workout journal that keeps you showing up
+          </h2>
           <p className="mt-1 text-sm text-zinc-500">
-            Log workouts in a few taps, reuse templates, and see your week at a glance.
+            Log workouts in a few taps, reuse templates, and see your week at a
+            glance.
           </p>
           <Link
             href="/login"
@@ -67,7 +73,9 @@ export function HomeScreen() {
     try {
       if (!(await write())) throw new Error("not saved");
     } catch {
-      window.alert("Couldn’t update your plan. Check your connection and try again.");
+      window.alert(
+        "Couldn’t update your plan. Check your connection and try again.",
+      );
     } finally {
       setCatchUpBusy(false);
     }
@@ -81,7 +89,10 @@ export function HomeScreen() {
         together={together}
         loaded={home.loaded}
         account={
-          <AccountMenu email={user?.email ?? null} onSignOut={() => void signOutUser()} />
+          <AccountMenu
+            email={user?.email ?? null}
+            onSignOut={() => void signOutUser()}
+          />
         }
         onLogActivity={() => setLogOpen(true)}
         challenge={<StepChallengeSection todayKey={home.todayKey} />}
@@ -91,9 +102,16 @@ export function HomeScreen() {
                 missed,
                 busy: catchUpBusy,
                 onDoToday: () =>
-                  void runCatchUp(() => moveScheduledWorkouts([{ id: missed.id, dateKey: home.todayKey }])),
+                  void runCatchUp(() =>
+                    moveScheduledWorkouts([
+                      { id: missed.id, dateKey: home.todayKey },
+                    ]),
+                  ),
                 onPickDay: () => setMoveOpen(true),
-                onSkip: () => void runCatchUp(() => updateScheduledWorkout(missed.id, { status: "skipped" })),
+                onSkip: () =>
+                  void runCatchUp(() =>
+                    updateScheduledWorkout(missed.id, { status: "skipped" }),
+                  ),
               }
             : null
         }

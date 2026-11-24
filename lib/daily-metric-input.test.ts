@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { parseDailyMetricInput } from "@/lib/daily-metric-input";
 
 const today = "2026-11-24";
-const ok = { date: "2026-11-23", metric: "steps", value: 8214, source: "apple_health" };
+const ok = {
+  date: "2026-11-23",
+  metric: "steps",
+  value: 8214,
+  source: "apple_health",
+};
 
 function error(raw: unknown): string | null {
   const r = parseDailyMetricInput(raw, today);

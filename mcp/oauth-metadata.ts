@@ -37,7 +37,9 @@ function isLoopback(origin: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
-export function buildAuthorizationServerMetadata(origin: string): OAuthMetadata {
+export function buildAuthorizationServerMetadata(
+  origin: string,
+): OAuthMetadata {
   return {
     issuer: origin,
     authorization_endpoint: `${origin}${AUTHORIZE_PATH}`,

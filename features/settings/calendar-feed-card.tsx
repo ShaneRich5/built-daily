@@ -38,8 +38,9 @@ export function CalendarFeedCard(props: CalendarFeedCardProps) {
     <SettingsSection id="calendar-heading" title="Calendar">
       <div className="flex flex-col gap-4 px-4 py-4">
         <p className="text-[13px] text-zinc-600 dark:text-zinc-400">
-          See your planned workouts in your calendar. Each one shows as an all-day event, and the calendar
-          follows your planner as you add or move days.
+          See your planned workouts in your calendar. Each one shows as an
+          all-day event, and the calendar follows your planner as you add or
+          move days.
         </p>
 
         {!props.loaded ? (
@@ -66,14 +67,20 @@ export function CalendarFeedCard(props: CalendarFeedCardProps) {
                 <ExternalLink className="size-4" aria-hidden />
                 Add to Google Calendar
               </a>
-              <a href={toWebcal(props.url)} className={`${secondaryButton} h-11`}>
+              <a
+                href={toWebcal(props.url)}
+                className={`${secondaryButton} h-11`}
+              >
                 Add to Apple Calendar
               </a>
             </div>
-            <CopyField label="Calendar link (for Outlook and other apps)" value={props.url} />
+            <CopyField
+              label="Calendar link (for Outlook and other apps)"
+              value={props.url}
+            />
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Google Calendar checks for changes every few hours, so a day you just planned or moved can take a
-              while to show up there.
+              Google Calendar checks for changes every few hours, so a day you
+              just planned or moved can take a while to show up there.
             </p>
           </>
         )}
@@ -84,15 +91,21 @@ export function CalendarFeedCard(props: CalendarFeedCardProps) {
       {props.url ? (
         <div className="flex flex-col gap-2.5 border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">
           <p className="text-[13px] text-zinc-600 dark:text-zinc-400">
-            Anyone with this link can see your planned workouts. If you shared it by mistake, get a new one.
+            Anyone with this link can see your planned workouts. If you shared
+            it by mistake, get a new one.
           </p>
           {confirmingReset ? (
             <div className="flex flex-col gap-2">
               <p className="text-[13px] font-medium text-zinc-900 dark:text-zinc-50">
-                The old link stops working, so add the new one to your calendar again.
+                The old link stops working, so add the new one to your calendar
+                again.
               </p>
               <span className="flex items-center gap-2">
-                <button type="button" onClick={() => setConfirmingReset(false)} className={secondaryButton}>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingReset(false)}
+                  className={secondaryButton}
+                >
                   Cancel
                 </button>
                 <button

@@ -51,7 +51,10 @@ export async function ensureUserProfile(
       return profile;
     }
 
-    if (existing.displayName === displayName && existing.timezone === timezone) {
+    if (
+      existing.displayName === displayName &&
+      existing.timezone === timezone
+    ) {
       return existing;
     }
 

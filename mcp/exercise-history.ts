@@ -1,4 +1,7 @@
-import { getCatalogExerciseById, type ExerciseMetric } from "@/lib/exercise-catalog";
+import {
+  getCatalogExerciseById,
+  type ExerciseMetric,
+} from "@/lib/exercise-catalog";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { estimatedOneRepMax } from "@/lib/progress-insights";
 import type { SessionLine, SetLog } from "@/lib/workout-types";
@@ -105,7 +108,9 @@ export async function getExerciseHistory(
 
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
-    const lines = Array.isArray(data.lines) ? (data.lines as SessionLine[]) : [];
+    const lines = Array.isArray(data.lines)
+      ? (data.lines as SessionLine[])
+      : [];
     const matching = lines.filter((line) => line.exerciseId === exerciseId);
     if (matching.length === 0) continue;
 

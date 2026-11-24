@@ -81,12 +81,12 @@ aggregates raw samples.
 Daily totals cover every feature planned so far. "Steps so far today" is just
 today's total updated through the day. If finer detail is ever needed:
 
-| Need | Shape | Where |
-|------|-------|-------|
-| Time-of-day challenges ("steps before 9 AM") | 24 hourly buckets | Inside the same daily doc, e.g. `metrics.steps.hourly: number[24]` |
-| Walks or watch workouts as entries | Events with start and end | Their own collection, or as activities, matched against logged sessions |
-| Heart rate during a logged workout | A summary (average and peak) | On the session doc. Read the window from the device on demand |
-| Sleep | A session crossing midnight | Keyed to the date of the morning you woke |
+| Need                                         | Shape                        | Where                                                                   |
+| -------------------------------------------- | ---------------------------- | ----------------------------------------------------------------------- |
+| Time-of-day challenges ("steps before 9 AM") | 24 hourly buckets            | Inside the same daily doc, e.g. `metrics.steps.hourly: number[24]`      |
+| Walks or watch workouts as entries           | Events with start and end    | Their own collection, or as activities, matched against logged sessions |
+| Heart rate during a logged workout           | A summary (average and peak) | On the session doc. Read the window from the device on demand           |
+| Sleep                                        | A session crossing midnight  | Keyed to the date of the morning you woke                               |
 
 Don't copy minute-level samples into Firestore. Apple Health and Health
 Connect already keep that history on the device, and the app can query any
@@ -124,11 +124,11 @@ minutes, distance) works with all three rules unchanged.
 
 ### 5. Ways in
 
-| Way in | Who uses it | Auth |
-|--------|-------------|------|
-| App write | Manual entry in the log sheet | Signed-in user, guarded by Firestore rules |
-| MCP tool `log_daily_metric` | ChatGPT and Claude ("I walked 9k today") | Existing MCP auth |
-| `POST /api/health/daily` | iOS Shortcut, future native apps | Personal access token (same system as the MCP server) |
+| Way in                      | Who uses it                              | Auth                                                  |
+| --------------------------- | ---------------------------------------- | ----------------------------------------------------- |
+| App write                   | Manual entry in the log sheet            | Signed-in user, guarded by Firestore rules            |
+| MCP tool `log_daily_metric` | ChatGPT and Claude ("I walked 9k today") | Existing MCP auth                                     |
+| `POST /api/health/daily`    | iOS Shortcut, future native apps         | Personal access token (same system as the MCP server) |
 
 The API accepts a **batch** (`[{ date, metric, value, source }]`), so a
 missed night can send the last 7 days at once. It validates bounds per metric
@@ -145,12 +145,12 @@ and writes only `metrics.<metric>.sources.<source>`, then recomputes `value`.
 
 ## Alternatives considered
 
-| | Design | Verdict |
-|---|--------|---------|
-| **A** | Personal weekly challenge as a card on Home | **Build first.** Private and low-risk, and B and C reuse its pieces. |
+|       | Design                                                                   | Verdict                                                                                                 |
+| ----- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **A** | Personal weekly challenge as a card on Home                              | **Build first.** Private and low-risk, and B and C reuse its pieces.                                    |
 | **B** | Group challenge inside a group: same rule for everyone, rows of days hit | Phase 2. Each member's app writes a progress snapshot to `groups/{gid}/challenges/{id}/progress/{uid}`. |
-| **C** | "Walk together": one pooled total for the group | After B. Needs a server-side total. One very active member can carry the group. |
-| **D** | Steps count as showing up toward the weekly goal | Product decision. Not planned. It would dilute the workout habit. |
+| **C** | "Walk together": one pooled total for the group                          | After B. Needs a server-side total. One very active member can carry the group.                         |
+| **D** | Steps count as showing up toward the weekly goal                         | Product decision. Not planned. It would dilute the workout habit.                                       |
 
 ---
 
@@ -171,15 +171,15 @@ and writes only `metrics.<metric>.sources.<source>`, then recomputes `value`.
 
 ### Metrics that could follow
 
-| Metric | Key | Day's number | Challenge? |
-|--------|-----|--------------|------------|
-| Steps | `steps` | Sum | Yes |
-| Active minutes | `activeMinutes` | Sum | Yes |
-| Distance | `distanceMeters` | Sum | Yes |
-| Watch workouts | `externalWorkouts` | Count + list | Maybe (must be matched against logged sessions) |
-| Sleep | `sleepMinutes` | Night ending that morning | No |
-| Body weight | `bodyWeightKg` | Latest | No (could feed existing body weight tracking) |
-| Resting heart rate | `restingHr` | Latest | No |
+| Metric             | Key                | Day's number              | Challenge?                                      |
+| ------------------ | ------------------ | ------------------------- | ----------------------------------------------- |
+| Steps              | `steps`            | Sum                       | Yes                                             |
+| Active minutes     | `activeMinutes`    | Sum                       | Yes                                             |
+| Distance           | `distanceMeters`   | Sum                       | Yes                                             |
+| Watch workouts     | `externalWorkouts` | Count + list              | Maybe (must be matched against logged sessions) |
+| Sleep              | `sleepMinutes`     | Night ending that morning | No                                              |
+| Body weight        | `bodyWeightKg`     | Latest                    | No (could feed existing body weight tracking)   |
+| Resting heart rate | `restingHr`        | Latest                    | No                                              |
 
 ---
 

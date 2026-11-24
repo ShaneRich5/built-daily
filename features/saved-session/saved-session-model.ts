@@ -26,14 +26,25 @@ export type SavedSessionSummary = {
   exercises: SavedSessionExercise[];
 };
 
-export function summarizeSavedSession(session: WorkoutSessionDoc): SavedSessionSummary {
+export function summarizeSavedSession(
+  session: WorkoutSessionDoc,
+): SavedSessionSummary {
   const stats: SavedSessionStat[] = [
-    { label: session.exerciseCount === 1 ? "Exercise" : "Exercises", value: String(session.exerciseCount) },
-    { label: session.setCount === 1 ? "Set" : "Sets", value: String(session.setCount) },
+    {
+      label: session.exerciseCount === 1 ? "Exercise" : "Exercises",
+      value: String(session.exerciseCount),
+    },
+    {
+      label: session.setCount === 1 ? "Set" : "Sets",
+      value: String(session.setCount),
+    },
   ];
   // Older workouts may carry a duration from the old session timer.
   if (session.activeDurationSec != null && session.activeDurationSec > 0) {
-    stats.push({ label: "Duration", value: formatDurationSec(session.activeDurationSec) });
+    stats.push({
+      label: "Duration",
+      value: formatDurationSec(session.activeDurationSec),
+    });
   }
   return {
     title: session.title,
@@ -54,7 +65,9 @@ export function summarizeSavedSession(session: WorkoutSessionDoc): SavedSessionS
     exercises: session.lines.map((line) => ({
       lineId: line.lineId,
       name: line.nameSnapshot,
-      sets: line.sets.map(formatSetSummary).filter((summary) => summary !== "—"),
+      sets: line.sets
+        .map(formatSetSummary)
+        .filter((summary) => summary !== "—"),
       note: session.exerciseNotesByLineId?.[line.lineId]?.trim() || null,
     })),
   };

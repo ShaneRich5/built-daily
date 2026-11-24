@@ -38,12 +38,14 @@ import {
 async function applyMoves(moves: ScheduledWorkoutMove[]) {
   if (moves.length === 0) return;
   const ok = await moveScheduledWorkouts(moves).catch(() => false);
-  if (!ok) window.alert("Couldn’t move that. Check your connection and try again.");
+  if (!ok)
+    window.alert("Couldn’t move that. Check your connection and try again.");
 }
 
 function copyMessage(result: CopyLastWeekResult | null): string {
   if (!result) return "Couldn’t copy last week’s plan.";
-  if (result.added === 0 && result.skippedExisting === 0) return "Last week had nothing to copy.";
+  if (result.added === 0 && result.skippedExisting === 0)
+    return "Last week had nothing to copy.";
   if (result.added === 0) return "This week is already planned.";
   const added = `Added ${result.added} workout${result.added === 1 ? "" : "s"}`;
   return result.skippedExisting > 0
@@ -64,7 +66,10 @@ export function PlannerScreen() {
   const [moveCard, setMoveCard] = useState<BoardCard | null>(null);
   const [moveOpen, setMoveOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
-  const [copyState, setCopyState] = useState<{ busy: boolean; message: string | null }>({
+  const [copyState, setCopyState] = useState<{
+    busy: boolean;
+    message: string | null;
+  }>({
     busy: false,
     message: null,
   });
@@ -83,14 +88,22 @@ export function PlannerScreen() {
         activities: data.activities,
         weeklyGoal: data.weeklyGoal,
       }),
-    [anchorKey, todayKey, data.scheduled, data.sessions, data.activities, data.weeklyGoal],
+    [
+      anchorKey,
+      todayKey,
+      data.scheduled,
+      data.sessions,
+      data.activities,
+      data.weeklyGoal,
+    ],
   );
   const tray = useMemo(
     () => data.unscheduled.map((entry) => toBoardCard(entry, todayKey)),
     [data.unscheduled, todayKey],
   );
   const movable = useMemo(
-    () => movableEntries(data.openNearby, todayKey, workoutDayKeys(data.sessions)),
+    () =>
+      movableEntries(data.openNearby, todayKey, workoutDayKeys(data.sessions)),
     [data.openNearby, todayKey, data.sessions],
   );
 
@@ -98,11 +111,15 @@ export function PlannerScreen() {
     () => calendarDays(view, anchorKey, todayKey, markers),
     [view, anchorKey, todayKey, markers],
   );
-  const agenda = useMemo(() => dayAgenda(items, selectedKey), [items, selectedKey]);
+  const agenda = useMemo(
+    () => dayAgenda(items, selectedKey),
+    [items, selectedKey],
+  );
   const templates = useMemo(() => {
     const uses = new Map<string, number>();
     for (const item of items) {
-      if (item.kind === "completed" && item.planId) uses.set(item.planId, (uses.get(item.planId) ?? 0) + 1);
+      if (item.kind === "completed" && item.planId)
+        uses.set(item.planId, (uses.get(item.planId) ?? 0) + 1);
     }
     return plans.map(({ id, plan }) => {
       const n = plan.lines.length;
@@ -120,7 +137,10 @@ export function PlannerScreen() {
       <div className="flex flex-1 flex-col gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Planner</h1>
         <p className="text-sm text-zinc-500">
-          <Link href="/login" className="font-semibold text-zinc-900 underline dark:text-zinc-100">
+          <Link
+            href="/login"
+            className="font-semibold text-zinc-900 underline dark:text-zinc-100"
+          >
             Sign in
           </Link>{" "}
           to plan your week.
@@ -155,20 +175,35 @@ export function PlannerScreen() {
         agendaHeading={agendaHeading(selectedKey, todayKey)}
         agenda={agenda}
         canPlan={selectedKey >= todayKey}
-        onPlan={() => openPlanSheet(view === "week" ? (selectedKey < todayKey ? todayKey : selectedKey) : selectedKey)}
+        onPlan={() =>
+          openPlanSheet(
+            view === "week"
+              ? selectedKey < todayKey
+                ? todayKey
+                : selectedKey
+              : selectedKey,
+          )
+        }
         onLogActivity={() => setLogOpen(true)}
         onRemovePlanned={(id) => {
-          if (window.confirm("Remove this from the calendar?")) void deleteScheduledWorkout(id);
+          if (window.confirm("Remove this from the calendar?"))
+            void deleteScheduledWorkout(id);
         }}
         copyLastWeek={
-          view === "week" && startOfWeekDateKey(anchorKey) === startOfWeekDateKey(todayKey)
+          view === "week" &&
+          startOfWeekDateKey(anchorKey) === startOfWeekDateKey(todayKey)
             ? {
                 ...copyState,
                 onCopy: () => {
                   setCopyState({ busy: true, message: null });
                   void copyLastWeekPlan(startOfWeekDateKey(todayKey))
                     .catch(() => null)
-                    .then((result) => setCopyState({ busy: false, message: copyMessage(result) }));
+                    .then((result) =>
+                      setCopyState({
+                        busy: false,
+                        message: copyMessage(result),
+                      }),
+                    );
                 },
               }
             : null
@@ -199,8 +234,10 @@ export function PlannerScreen() {
                   setMoveOpen(true);
                 },
                 onPlanDay: openPlanSheet,
-                onPrev: () => setAnchorKey((key) => shiftAnchor("week", key, -1)),
-                onNext: () => setAnchorKey((key) => shiftAnchor("week", key, 1)),
+                onPrev: () =>
+                  setAnchorKey((key) => shiftAnchor("week", key, -1)),
+                onNext: () =>
+                  setAnchorKey((key) => shiftAnchor("week", key, 1)),
               }
             : null
         }
@@ -222,7 +259,9 @@ export function PlannerScreen() {
         onPlan={async (input) => {
           const id = await addScheduledWorkout(input);
           if (!id) {
-            window.alert("Couldn’t add that to the calendar. Check that you’re signed in.");
+            window.alert(
+              "Couldn’t add that to the calendar. Check that you’re signed in.",
+            );
             return;
           }
           if (input.dateKey) setSelectedKey(input.dateKey);

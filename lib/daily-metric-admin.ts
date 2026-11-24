@@ -5,7 +5,10 @@ import {
   firestoreToDailyMetricsDoc,
 } from "@/lib/daily-metric-mapper";
 import { withSourceValue } from "@/lib/daily-metric-resolve";
-import type { DailyMetricKey, DailyMetricSource } from "@/lib/daily-metric-types";
+import type {
+  DailyMetricKey,
+  DailyMetricSource,
+} from "@/lib/daily-metric-types";
 
 /**
  * Admin-SDK writer for synced daily metrics (ingest API + MCP). Server-side

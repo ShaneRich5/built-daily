@@ -29,8 +29,12 @@ export async function deleteHistoryItems({
   if (!db || !uid) return false;
 
   const refs = [
-    ...sessionIds.filter(Boolean).map((id) => doc(db, "users", uid, "sessions", id)),
-    ...activityIds.filter(Boolean).map((id) => doc(db, "users", uid, "activities", id)),
+    ...sessionIds
+      .filter(Boolean)
+      .map((id) => doc(db, "users", uid, "sessions", id)),
+    ...activityIds
+      .filter(Boolean)
+      .map((id) => doc(db, "users", uid, "activities", id)),
   ];
   if (refs.length === 0) return true;
 

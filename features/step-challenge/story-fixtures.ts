@@ -2,7 +2,11 @@
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import type { ChallengeRule, SavedChallenge } from "@/lib/challenge-types";
 import { withSourceValue } from "@/lib/daily-metric-resolve";
-import type { DailyMetricEntry, DailyMetricSource, DailyMetricsDoc } from "@/lib/daily-metric-types";
+import type {
+  DailyMetricEntry,
+  DailyMetricSource,
+  DailyMetricsDoc,
+} from "@/lib/daily-metric-types";
 import {
   buildStepChallengeCardView,
   type StepChallengeCardView,
@@ -13,7 +17,10 @@ export const TODAY = "2026-11-24";
 
 const at = new Date("2026-11-24T09:41:00");
 
-export function challenge(rule: ChallengeRule, startDate = WEEK_START): SavedChallenge {
+export function challenge(
+  rule: ChallengeRule,
+  startDate = WEEK_START,
+): SavedChallenge {
   return {
     id: `c-${startDate}-${rule.kind}`,
     challenge: {
@@ -32,7 +39,10 @@ export function challenge(rule: ChallengeRule, startDate = WEEK_START): SavedCha
 /** Each day's sources, Sunday first. `null` = nothing that day. */
 type DaySources = Partial<Record<DailyMetricSource, number>> | null;
 
-export function stepWeek(daySources: DaySources[], startDate = WEEK_START): Record<string, DailyMetricsDoc> {
+export function stepWeek(
+  daySources: DaySources[],
+  startDate = WEEK_START,
+): Record<string, DailyMetricsDoc> {
   const out: Record<string, DailyMetricsDoc> = {};
   daySources.forEach((sources, i) => {
     if (!sources) return;
@@ -41,15 +51,24 @@ export function stepWeek(daySources: DaySources[], startDate = WEEK_START): Reco
     for (const [source, value] of Object.entries(sources)) {
       entry = withSourceValue(entry, source as DailyMetricSource, value, at);
     }
-    if (entry) out[dateKey] = { dateKey, metrics: { steps: entry }, updatedAt: at };
+    if (entry)
+      out[dateKey] = { dateKey, metrics: { steps: entry }, updatedAt: at };
   });
   return out;
 }
 
-export const daysHit: ChallengeRule = { kind: "days_hit", dailyTarget: 7000, daysNeeded: 5 };
+export const daysHit: ChallengeRule = {
+  kind: "days_hit",
+  dailyTarget: 7000,
+  daysNeeded: 5,
+};
 
 /** Sun and Mon hit (typed), Tue 3,100 so far. */
-export const typedWeek = stepWeek([{ manual: 8200 }, { manual: 7500 }, { manual: 3100 }]);
+export const typedWeek = stepWeek([
+  { manual: 8200 },
+  { manual: 7500 },
+  { manual: 3100 },
+]);
 
 /** The same week, synced from Apple Health; today's sync is still catching up. */
 export const syncedWeek = stepWeek([

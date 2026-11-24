@@ -8,13 +8,21 @@ import type { DailyMetricKey } from "@/lib/daily-metric-types";
  */
 
 /** "7,000 steps on 5 of 7 days". The default: leaves room for rest days. */
-export type DaysHitRule = { kind: "days_hit"; dailyTarget: number; daysNeeded: number };
+export type DaysHitRule = {
+  kind: "days_hit";
+  dailyTarget: number;
+  daysNeeded: number;
+};
 
 /** "50,000 steps this week", any mix of days. */
 export type TotalRule = { kind: "total"; target: number };
 
 /** "6,000 a day, 7 days running". Opt-in only, since a broken streak feels bad. */
-export type StreakRule = { kind: "streak"; dailyTarget: number; length: number };
+export type StreakRule = {
+  kind: "streak";
+  dailyTarget: number;
+  length: number;
+};
 
 export type ChallengeRule = DaysHitRule | TotalRule | StreakRule;
 export type ChallengeRuleKind = ChallengeRule["kind"];

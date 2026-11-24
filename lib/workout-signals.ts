@@ -72,7 +72,10 @@ export function computeWorkoutSignals(
   const activityByDay = activityByDayFromSessions(completed);
   for (const a of activities) {
     if (!a.activityDate) continue;
-    activityByDay.set(a.activityDate, (activityByDay.get(a.activityDate) ?? 0) + 1);
+    activityByDay.set(
+      a.activityDate,
+      (activityByDay.get(a.activityDate) ?? 0) + 1,
+    );
   }
 
   let lastWorkoutDateKey: string | null = null;
@@ -82,7 +85,9 @@ export function computeWorkoutSignals(
     const later =
       !lastWorkoutDateKey ||
       key > lastWorkoutDateKey ||
-      (key === lastWorkoutDateKey && lastWorkoutAt !== null && at > lastWorkoutAt);
+      (key === lastWorkoutDateKey &&
+        lastWorkoutAt !== null &&
+        at > lastWorkoutAt);
     if (later) {
       lastWorkoutDateKey = key;
       lastWorkoutAt = at;
@@ -91,7 +96,11 @@ export function computeWorkoutSignals(
   };
   for (const s of completed) {
     const at = s.endedAt ?? s.startedAt;
-    considerLast(s.workoutDate ?? localDateKeyFromMs(at.getTime()), at, s.title);
+    considerLast(
+      s.workoutDate ?? localDateKeyFromMs(at.getTime()),
+      at,
+      s.title,
+    );
   }
   for (const a of activities) {
     considerLast(a.activityDate, a.at, a.label);
@@ -99,7 +108,10 @@ export function computeWorkoutSignals(
 
   return {
     currentStreak: currentWorkoutStreak(activityByDay, todayKey),
-    workoutsThisWeek: workoutsInWeek(activityByDay, startOfWeekDateKey(todayKey)),
+    workoutsThisWeek: workoutsInWeek(
+      activityByDay,
+      startOfWeekDateKey(todayKey),
+    ),
     lastWorkoutDateKey,
     lastWorkoutAt,
     lastWorkoutLabel,

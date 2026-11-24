@@ -10,7 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Built Daily",
     short_name: "Built Daily",
-    description: "A simple workout journal focused on consistency and showing up.",
+    description:
+      "A simple workout journal focused on consistency and showing up.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -18,9 +19,24 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#fafafa",
     categories: ["health", "fitness", "lifestyle"],
     icons: [
-      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
-      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      {
+        src: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/icon-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
     ],
     shortcuts: [
       { name: "Start a workout", short_name: "Start", url: "/workout" },

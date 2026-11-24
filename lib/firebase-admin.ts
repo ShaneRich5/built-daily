@@ -25,7 +25,7 @@ function resolveCredentialsPath(): void {
 export function isFirebaseAdminConfigured(): boolean {
   return Boolean(
     process.env.FIREBASE_SERVICE_ACCOUNT?.trim() ||
-      process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim(),
+    process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim(),
   );
 }
 

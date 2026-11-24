@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import {
   describeChallengeRule,
   evaluateChallenge,
@@ -9,7 +9,11 @@ import {
 } from "@/lib/challenge-evaluate";
 
 /** Sun Nov 22 – Sat Nov 28, 2026. */
-const week = { metric: "steps" as const, startDate: "2026-11-22", endDate: "2026-11-28" };
+const week = {
+  metric: "steps" as const,
+  startDate: "2026-11-22",
+  endDate: "2026-11-28",
+};
 
 /** Values for the week from Sunday, e.g. `days(8200, 7500)` fills Sun and Mon. */
 function days(...values: Array<number | null>): Record<string, number | null> {
@@ -21,7 +25,10 @@ function days(...values: Array<number | null>): Record<string, number | null> {
 }
 
 describe("evaluateDaysHit", () => {
-  const input = { ...week, rule: { kind: "days_hit" as const, dailyTarget: 7000, daysNeeded: 5 } };
+  const input = {
+    ...week,
+    rule: { kind: "days_hit" as const, dailyTarget: 7000, daysNeeded: 5 },
+  };
 
   it("counts days at or above the target", () => {
     const r = evaluateDaysHit(input, days(8214, 7000, 3100), "2026-11-24");
@@ -56,7 +63,11 @@ describe("evaluateDaysHit", () => {
   });
 
   it("is done once enough days are in, and ignores future values", () => {
-    const r = evaluateDaysHit(input, days(9000, 9000, 9000, 9000, 9000, 1, 99999), "2026-11-26");
+    const r = evaluateDaysHit(
+      input,
+      days(9000, 9000, 9000, 9000, 9000, 1, 99999),
+      "2026-11-26",
+    );
     assert.equal(r.done, true);
     assert.equal(r.tone, "done");
     assert.equal(r.progress, 1);
@@ -67,7 +78,10 @@ describe("evaluateDaysHit", () => {
     const r = evaluateDaysHit(input, days(9000, 9000, 9000), "2026-11-30");
     assert.equal(r.ended, true);
     assert.equal(r.done, false);
-    assert.equal(r.status, "3 of 5 days this time. A new week is a fresh start.");
+    assert.equal(
+      r.status,
+      "3 of 5 days this time. A new week is a fresh start.",
+    );
   });
 });
 
@@ -92,7 +106,10 @@ describe("evaluateTotal", () => {
   it("marks a day as hit when it carries its fair share of the target", () => {
     // Fair share of 50,000 over 7 days is ~7,100.
     const r = evaluateTotal(input, days(7200, 7000), "2026-11-23");
-    assert.deepEqual(r.days.slice(0, 2).map((d) => d.hit), [true, false]);
+    assert.deepEqual(
+      r.days.slice(0, 2).map((d) => d.hit),
+      [true, false],
+    );
   });
 
   it("is done at the target", () => {
@@ -103,7 +120,10 @@ describe("evaluateTotal", () => {
 });
 
 describe("evaluateStreak", () => {
-  const input = { ...week, rule: { kind: "streak" as const, dailyTarget: 6000, length: 7 } };
+  const input = {
+    ...week,
+    rule: { kind: "streak" as const, dailyTarget: 6000, length: 7 },
+  };
 
   it("counts the current run, and today not being hit yet doesn't break it", () => {
     const r = evaluateStreak(input, days(6500, 7000, 1200), "2026-11-24");
@@ -112,7 +132,11 @@ describe("evaluateStreak", () => {
   });
 
   it("restarts the run after a missed day", () => {
-    const r = evaluateStreak({ ...input, rule: { ...input.rule, length: 3 } }, days(6500, 100, 7000), "2026-11-24");
+    const r = evaluateStreak(
+      { ...input, rule: { ...input.rule, length: 3 } },
+      days(6500, 100, 7000),
+      "2026-11-24",
+    );
     assert.equal(r.current, 1);
   });
 
@@ -146,10 +170,17 @@ describe("evaluateChallenge", () => {
 
   it("describes each preset in plain words", () => {
     assert.equal(
-      describeChallengeRule({ kind: "days_hit", dailyTarget: 7000, daysNeeded: 5 }),
+      describeChallengeRule({
+        kind: "days_hit",
+        dailyTarget: 7000,
+        daysNeeded: 5,
+      }),
       "7,000 steps on 5 of 7 days",
     );
-    assert.equal(describeChallengeRule({ kind: "total", target: 50000 }), "50,000 steps this week");
+    assert.equal(
+      describeChallengeRule({ kind: "total", target: 50000 }),
+      "50,000 steps this week",
+    );
     assert.equal(
       describeChallengeRule({ kind: "streak", dailyTarget: 6000, length: 7 }),
       "6,000 a day, 7 days running",

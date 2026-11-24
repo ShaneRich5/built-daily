@@ -36,10 +36,13 @@ export function setUpPwa(): void {
   });
 
   // Dev builds change on every save; a caching worker there only gets in the way.
-  if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
-  navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => {
-    // Not fatal: the app works the same without it, just not offline.
-  });
+  if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator))
+    return;
+  navigator.serviceWorker
+    .register("/sw.js", { scope: "/", updateViaCache: "none" })
+    .catch(() => {
+      // Not fatal: the app works the same without it, just not offline.
+    });
 }
 
 export function subscribeInstallPrompt(listener: () => void): () => void {
@@ -65,13 +68,19 @@ export async function promptInstall(): Promise<boolean> {
 /** Already running as the installed app (home screen / app window). */
 export function isRunningStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return iosStandalone || window.matchMedia("(display-mode: standalone)").matches;
+  const iosStandalone =
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+  return (
+    iosStandalone || window.matchMedia("(display-mode: standalone)").matches
+  );
 }
 
 /** iPhone or iPad (including iPadOS, which reports itself as a Mac with touch). */
 export function isIos(): boolean {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
-  return /iPhone|iPad|iPod/.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
+  return (
+    /iPhone|iPad|iPod/.test(ua) ||
+    (ua.includes("Macintosh") && navigator.maxTouchPoints > 1)
+  );
 }

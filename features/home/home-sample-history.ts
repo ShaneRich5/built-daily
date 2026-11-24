@@ -84,11 +84,14 @@ export function sampleHistory({
   for (let back = pastWeeks; back >= 1; back--) {
     const start = addDaysToDateKey(weekStart, -7 * back);
     const days = shortWeeks.includes(back) ? [1, 4] : [1, 3, 5];
-    for (const d of days) sessions.push(session(addDaysToDateKey(start, d), n++));
+    for (const d of days)
+      sessions.push(session(addDaysToDateKey(start, d), n++));
     if (back % 2 === 0) activities.push(walk(addDaysToDateKey(start, 6)));
   }
-  for (const d of doneThisWeek) sessions.push(session(addDaysToDateKey(weekStart, d), n++));
-  for (const d of walksThisWeek) activities.push(walk(addDaysToDateKey(weekStart, d)));
+  for (const d of doneThisWeek)
+    sessions.push(session(addDaysToDateKey(weekStart, d), n++));
+  for (const d of walksThisWeek)
+    activities.push(walk(addDaysToDateKey(weekStart, d)));
   const entries = plannedThisWeek.map((d, i): ScheduledWorkoutEntry => {
     const dateKey = addDaysToDateKey(weekStart, d);
     return {

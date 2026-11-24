@@ -14,10 +14,7 @@ import {
   getActivityTypeById,
   pickableActivityTypes,
 } from "@/lib/activity-catalog";
-import {
-  deleteActivity,
-  updateActivity,
-} from "@/lib/activity-repository";
+import { deleteActivity, updateActivity } from "@/lib/activity-repository";
 import type { ActivityDoc } from "@/lib/activity-types";
 import { normalizeWorkoutTime } from "@/lib/workout-date";
 
@@ -51,18 +48,14 @@ export function ActivityDetail({
   const router = useRouter();
   const [typeId, setTypeId] = useState(activity.activityTypeId);
   const [activityDate, setActivityDate] = useState(activity.activityDate);
-  const [activityTime, setActivityTime] = useState(
-    activity.activityTime ?? "",
-  );
+  const [activityTime, setActivityTime] = useState(activity.activityTime ?? "");
   const [durationMin, setDurationMin] = useState(
     activity.durationMin != null ? String(activity.durationMin) : "",
   );
   const [distanceMiles, setDistanceMiles] = useState(
     activity.distanceMiles != null ? String(activity.distanceMiles) : "",
   );
-  const [locationName, setLocationName] = useState(
-    activity.locationName ?? "",
-  );
+  const [locationName, setLocationName] = useState(activity.locationName ?? "");
   const [notes, setNotes] = useState(activity.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);

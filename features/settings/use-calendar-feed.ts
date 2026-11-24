@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { createCalendarFeedUrl, getCalendarFeedUrl } from "@/lib/calendar-feed-repository";
+import {
+  createCalendarFeedUrl,
+  getCalendarFeedUrl,
+} from "@/lib/calendar-feed-repository";
 
 /** The signed-in user's calendar feed link: load it, make it, or swap it for a new one. */
 export function useCalendarFeed() {

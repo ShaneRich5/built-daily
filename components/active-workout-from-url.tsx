@@ -3,7 +3,14 @@
 import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { firestoreLeftoverPlanner } from "@/features/workout-session/leftover-planner";
 import { WorkoutSessionScreen } from "@/features/workout-session/workout-session-screen";
 import { useAuth } from "@/components/auth-provider";
@@ -35,10 +42,7 @@ import {
   upsertWorkoutSession,
 } from "@/lib/workout-session-repository";
 import type { WorkoutPlanDoc, WorkoutSessionDoc } from "@/lib/workout-types";
-import {
-  isDefaultWorkoutTitle,
-  localDateKeyFromMs,
-} from "@/lib/workout-date";
+import { isDefaultWorkoutTitle, localDateKeyFromMs } from "@/lib/workout-date";
 
 const QUERY_EXERCISES = "e";
 const QUERY_TITLE = "t";
@@ -63,7 +67,6 @@ type ResumeBundle = {
   sessionStartedAtMs: number;
 };
 
-
 function sessionToResumeBundle(
   sessionId: string,
   session: WorkoutSessionDoc,
@@ -77,7 +80,9 @@ function sessionToResumeBundle(
   const setsByExercise = session.lines.map((line) =>
     line.sets.length > 0 ? line.sets.map(setLogToUiSetRow) : [emptyUiSetRow()],
   );
-  const sections = session.lines.map((line): LineSection => line.section ?? "plan");
+  const sections = session.lines.map(
+    (line): LineSection => line.section ?? "plan",
+  );
   const alternates = session.lines.map((line) =>
     (line.alternates ?? []).map(exerciseFromAlternate),
   );
@@ -147,8 +152,7 @@ export function ActiveWorkoutFromUrl() {
     !sessionIdParam && planId && !planId.startsWith("starter-"),
   );
 
-  const fetchKey =
-    needsPlanFetch && planId ? `${planId}:${ids.join(",")}` : "";
+  const fetchKey = needsPlanFetch && planId ? `${planId}:${ids.join(",")}` : "";
 
   const [planLoad, setPlanLoad] = useState<{
     key: string;
@@ -245,7 +249,9 @@ export function ActiveWorkoutFromUrl() {
     });
     // Templates can mark exercises as maybes and list alternates for a slot.
     const sections = lines.map((line): LineSection => line?.section ?? "plan");
-    const alternates = lines.map((line) => (line?.alternates ?? []).map(exerciseFromAlternate));
+    const alternates = lines.map((line) =>
+      (line?.alternates ?? []).map(exerciseFromAlternate),
+    );
     return { notes, setsByExercise, sections, alternates };
   }, [needsPlanFetch, planLoad, urlExercises]);
 

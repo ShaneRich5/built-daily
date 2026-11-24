@@ -15,7 +15,15 @@ import { dateFromLocalDateKey } from "@/lib/workout-date";
 /** How long a finished challenge stays on Home (through Tuesday of the next week). */
 export const ENDED_VISIBLE_DAYS = 3;
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 export type StepDayCell = {
   dateKey: string;
@@ -67,7 +75,8 @@ export function rangeLabel(startDate: string, endDate: string): string {
   const start = dateFromLocalDateKey(startDate);
   const end = dateFromLocalDateKey(endDate);
   if (!start || !end) return "";
-  const month = (d: Date) => new Intl.DateTimeFormat("en-US", { month: "short" }).format(d);
+  const month = (d: Date) =>
+    new Intl.DateTimeFormat("en-US", { month: "short" }).format(d);
   return start.getMonth() === end.getMonth()
     ? `${month(start)} ${start.getDate()}–${end.getDate()}`
     : `${month(start)} ${start.getDate()} – ${month(end)} ${end.getDate()}`;
@@ -77,7 +86,10 @@ export function rangeLabel(startDate: string, endDate: string): string {
 export function dayTitle(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
   if (!d) return dateKey;
-  const md = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+  const md = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(d);
   return `${DAY_NAMES[d.getDay()]}, ${md}`;
 }
 
@@ -105,14 +117,18 @@ export type HomeChallengePick = {
 };
 
 /** Which challenge Home shows. Latest created wins if two cover the same week. */
-export function pickHomeChallenge(rows: SavedChallenge[], todayKey: string): HomeChallengePick {
+export function pickHomeChallenge(
+  rows: SavedChallenge[],
+  todayKey: string,
+): HomeChallengePick {
   const newestFirst = [...rows].sort(
     (a, b) => b.challenge.createdAt.getTime() - a.challenge.createdAt.getTime(),
   );
   const current = newestFirst.find(
     (r) => r.challenge.startDate <= todayKey && todayKey <= r.challenge.endDate,
   );
-  const upcoming = newestFirst.find((r) => r.challenge.startDate > todayKey) ?? null;
+  const upcoming =
+    newestFirst.find((r) => r.challenge.startDate > todayKey) ?? null;
   if (current) return { shown: current, upcoming };
 
   const recentlyEnded = newestFirst
@@ -126,7 +142,10 @@ export function pickHomeChallenge(rows: SavedChallenge[], todayKey: string): Hom
 }
 
 /** Sunday the repeat would start: next week while this one runs, else this week. */
-export function repeatStartDate(saved: SavedChallenge, todayKey: string): string {
+export function repeatStartDate(
+  saved: SavedChallenge,
+  todayKey: string,
+): string {
   return saved.challenge.endDate >= todayKey
     ? addDaysToDateKey(saved.challenge.endDate, 1)
     : startOfWeekDateKey(todayKey);
@@ -139,15 +158,23 @@ export function buildStepChallengeCardView(
   upcoming: SavedChallenge | null,
 ): StepChallengeCardView {
   const { challenge } = saved;
-  const progress = evaluateChallenge(challenge, stepValuesByDate(days), todayKey);
+  const progress = evaluateChallenge(
+    challenge,
+    stepValuesByDate(days),
+    todayKey,
+  );
   const state = progress.done ? "done" : progress.ended ? "ended" : "active";
   const isTotal = challenge.rule.kind === "total";
 
   const cells: StepDayCell[] = progress.days.map((d) => {
     const resolvedFrom = days[d.dateKey]?.metrics.steps?.resolvedFrom ?? null;
-    const synced = !d.isFuture && resolvedFrom != null && resolvedFrom !== "manual";
+    const synced =
+      !d.isFuture && resolvedFrom != null && resolvedFrom !== "manual";
     const name = dayName(d.dateKey);
-    const amount = d.value == null ? "nothing logged" : `${d.value.toLocaleString("en-US")} steps`;
+    const amount =
+      d.value == null
+        ? "nothing logged"
+        : `${d.value.toLocaleString("en-US")} steps`;
     return {
       dateKey: d.dateKey,
       letter: name[0]!,
@@ -165,9 +192,11 @@ export function buildStepChallengeCardView(
   });
 
   const todayEntry = days[todayKey]?.metrics.steps ?? null;
-  const running = challenge.startDate <= todayKey && todayKey <= challenge.endDate;
+  const running =
+    challenge.startDate <= todayKey && todayKey <= challenge.endDate;
   const repeatStart = repeatStartDate(saved, todayKey);
-  const nextWeekSet = upcoming != null && upcoming.challenge.startDate <= repeatStart;
+  const nextWeekSet =
+    upcoming != null && upcoming.challenge.startDate <= repeatStart;
 
   return {
     id: saved.id,
@@ -190,9 +219,16 @@ export function buildStepChallengeCardView(
     days: cells,
     today: running
       ? {
-          value: todayEntry?.value != null ? todayEntry.value.toLocaleString("en-US") : "nothing yet",
-          source: todayEntry?.resolvedFrom ? DAILY_METRIC_SOURCE_LABELS[todayEntry.resolvedFrom] : null,
-          synced: todayEntry?.resolvedFrom != null && todayEntry.resolvedFrom !== "manual",
+          value:
+            todayEntry?.value != null
+              ? todayEntry.value.toLocaleString("en-US")
+              : "nothing yet",
+          source: todayEntry?.resolvedFrom
+            ? DAILY_METRIC_SOURCE_LABELS[todayEntry.resolvedFrom]
+            : null,
+          synced:
+            todayEntry?.resolvedFrom != null &&
+            todayEntry.resolvedFrom !== "manual",
         }
       : null,
     repeatLabel:
@@ -230,7 +266,10 @@ export function buildLogStepsDay(
     manual: manual?.value ?? null,
     synced:
       fallback.value != null && fallback.resolvedFrom
-        ? { value: fallback.value, source: DAILY_METRIC_SOURCE_LABELS[fallback.resolvedFrom] }
+        ? {
+            value: fallback.value,
+            source: DAILY_METRIC_SOURCE_LABELS[fallback.resolvedFrom],
+          }
         : null,
   };
 }

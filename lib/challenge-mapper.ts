@@ -12,7 +12,10 @@ function asDate(v: unknown): Date | null {
   return v instanceof Timestamp ? v.toDate() : null;
 }
 
-function inRange(v: unknown, limits: { min: number; max: number }): v is number {
+function inRange(
+  v: unknown,
+  limits: { min: number; max: number },
+): v is number {
   return (
     typeof v === "number" &&
     Number.isInteger(v) &&
@@ -29,7 +32,11 @@ export function parseChallengeRule(raw: unknown): ChallengeRule | null {
     case "days_hit":
       return inRange(r.dailyTarget, CHALLENGE_LIMITS.dailyTarget) &&
         inRange(r.daysNeeded, CHALLENGE_LIMITS.daysNeeded)
-        ? { kind: "days_hit", dailyTarget: r.dailyTarget, daysNeeded: r.daysNeeded }
+        ? {
+            kind: "days_hit",
+            dailyTarget: r.dailyTarget,
+            daysNeeded: r.daysNeeded,
+          }
         : null;
     case "total":
       return inRange(r.target, CHALLENGE_LIMITS.total)
@@ -46,18 +53,30 @@ export function parseChallengeRule(raw: unknown): ChallengeRule | null {
 }
 
 /** Only the rule's own fields, so a preset's extras never reach Firestore. */
-export function challengeRuleToFirestore(rule: ChallengeRule): Record<string, unknown> {
+export function challengeRuleToFirestore(
+  rule: ChallengeRule,
+): Record<string, unknown> {
   switch (rule.kind) {
     case "days_hit":
-      return { kind: rule.kind, dailyTarget: rule.dailyTarget, daysNeeded: rule.daysNeeded };
+      return {
+        kind: rule.kind,
+        dailyTarget: rule.dailyTarget,
+        daysNeeded: rule.daysNeeded,
+      };
     case "total":
       return { kind: rule.kind, target: rule.target };
     case "streak":
-      return { kind: rule.kind, dailyTarget: rule.dailyTarget, length: rule.length };
+      return {
+        kind: rule.kind,
+        dailyTarget: rule.dailyTarget,
+        length: rule.length,
+      };
   }
 }
 
-export function challengeDocToFirestore(doc: ChallengeDoc): Record<string, unknown> {
+export function challengeDocToFirestore(
+  doc: ChallengeDoc,
+): Record<string, unknown> {
   return {
     metric: doc.metric,
     rule: challengeRuleToFirestore(doc.rule),

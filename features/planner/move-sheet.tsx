@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeftRight, ArrowRight, Ban, Inbox, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Ban,
+  Inbox,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { addDaysToDateKey } from "@/lib/calendar-views";
@@ -31,15 +38,26 @@ type MoveSheetProps = {
   movable: MovableEntry[];
 };
 
-type StripDay = { dateKey: string; dow: string; day: number; busy: MovableEntry[] };
+type StripDay = {
+  dateKey: string;
+  dow: string;
+  day: number;
+  busy: MovableEntry[];
+};
 
-function nextSevenDays(todayKey: string, movable: MovableEntry[], cardId: string): StripDay[] {
+function nextSevenDays(
+  todayKey: string,
+  movable: MovableEntry[],
+  cardId: string,
+): StripDay[] {
   return Array.from({ length: 7 }, (_, i) => {
     const dateKey = addDaysToDateKey(todayKey, i);
     const d = dateFromLocalDateKey(dateKey);
     return {
       dateKey,
-      dow: d ? new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d) : "",
+      dow: d
+        ? new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d)
+        : "",
       day: d?.getDate() ?? 0,
       busy: movable.filter((e) => e.dateKey === dateKey && e.id !== cardId),
     };
@@ -80,8 +98,12 @@ function OptionRow({
         {icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">{title}</span>
-        <span className="block text-xs text-zinc-600 dark:text-zinc-400">{sub}</span>
+        <span className="block text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+          {title}
+        </span>
+        <span className="block text-xs text-zinc-600 dark:text-zinc-400">
+          {sub}
+        </span>
       </span>
     </button>
   );
@@ -91,7 +113,13 @@ function OptionRow({
  * Move one planned workout: pick a day (a busy day offers a swap), push the
  * rest of the week back, park it in Unscheduled, skip it, or remove it.
  */
-export function MoveSheet({ open, onOpenChange, card, todayKey, movable }: MoveSheetProps) {
+export function MoveSheet({
+  open,
+  onOpenChange,
+  card,
+  todayKey,
+  movable,
+}: MoveSheetProps) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -115,12 +143,15 @@ export function MoveSheet({ open, onOpenChange, card, todayKey, movable }: MoveS
       if (!ok) throw new Error("not saved");
       close(false);
     } catch {
-      window.alert("Couldn’t update your plan. Check your connection and try again.");
+      window.alert(
+        "Couldn’t update your plan. Check your connection and try again.",
+      );
     } finally {
       setSaving(false);
     }
   };
-  const move = (moves: ScheduledWorkoutMove[]) => run(() => moveScheduledWorkouts(moves));
+  const move = (moves: ScheduledWorkoutMove[]) =>
+    run(() => moveScheduledWorkouts(moves));
 
   const strip = nextSevenDays(todayKey, movable, card.id);
   const pending = strip.find((d) => d.dateKey === pendingKey) ?? null;
@@ -197,7 +228,11 @@ export function MoveSheet({ open, onOpenChange, card, todayKey, movable }: MoveS
                     aria-hidden
                     className={cn(
                       "size-1.5 rounded-full",
-                      day.busy.length > 0 ? (current ? "bg-emerald-300" : "bg-emerald-700 dark:bg-emerald-400") : "bg-transparent",
+                      day.busy.length > 0
+                        ? current
+                          ? "bg-emerald-300"
+                          : "bg-emerald-700 dark:bg-emerald-400"
+                        : "bg-transparent",
                     )}
                   />
                 </button>
@@ -221,7 +256,10 @@ export function MoveSheet({ open, onOpenChange, card, todayKey, movable }: MoveS
                   onClick={() =>
                     void move([
                       { id: card.id, dateKey: pending.dateKey },
-                      ...pending.busy.map((e) => ({ id: e.id, dateKey: card.dateKey })),
+                      ...pending.busy.map((e) => ({
+                        id: e.id,
+                        dateKey: card.dateKey,
+                      })),
                     ])
                   }
                 />
@@ -231,7 +269,9 @@ export function MoveSheet({ open, onOpenChange, card, todayKey, movable }: MoveS
                 title={`Add to ${pending.dow} as well`}
                 sub={`Two things on ${shortDay(pending.dateKey)}`}
                 disabled={saving}
-                onClick={() => void move([{ id: card.id, dateKey: pending.dateKey }])}
+                onClick={() =>
+                  void move([{ id: card.id, dateKey: pending.dateKey }])
+                }
               />
             </>
           ) : null}
@@ -263,7 +303,11 @@ export function MoveSheet({ open, onOpenChange, card, todayKey, movable }: MoveS
               title="Skip this one"
               sub="Marked skipped, nothing else changes"
               disabled={saving}
-              onClick={() => void run(() => updateScheduledWorkout(card.id, { status: "skipped" }))}
+              onClick={() =>
+                void run(() =>
+                  updateScheduledWorkout(card.id, { status: "skipped" }),
+                )
+              }
             />
           ) : null}
           <OptionRow

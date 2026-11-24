@@ -5,10 +5,7 @@ import {
   shiftLocalDateKey,
   type WorkoutActivityByDay,
 } from "@/lib/workout-activity";
-import {
-  dateFromLocalDateKey,
-  localDateKeyFromMs,
-} from "@/lib/workout-date";
+import { dateFromLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
 import type {
   DayActivityDetail,
   DayLoggedActivitySummary,
@@ -18,9 +15,7 @@ import type {
 /** Activity counts per local calendar day. */
 export type ActivityByDay = Map<string, number>;
 
-export function activityByDayFromSaved(
-  rows: SavedActivity[],
-): ActivityByDay {
+export function activityByDayFromSaved(rows: SavedActivity[]): ActivityByDay {
   const map: ActivityByDay = new Map();
   for (const { activity } of rows) {
     const key = activity.activityDate;

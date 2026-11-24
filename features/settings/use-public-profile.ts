@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { getOwnPublicProfile, setProfilePublic } from "@/lib/public-profile-repository";
+import {
+  getOwnPublicProfile,
+  setProfilePublic,
+} from "@/lib/public-profile-repository";
 
 /** Loads whether the signed-in user's profile is public and flips it optimistically. */
 export function usePublicProfile() {
@@ -22,7 +25,10 @@ export function usePublicProfile() {
       if (cancelled) return;
       const nowPublic = row?.profile.profilePublic ?? false;
       // Re-seed chart history for profiles created before activityByDay existed.
-      if (nowPublic && Object.keys(row?.profile.activityByDay ?? {}).length === 0) {
+      if (
+        nowPublic &&
+        Object.keys(row?.profile.activityByDay ?? {}).length === 0
+      ) {
         await setProfilePublic(true);
       }
       if (cancelled) return;
@@ -52,7 +58,10 @@ export function usePublicProfile() {
 
   const loaded = Boolean(user) && loadedFor === user?.uid;
   const sharePath = user ? `/u/${user.uid}` : "";
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}${sharePath}` : sharePath;
+  const shareUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${sharePath}`
+      : sharePath;
 
   return { loaded, isPublic, busy, error, sharePath, shareUrl, toggle };
 }

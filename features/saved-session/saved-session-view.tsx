@@ -82,18 +82,24 @@ export function SavedSessionView({
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
             {summary.title}
           </h1>
-          <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">{summary.when}</p>
+          <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
+            {summary.when}
+          </p>
         </div>
         <dl
           className="grid gap-2"
-          style={{ gridTemplateColumns: `repeat(${summary.stats.length}, minmax(0, 1fr))` }}
+          style={{
+            gridTemplateColumns: `repeat(${summary.stats.length}, minmax(0, 1fr))`,
+          }}
         >
           {summary.stats.map((stat) => (
             <div
               key={stat.label}
               className="flex flex-col-reverse rounded-xl border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950"
             >
-              <dt className="text-xs text-zinc-500 dark:text-zinc-400">{stat.label}</dt>
+              <dt className="text-xs text-zinc-500 dark:text-zinc-400">
+                {stat.label}
+              </dt>
               <dd className="font-mono text-lg font-medium text-zinc-900 tabular-nums dark:text-zinc-50">
                 {stat.value}
               </dd>
@@ -136,7 +142,10 @@ export function SavedSessionView({
         </section>
       ) : null}
 
-      <section aria-labelledby="saved-exercises-heading" className="flex flex-col gap-2">
+      <section
+        aria-labelledby="saved-exercises-heading"
+        className="flex flex-col gap-2"
+      >
         <h2
           id="saved-exercises-heading"
           className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
@@ -144,7 +153,9 @@ export function SavedSessionView({
           Exercises
         </h2>
         {summary.exercises.length === 0 ? (
-          <p className="text-sm text-zinc-500">Logged without exercise details.</p>
+          <p className="text-sm text-zinc-500">
+            Logged without exercise details.
+          </p>
         ) : (
           <ol className="flex flex-col gap-2">
             {summary.exercises.map((exercise) => (
@@ -156,7 +167,10 @@ export function SavedSessionView({
                   {exercise.name}
                 </h3>
                 {exercise.sets.length > 0 ? (
-                  <ol className="flex flex-wrap gap-1.5" aria-label={`${exercise.name} sets`}>
+                  <ol
+                    className="flex flex-wrap gap-1.5"
+                    aria-label={`${exercise.name} sets`}
+                  >
                     {exercise.sets.map((set, i) => (
                       <li
                         key={i}
@@ -173,7 +187,9 @@ export function SavedSessionView({
                   <p className="text-xs text-zinc-500">No set details.</p>
                 )}
                 {exercise.note ? (
-                  <p className="text-[13px] text-zinc-600 dark:text-zinc-400">{exercise.note}</p>
+                  <p className="text-[13px] text-zinc-600 dark:text-zinc-400">
+                    {exercise.note}
+                  </p>
                 ) : null}
               </li>
             ))}
@@ -183,7 +199,10 @@ export function SavedSessionView({
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 bg-zinc-50/95 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         {error ? (
-          <p role="alert" className="mx-auto mb-2 max-w-2xl text-center text-xs text-red-700 dark:text-red-400">
+          <p
+            role="alert"
+            className="mx-auto mb-2 max-w-2xl text-center text-xs text-red-700 dark:text-red-400"
+          >
             {error}
           </p>
         ) : null}
@@ -191,13 +210,26 @@ export function SavedSessionView({
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <button type="button" className={iconButton} aria-label="More actions" disabled={busy} />
+                <button
+                  type="button"
+                  className={iconButton}
+                  aria-label="More actions"
+                  disabled={busy}
+                />
               }
             >
               <MoreHorizontal className="size-4" aria-hidden />
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" sideOffset={8} className="w-60">
-              <DropdownMenuItem className="min-h-11 gap-2" onClick={actions.onReopen}>
+            <DropdownMenuContent
+              side="top"
+              align="start"
+              sideOffset={8}
+              className="w-60"
+            >
+              <DropdownMenuItem
+                className="min-h-11 gap-2"
+                onClick={actions.onReopen}
+              >
                 <Play className="size-4" aria-hidden />
                 Move back to in progress
               </DropdownMenuItem>
@@ -209,16 +241,30 @@ export function SavedSessionView({
                 <CopyPlus className="size-4" aria-hidden />
                 Save as template
               </DropdownMenuItem>
-              <DropdownMenuItem className="min-h-11 gap-2" onClick={actions.onCopyJournal}>
-                {journalCopied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+              <DropdownMenuItem
+                className="min-h-11 gap-2"
+                onClick={actions.onCopyJournal}
+              >
+                {journalCopied ? (
+                  <Check className="size-4" aria-hidden />
+                ) : (
+                  <Copy className="size-4" aria-hidden />
+                )}
                 {journalCopied ? "Copied" : "Copy journal entry"}
               </DropdownMenuItem>
-              <DropdownMenuItem className="min-h-11 gap-2" onClick={actions.onDownloadJournal}>
+              <DropdownMenuItem
+                className="min-h-11 gap-2"
+                onClick={actions.onDownloadJournal}
+              >
                 <Download className="size-4" aria-hidden />
                 Download .txt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" className="min-h-11 gap-2" onClick={actions.onDelete}>
+              <DropdownMenuItem
+                variant="destructive"
+                className="min-h-11 gap-2"
+                onClick={actions.onDelete}
+              >
                 <Trash2 className="size-4" aria-hidden />
                 Delete workout
               </DropdownMenuItem>

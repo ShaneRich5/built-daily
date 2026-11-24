@@ -2,9 +2,18 @@
 
 import Link from "next/link";
 import { Check, Copy, Download, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { ActivityTypeIcon } from "@/components/activity-type-icon";
-import { HistoryDeleteSheet, selectionLabel } from "@/components/history-delete-sheet";
+import {
+  HistoryDeleteSheet,
+  selectionLabel,
+} from "@/components/history-delete-sheet";
 import { LogActivitySheet } from "@/components/log-activity-sheet";
 import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
@@ -93,11 +102,7 @@ function buildTimeline(
         s.status === "in_progress"
           ? `/workout?s=${encodeURIComponent(s.id)}`
           : `/sessions/${s.id}`,
-      dateLabel: formatSessionJournalMeta(
-        s.workoutDate,
-        s.workoutTime,
-        dateMs,
-      ),
+      dateLabel: formatSessionJournalMeta(s.workoutDate, s.workoutTime, dateMs),
       status: s.status,
       exerciseCount: s.exerciseCount,
       setCount: s.setCount,
@@ -263,7 +268,9 @@ export function HomeTimeline() {
         setActivities(null);
       };
     }
-    const unsubSessions = subscribeRecentSessions(setSessions, { maxDocs: 100 });
+    const unsubSessions = subscribeRecentSessions(setSessions, {
+      maxDocs: 100,
+    });
     const unsubActivities = subscribeRecentActivities(setActivities, {
       maxDocs: 40,
     });
@@ -281,24 +288,34 @@ export function HomeTimeline() {
   const workoutIds = useMemo(
     () =>
       groups.flatMap((group) =>
-        group.items.filter((item) => item.kind === "workout").map((item) => item.id),
+        group.items
+          .filter((item) => item.kind === "workout")
+          .map((item) => item.id),
       ),
     [groups],
   );
   const allKeys = useMemo(
-    () => groups.flatMap((group) => group.items.map((item) => selectionKey(item.kind, item.id))),
+    () =>
+      groups.flatMap((group) =>
+        group.items.map((item) => selectionKey(item.kind, item.id)),
+      ),
     [groups],
   );
   /** Selected workouts in timeline order (exports and deletes use these). */
   const selectedWorkoutIds = useMemo(
-    () => workoutIds.filter((id) => selectedIds.has(selectionKey("workout", id))),
+    () =>
+      workoutIds.filter((id) => selectedIds.has(selectionKey("workout", id))),
     [workoutIds, selectedIds],
   );
   const selectedActivityIds = useMemo(
     () =>
       groups.flatMap((group) =>
         group.items
-          .filter((item) => item.kind === "activity" && selectedIds.has(selectionKey("activity", item.id)))
+          .filter(
+            (item) =>
+              item.kind === "activity" &&
+              selectedIds.has(selectionKey("activity", item.id)),
+          )
           .map((item) => item.id),
       ),
     [groups, selectedIds],
@@ -384,7 +401,10 @@ export function HomeTimeline() {
   const handleDelete = useCallback(async () => {
     if (deleting) return;
     setDeleting(true);
-    const what = selectionLabel(selectedWorkoutIds.length, selectedActivityIds.length);
+    const what = selectionLabel(
+      selectedWorkoutIds.length,
+      selectedActivityIds.length,
+    );
     try {
       const ok = await deleteHistoryItems({
         sessionIds: selectedWorkoutIds,
@@ -392,7 +412,9 @@ export function HomeTimeline() {
       });
       setConfirmDelete(false);
       if (!ok) {
-        setExportError("Couldn’t delete everything. Check your connection and try again.");
+        setExportError(
+          "Couldn’t delete everything. Check your connection and try again.",
+        );
         return;
       }
       exitSelectMode();
@@ -502,8 +524,8 @@ export function HomeTimeline() {
 
       {selecting ? (
         <p className="text-sm text-zinc-500">
-          Tap workouts and activities to select them. Copy and download export the
-          selected workouts as a journal; activities aren’t exported.
+          Tap workouts and activities to select them. Copy and download export
+          the selected workouts as a journal; activities aren’t exported.
         </p>
       ) : null}
 
@@ -541,22 +563,36 @@ export function HomeTimeline() {
                         status={item.status}
                         href={selecting ? undefined : item.href}
                         selectable={selecting}
-                        selected={selectedIds.has(selectionKey("workout", item.id))}
-                        onToggleSelect={() => toggleSelected(selectionKey("workout", item.id))}
+                        selected={selectedIds.has(
+                          selectionKey("workout", item.id),
+                        )}
+                        onToggleSelect={() =>
+                          toggleSelected(selectionKey("workout", item.id))
+                        }
                       />
                     ) : selecting ? (
                       <ActivitySelectRow
-                        selected={selectedIds.has(selectionKey("activity", item.id))}
-                        onToggle={() => toggleSelected(selectionKey("activity", item.id))}
+                        selected={selectedIds.has(
+                          selectionKey("activity", item.id),
+                        )}
+                        onToggle={() =>
+                          toggleSelected(selectionKey("activity", item.id))
+                        }
                       >
-                        <ActivityRowBody item={item} showDate={group.showItemDate} />
+                        <ActivityRowBody
+                          item={item}
+                          showDate={group.showItemDate}
+                        />
                       </ActivitySelectRow>
                     ) : (
                       <Link
                         href={item.href}
                         className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-3 text-left transition hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
                       >
-                        <ActivityRowBody item={item} showDate={group.showItemDate} />
+                        <ActivityRowBody
+                          item={item}
+                          showDate={group.showItemDate}
+                        />
                       </Link>
                     )}
                   </li>
@@ -575,7 +611,10 @@ export function HomeTimeline() {
                 {exportError}
               </p>
             ) : (
-              <p className="text-center text-xs text-zinc-500" aria-live="polite">
+              <p
+                className="text-center text-xs text-zinc-500"
+                aria-live="polite"
+              >
                 {selectedIds.size === 0
                   ? "Select workouts or activities."
                   : `${selectionLabel(selectedWorkoutIds.length, selectedActivityIds.length)} selected`}
@@ -642,36 +681,35 @@ export function HomeTimeline() {
 type ActivityItem = Extract<TimelineItem, { kind: "activity" }>;
 
 /** Icon, name, day/time and details of an activity row (normal and select mode). */
-function ActivityRowBody({ item, showDate }: { item: ActivityItem; showDate: boolean }) {
+function ActivityRowBody({
+  item,
+  showDate,
+}: {
+  item: ActivityItem;
+  showDate: boolean;
+}) {
   return (
     <>
       <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300">
-          <ActivityTypeIcon
-            icon={item.icon}
-            className="size-4"
-          />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="font-semibold text-zinc-900 dark:text-zinc-50">
-              {item.title}
+        <ActivityTypeIcon icon={item.icon} className="size-4" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-baseline justify-between gap-2">
+          <span className="font-semibold text-zinc-900 dark:text-zinc-50">
+            {item.title}
+          </span>
+          {showDate || item.time ? (
+            <span className="text-xs tabular-nums text-zinc-400">
+              {showDate ? formatShortDayLabel(item.dateKey) : null}
+              {showDate && item.time ? " · " : null}
+              {item.time ? formatWorkoutTimeLabel(item.time) : null}
             </span>
-            {showDate || item.time ? (
-              <span className="text-xs tabular-nums text-zinc-400">
-                {showDate
-                  ? formatShortDayLabel(item.dateKey)
-                  : null}
-                {showDate && item.time ? " · " : null}
-                {item.time
-                  ? formatWorkoutTimeLabel(item.time)
-                  : null}
-              </span>
-            ) : null}
-          </span>
-          <span className="mt-0.5 block text-xs text-zinc-500">
-            Activity · {item.meta}
-          </span>
+          ) : null}
         </span>
+        <span className="mt-0.5 block text-xs text-zinc-500">
+          Activity · {item.meta}
+        </span>
+      </span>
     </>
   );
 }

@@ -10,7 +10,11 @@ type AlternateChipsProps = {
 };
 
 /** "or Pec deck · Dumbbell fly": one tap swaps when the machine is taken. */
-export function AlternateChips({ currentName, alternates, onSwap }: AlternateChipsProps) {
+export function AlternateChips({
+  currentName,
+  alternates,
+  onSwap,
+}: AlternateChipsProps) {
   if (alternates.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1.5 pt-1.5 pl-[38px]">

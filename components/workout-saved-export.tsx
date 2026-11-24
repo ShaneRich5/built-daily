@@ -4,7 +4,10 @@ import { Check, Copy, Download, RotateCw, Users } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { getUserGroupMemberships, type SavedGroupMembership } from "@/lib/group-repository";
+import {
+  getUserGroupMemberships,
+  type SavedGroupMembership,
+} from "@/lib/group-repository";
 import {
   formatWorkoutJournalEntry,
   workoutJournalFilename,

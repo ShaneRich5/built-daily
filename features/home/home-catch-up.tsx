@@ -17,7 +17,14 @@ function when(dateKey: string, todayKey: string): string {
 }
 
 /** A calm nudge when a planned workout slid past. Never a red mark. */
-export function HomeCatchUp({ missed, todayKey, busy, onDoToday, onPickDay, onSkip }: HomeCatchUpProps) {
+export function HomeCatchUp({
+  missed,
+  todayKey,
+  busy,
+  onDoToday,
+  onPickDay,
+  onSkip,
+}: HomeCatchUpProps) {
   const secondary =
     "inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-zinc-200 bg-white text-[13px] font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900";
   return (
@@ -33,10 +40,16 @@ export function HomeCatchUp({ missed, todayKey, busy, onDoToday, onPickDay, onSk
           <CalendarCheck className="size-[18px]" />
         </span>
         <div>
-          <h2 id="home-catch-up-heading" className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-            {missed.title} slid past {missed.dateKey ? when(missed.dateKey, todayKey) : ""}
+          <h2
+            id="home-catch-up-heading"
+            className="text-base font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            {missed.title} slid past{" "}
+            {missed.dateKey ? when(missed.dateKey, todayKey) : ""}
           </h2>
-          <p className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-400">Happens. Want to fit it back in?</p>
+          <p className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-400">
+            Happens. Want to fit it back in?
+          </p>
         </div>
       </div>
       <button
@@ -48,10 +61,20 @@ export function HomeCatchUp({ missed, todayKey, busy, onDoToday, onPickDay, onSk
         Do it today
       </button>
       <div className="flex gap-2">
-        <button type="button" disabled={busy} onClick={onPickDay} className={secondary}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onPickDay}
+          className={secondary}
+        >
           Pick a day
         </button>
-        <button type="button" disabled={busy} onClick={onSkip} className={secondary}>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onSkip}
+          className={secondary}
+        >
           Skip it
         </button>
       </div>

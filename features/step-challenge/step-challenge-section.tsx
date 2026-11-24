@@ -1,14 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { addDaysToDateKey, endOfWeekDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
-import { startChallenge, updateChallengeRule } from "@/lib/challenge-repository";
-import { DEFAULT_CHALLENGE_RULE, type ChallengeRule } from "@/lib/challenge-types";
+import {
+  addDaysToDateKey,
+  endOfWeekDateKey,
+  startOfWeekDateKey,
+} from "@/lib/calendar-views";
+import {
+  startChallenge,
+  updateChallengeRule,
+} from "@/lib/challenge-repository";
+import {
+  DEFAULT_CHALLENGE_RULE,
+  type ChallengeRule,
+} from "@/lib/challenge-types";
 import { setManualDailyMetric } from "@/lib/daily-metric-repository";
 import { LogStepsSheet } from "@/features/step-challenge/log-steps-sheet";
 import { StartChallengeSheet } from "@/features/step-challenge/start-challenge-sheet";
 import { StepChallengeCard } from "@/features/step-challenge/step-challenge-card";
-import { buildLogStepsDay, repeatStartDate } from "@/features/step-challenge/step-challenge-model";
+import {
+  buildLogStepsDay,
+  repeatStartDate,
+} from "@/features/step-challenge/step-challenge-model";
 import { useStepChallenge } from "@/features/step-challenge/use-step-challenge";
 
 /**
@@ -41,7 +54,11 @@ export function StepChallengeSection({ todayKey }: { todayKey: string }) {
     });
 
   const submitRule = async (rule: ChallengeRule) => {
-    inBackground(sheet === "edit" && shown ? updateChallengeRule(shown.id, rule) : startThisWeek(rule));
+    inBackground(
+      sheet === "edit" && shown
+        ? updateChallengeRule(shown.id, rule)
+        : startThisWeek(rule),
+    );
     setSheet(null);
     return true;
   };

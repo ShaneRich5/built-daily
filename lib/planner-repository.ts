@@ -22,7 +22,10 @@ import type {
   UnscheduledWorkoutEntry,
 } from "@/lib/planner-types";
 import { NOTE_LIMITS } from "@/lib/workout-types";
-import { removeSelfFromSharedPlan, syncUpcomingPlansToGroups } from "@/lib/group-plan-sync";
+import {
+  removeSelfFromSharedPlan,
+  syncUpcomingPlansToGroups,
+} from "@/lib/group-plan-sync";
 
 /** Groupmates see your next 7 days (day + label); refresh that after any planner write. */
 function afterPlannerWrite(): void {
@@ -99,7 +102,11 @@ export function subscribeScheduledWorkoutsInRange(
   onEntries: (entries: ScheduledWorkoutEntry[]) => void,
 ): () => void {
   const col = scheduledCollectionRef();
-  if (!col || !/^\d{4}-\d{2}-\d{2}$/.test(startKey) || !/^\d{4}-\d{2}-\d{2}$/.test(endKey)) {
+  if (
+    !col ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(startKey) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(endKey)
+  ) {
     onEntries([]);
     return () => {};
   }
@@ -162,8 +169,12 @@ export function subscribeUnscheduledWorkouts(
     (snap) => {
       const out: UnscheduledWorkoutEntry[] = [];
       for (const d of snap.docs) {
-        const fields = parseEntryFields(d.id, d.data() as Record<string, unknown>);
-        if (fields && fields.status === "planned") out.push({ ...fields, dateKey: null });
+        const fields = parseEntryFields(
+          d.id,
+          d.data() as Record<string, unknown>,
+        );
+        if (fields && fields.status === "planned")
+          out.push({ ...fields, dateKey: null });
       }
       out.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
       onEntries(out);
@@ -203,7 +214,10 @@ export async function addScheduledWorkout(
 
   const shared =
     input.sharedPlanId && input.groupId
-      ? { sharedPlanId: input.sharedPlanId.slice(0, 128), groupId: input.groupId.slice(0, 128) }
+      ? {
+          sharedPlanId: input.sharedPlanId.slice(0, 128),
+          groupId: input.groupId.slice(0, 128),
+        }
       : {};
 
   const ref = await addDoc(col, {
@@ -275,23 +289,36 @@ export type ScheduledWorkoutMove = { id: string; dateKey: string | null };
  * Moves several entries at once (a swap, or pushing the week back) so the
  * planner never shows a half-applied shuffle.
  */
-export async function moveScheduledWorkouts(moves: ScheduledWorkoutMove[]): Promise<boolean> {
+export async function moveScheduledWorkouts(
+  moves: ScheduledWorkoutMove[],
+): Promise<boolean> {
   const db = getFirestoreDb();
   const col = scheduledCollectionRef();
   if (!db || !col || moves.length === 0) return false;
-  if (moves.some((m) => !m.id || (m.dateKey !== null && !DATE_KEY.test(m.dateKey)))) return false;
+  if (
+    moves.some(
+      (m) => !m.id || (m.dateKey !== null && !DATE_KEY.test(m.dateKey)),
+    )
+  )
+    return false;
   const batch = writeBatch(db);
   // Only open entries move, so status/sessionId are always planned/null; writing
   // them also backfills entries created before those fields existed (rules need them).
   for (const move of moves) {
-    batch.update(doc(col, move.id), { dateKey: move.dateKey, status: "planned", sessionId: null });
+    batch.update(doc(col, move.id), {
+      dateKey: move.dateKey,
+      status: "planned",
+      sessionId: null,
+    });
   }
   await batch.commit();
   afterPlannerWrite();
   return true;
 }
 
-export async function deleteScheduledWorkout(entryId: string): Promise<boolean> {
+export async function deleteScheduledWorkout(
+  entryId: string,
+): Promise<boolean> {
   const col = scheduledCollectionRef();
   if (!col) return false;
   const ref = doc(col, entryId);
@@ -301,7 +328,8 @@ export async function deleteScheduledWorkout(entryId: string): Promise<boolean> 
   await deleteDoc(ref);
   const sharedPlanId = optionalId(data?.sharedPlanId);
   const groupId = optionalId(data?.groupId);
-  if (sharedPlanId && groupId) void removeSelfFromSharedPlan(groupId, sharedPlanId);
+  if (sharedPlanId && groupId)
+    void removeSelfFromSharedPlan(groupId, sharedPlanId);
   afterPlannerWrite();
   return true;
 }
@@ -319,8 +347,12 @@ export async function findNextPlannedForPlan(
   const snap = await getDocs(query(col, where("planId", "==", planId)));
   let next: ScheduledWorkoutEntry | null = null;
   for (const d of snap.docs) {
-    const entry = parseScheduledEntry(d.id, d.data() as Record<string, unknown>);
-    if (!entry || entry.status !== "planned" || entry.dateKey <= afterDateKey) continue;
+    const entry = parseScheduledEntry(
+      d.id,
+      d.data() as Record<string, unknown>,
+    );
+    if (!entry || entry.status !== "planned" || entry.dateKey <= afterDateKey)
+      continue;
     if (!next || entry.dateKey < next.dateKey) next = entry;
   }
   return next;
@@ -337,24 +369,39 @@ export async function appendExercisesToScheduledWorkout(
   const snap = await getDoc(ref);
   if (!snap.exists()) return false;
   const existing = (snap.data() as Record<string, unknown>).exerciseIds;
-  const current = Array.isArray(existing) ? existing.filter((x): x is string => typeof x === "string") : [];
-  const merged = [...current, ...exerciseIds.filter((id) => !current.includes(id))].slice(0, 40);
+  const current = Array.isArray(existing)
+    ? existing.filter((x): x is string => typeof x === "string")
+    : [];
+  const merged = [
+    ...current,
+    ...exerciseIds.filter((id) => !current.includes(id)),
+  ].slice(0, 40);
   // status/sessionId backfill entries created before those fields existed (rules need them).
-  await updateDoc(ref, { exerciseIds: merged, status: "planned", sessionId: null });
+  await updateDoc(ref, {
+    exerciseIds: merged,
+    status: "planned",
+    sessionId: null,
+  });
   afterPlannerWrite();
   return true;
 }
 
 /** The signed-in user's planner entries linked to one plan together. */
-export async function findEntriesForSharedPlan(sharedPlanId: string): Promise<string[]> {
+export async function findEntriesForSharedPlan(
+  sharedPlanId: string,
+): Promise<string[]> {
   const col = scheduledCollectionRef();
   if (!col || !sharedPlanId) return [];
-  const snap = await getDocs(query(col, where("sharedPlanId", "==", sharedPlanId)));
+  const snap = await getDocs(
+    query(col, where("sharedPlanId", "==", sharedPlanId)),
+  );
   return snap.docs.map((d) => d.id);
 }
 
 /** Deletes linked entries without touching the plan's going list (the caller already did). */
-export async function deleteEntriesForSharedPlan(sharedPlanId: string): Promise<void> {
+export async function deleteEntriesForSharedPlan(
+  sharedPlanId: string,
+): Promise<void> {
   const db = getFirestoreDb();
   const col = scheduledCollectionRef();
   if (!db || !col) return;
@@ -392,7 +439,9 @@ export async function copyLastWeekPlan(
 
   const parseDocs = (docs: { id: string; data: () => unknown }[]) =>
     docs
-      .map((d) => parseScheduledEntry(d.id, d.data() as Record<string, unknown>))
+      .map((d) =>
+        parseScheduledEntry(d.id, d.data() as Record<string, unknown>),
+      )
       .filter((e): e is ScheduledWorkoutEntry => e !== null);
 
   const [lastWeekSnap, currentWeekSnap] = await Promise.all([

@@ -26,7 +26,9 @@ const LOOKBACK_DAYS = 60;
 const MAX_ENTRIES = 1500;
 
 /** The user's current feed token, or null if they haven't made one. */
-export async function getCalendarFeedToken(uid: string): Promise<string | null> {
+export async function getCalendarFeedToken(
+  uid: string,
+): Promise<string | null> {
   const snap = await getAdminFirestore().collection(COLLECTION).doc(uid).get();
   const token = snap.data()?.token;
   return typeof token === "string" ? token : null;
@@ -45,14 +47,18 @@ export async function createCalendarFeedToken(uid: string): Promise<string> {
 
 /** Cheap shape check before touching Firestore. */
 export function looksLikeCalendarFeedToken(token: string): boolean {
-  return token.startsWith(TOKEN_PREFIX) && token.length > TOKEN_PREFIX.length + 20;
+  return (
+    token.startsWith(TOKEN_PREFIX) && token.length > TOKEN_PREFIX.length + 20
+  );
 }
 
 /**
  * Resolves a feed token to its owner, or null if unknown or replaced.
  * Best-effort records when a calendar last fetched it.
  */
-export async function resolveCalendarFeedToken(token: string): Promise<string | null> {
+export async function resolveCalendarFeedToken(
+  token: string,
+): Promise<string | null> {
   const snap = await getAdminFirestore()
     .collection(COLLECTION)
     .where("token", "==", token)
@@ -61,7 +67,9 @@ export async function resolveCalendarFeedToken(token: string): Promise<string | 
   const doc = snap.docs[0];
   if (!doc) return null;
 
-  void doc.ref.update({ lastFetchedAt: FieldValue.serverTimestamp() }).catch(() => {});
+  void doc.ref
+    .update({ lastFetchedAt: FieldValue.serverTimestamp() })
+    .catch(() => {});
   return doc.id;
 }
 
@@ -85,7 +93,8 @@ export async function listCalendarFeedEntries(
   const entries: CalendarFeedEntry[] = [];
   for (const doc of snap.docs) {
     const data = doc.data();
-    if (typeof data.dateKey !== "string" || typeof data.label !== "string") continue;
+    if (typeof data.dateKey !== "string" || typeof data.label !== "string")
+      continue;
     entries.push({
       id: doc.id,
       dateKey: data.dateKey,

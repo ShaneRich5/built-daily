@@ -1,12 +1,18 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-import { resolveDailyMetric, withSourceValue } from "@/lib/daily-metric-resolve";
+import { describe, it } from "vitest";
+import {
+  resolveDailyMetric,
+  withSourceValue,
+} from "@/lib/daily-metric-resolve";
 
 const at = new Date("2026-11-24T12:00:00Z");
 
 describe("resolveDailyMetric", () => {
   it("is empty when no source has a number", () => {
-    assert.deepEqual(resolveDailyMetric({}), { value: null, resolvedFrom: null });
+    assert.deepEqual(resolveDailyMetric({}), {
+      value: null,
+      resolvedFrom: null,
+    });
   });
 
   it("uses a manual edit over any synced value, even a higher one", () => {
@@ -44,7 +50,10 @@ describe("resolveDailyMetric", () => {
   });
 
   it("keeps a manual zero (a day the user says had no steps)", () => {
-    const r = resolveDailyMetric({ manual: { value: 0 }, apple_health: { value: 300 } });
+    const r = resolveDailyMetric({
+      manual: { value: 0 },
+      apple_health: { value: 300 },
+    });
     assert.deepEqual(r, { value: 0, resolvedFrom: "manual" });
   });
 });

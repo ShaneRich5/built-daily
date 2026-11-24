@@ -25,13 +25,20 @@ export type SessionAction =
   | {
       type: "updateMeta";
       patch: Partial<
-        Pick<SessionState, "title" | "workoutDate" | "workoutTime" | "workoutNote">
+        Pick<
+          SessionState,
+          "title" | "workoutDate" | "workoutTime" | "workoutNote"
+        >
       >;
     }
   | { type: "openExercise"; lineId: string | null }
   /** Open the next exercise (after this one, wrapping) that still has work left. */
   | { type: "openNextExercise"; afterLineId: string }
-  | { type: "addExercises"; exercises: CatalogExercise[]; section?: LineSection }
+  | {
+      type: "addExercises";
+      exercises: CatalogExercise[];
+      section?: LineSection;
+    }
   /**
    * Swap in a different exercise for this slot (machine taken). The one it
    * replaces becomes an alternate, so swapping back is one tap.
@@ -42,7 +49,12 @@ export type SessionAction =
   | { type: "removeExercise"; lineId: string }
   | { type: "moveExercise"; lineId: string; toIndex: number }
   | { type: "setExerciseNote"; lineId: string; note: string }
-  | { type: "updateSet"; lineId: string; setIndex: number; patch: Partial<SetRow> }
+  | {
+      type: "updateSet";
+      lineId: string;
+      setIndex: number;
+      patch: Partial<SetRow>;
+    }
   | { type: "addSet"; lineId: string }
   | { type: "copyLastSet"; lineId: string }
   | { type: "removeSet"; lineId: string; setIndex: number }
@@ -80,11 +92,17 @@ function updateSets(
 }
 
 /** The next planned exercise after `lineId` (wrapping around) that is not done yet. Maybes wait to be picked. */
-export function nextUnfinishedAfter(exercises: SessionExercise[], lineId: string): string | null {
+export function nextUnfinishedAfter(
+  exercises: SessionExercise[],
+  lineId: string,
+): string | null {
   const start = exercises.findIndex((item) => item.lineId === lineId);
   for (let step = 1; step < exercises.length; step++) {
     const candidate = exercises[(start + step) % exercises.length]!;
-    if (candidate.section === "plan" && exerciseProgress(candidate.sets) !== "done") {
+    if (
+      candidate.section === "plan" &&
+      exerciseProgress(candidate.sets) !== "done"
+    ) {
       return candidate.lineId;
     }
   }
@@ -92,10 +110,14 @@ export function nextUnfinishedAfter(exercises: SessionExercise[], lineId: string
 }
 
 /** The old exercise first, without the new one or duplicates, capped. */
-function alternatesAfterSwap(item: SessionExercise, next: CatalogExercise): CatalogExercise[] {
+function alternatesAfterSwap(
+  item: SessionExercise,
+  next: CatalogExercise,
+): CatalogExercise[] {
   const out: CatalogExercise[] = [];
   for (const candidate of [item.exercise, ...item.alternates]) {
-    if (candidate.id === next.id || out.some((alt) => alt.id === candidate.id)) continue;
+    if (candidate.id === next.id || out.some((alt) => alt.id === candidate.id))
+      continue;
     out.push(candidate);
   }
   return out.slice(0, MAX_ALTERNATES);
@@ -167,9 +189,13 @@ export function sessionReducer(
     }
 
     case "removeExercise": {
-      const index = state.exercises.findIndex((item) => item.lineId === action.lineId);
+      const index = state.exercises.findIndex(
+        (item) => item.lineId === action.lineId,
+      );
       if (index < 0) return state;
-      const exercises = state.exercises.filter((item) => item.lineId !== action.lineId);
+      const exercises = state.exercises.filter(
+        (item) => item.lineId !== action.lineId,
+      );
       const openLineId =
         state.openLineId === action.lineId
           ? (exercises[Math.min(index, exercises.length - 1)]?.lineId ?? null)
@@ -178,9 +204,14 @@ export function sessionReducer(
     }
 
     case "moveExercise": {
-      const from = state.exercises.findIndex((item) => item.lineId === action.lineId);
+      const from = state.exercises.findIndex(
+        (item) => item.lineId === action.lineId,
+      );
       if (from < 0) return state;
-      const to = Math.max(0, Math.min(state.exercises.length - 1, action.toIndex));
+      const to = Math.max(
+        0,
+        Math.min(state.exercises.length - 1, action.toIndex),
+      );
       if (from === to) return state;
       const exercises = [...state.exercises];
       const [moved] = exercises.splice(from, 1);
@@ -196,11 +227,16 @@ export function sessionReducer(
 
     case "updateSet":
       return updateSets(state, action.lineId, (sets) =>
-        sets.map((set, i) => (i === action.setIndex ? { ...set, ...action.patch } : set)),
+        sets.map((set, i) =>
+          i === action.setIndex ? { ...set, ...action.patch } : set,
+        ),
       );
 
     case "addSet":
-      return updateSets(state, action.lineId, (sets) => [...sets, emptySetRow()]);
+      return updateSets(state, action.lineId, (sets) => [
+        ...sets,
+        emptySetRow(),
+      ]);
 
     case "copyLastSet":
       return updateSets(state, action.lineId, (sets) => {

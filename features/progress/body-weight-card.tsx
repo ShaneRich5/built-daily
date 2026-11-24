@@ -17,19 +17,32 @@ type BodyWeightCardProps = {
 };
 
 /** Optional scale check-ins: the latest weight, the 30-day change, a sparkline, and a quick log. */
-export function BodyWeightCard({ entries, goalWeightLbs, todayKey, onLog = logBodyWeight }: BodyWeightCardProps) {
+export function BodyWeightCard({
+  entries,
+  goalWeightLbs,
+  todayKey,
+  onLog = logBodyWeight,
+}: BodyWeightCardProps) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const sorted = useMemo(
-    () => [...entries].sort((a, b) => a.entry.dateKey.localeCompare(b.entry.dateKey)),
+    () =>
+      [...entries].sort((a, b) =>
+        a.entry.dateKey.localeCompare(b.entry.dateKey),
+      ),
     [entries],
   );
   const current = sorted[sorted.length - 1]?.entry ?? null;
   const monthAgoKey = shiftLocalDateKey(todayKey, -30);
-  const monthAgo = [...sorted].reverse().find((e) => e.entry.dateKey <= monthAgoKey)?.entry;
-  const delta = current && monthAgo ? Math.round((current.weightLbs - monthAgo.weightLbs) * 10) / 10 : null;
+  const monthAgo = [...sorted]
+    .reverse()
+    .find((e) => e.entry.dateKey <= monthAgoKey)?.entry;
+  const delta =
+    current && monthAgo
+      ? Math.round((current.weightLbs - monthAgo.weightLbs) * 10) / 10
+      : null;
 
   const points = useMemo(() => {
     const recent = sorted.slice(-30);
@@ -66,7 +79,11 @@ export function BodyWeightCard({ entries, goalWeightLbs, todayKey, onLog = logBo
   };
 
   const trend =
-    delta === null ? "" : delta === 0 ? "no change in 30 days" : `${delta > 0 ? "+" : "−"}${Math.abs(delta)} in 30 days`;
+    delta === null
+      ? ""
+      : delta === 0
+        ? "no change in 30 days"
+        : `${delta > 0 ? "+" : "−"}${Math.abs(delta)} in 30 days`;
 
   return (
     <section
@@ -74,18 +91,29 @@ export function BodyWeightCard({ entries, goalWeightLbs, todayKey, onLog = logBo
       className="flex flex-col gap-3 rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950"
     >
       <div className="flex items-baseline justify-between">
-        <h2 id="weight-heading" className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2
+          id="weight-heading"
+          className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50"
+        >
           Body weight
         </h2>
-        {goalWeightLbs != null ? <span className="text-xs text-zinc-500">Goal {goalWeightLbs} lb</span> : null}
+        {goalWeightLbs != null ? (
+          <span className="text-xs text-zinc-500">Goal {goalWeightLbs} lb</span>
+        ) : null}
       </div>
       {current ? (
         <p className="flex items-baseline gap-2.5">
-          <span className="font-mono text-[28px] font-medium text-zinc-900 dark:text-zinc-50">{current.weightLbs}</span>
-          <span className="text-[13px] text-zinc-600 dark:text-zinc-400">lb{trend ? ` · ${trend}` : ""}</span>
+          <span className="font-mono text-[28px] font-medium text-zinc-900 dark:text-zinc-50">
+            {current.weightLbs}
+          </span>
+          <span className="text-[13px] text-zinc-600 dark:text-zinc-400">
+            lb{trend ? ` · ${trend}` : ""}
+          </span>
         </p>
       ) : (
-        <p className="text-[13px] text-zinc-500">Optional. Log a weigh-in whenever you like; no pressure.</p>
+        <p className="text-[13px] text-zinc-500">
+          Optional. Log a weigh-in whenever you like; no pressure.
+        </p>
       )}
       {points ? (
         <svg

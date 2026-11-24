@@ -4,7 +4,10 @@ import {
   shiftLocalDateKey,
   type WorkoutActivityByDay,
 } from "@/lib/workout-activity";
-import { muscleGroupForExercise, muscleGroupLabel } from "@/lib/exercise-muscle";
+import {
+  muscleGroupForExercise,
+  muscleGroupLabel,
+} from "@/lib/exercise-muscle";
 import type {
   DayActivityDetail,
   DayWorkoutSummary,
@@ -14,10 +17,7 @@ import type {
   WeekGoalStatus,
   WeeklyGoalTarget,
 } from "@/lib/progress-types";
-import {
-  dateFromLocalDateKey,
-  localDateKeyFromMs,
-} from "@/lib/workout-date";
+import { dateFromLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
 import type { WorkoutSessionDoc } from "@/lib/workout-types";
 
 export type ProgressSession = {
@@ -39,7 +39,10 @@ export function sessionDateKey(session: WorkoutSessionDoc): string {
   );
 }
 
-export function setVolumeLbs(weight: number | null, reps: number | null): number {
+export function setVolumeLbs(
+  weight: number | null,
+  reps: number | null,
+): number {
   if (weight == null || reps == null || !(weight > 0) || !(reps > 0)) return 0;
   return weight * reps;
 }
@@ -91,11 +94,7 @@ export function daysLeftInWeekIncludingToday(todayKey: string): number {
 }
 
 export type WeekMomentumStatus =
-  | "complete"
-  | "protecting"
-  | "on_track"
-  | "at_risk"
-  | "starting";
+  "complete" | "protecting" | "on_track" | "at_risk" | "starting";
 
 export type WeekMomentum = {
   status: WeekMomentumStatus;
@@ -275,9 +274,7 @@ function hasAnyActivityBefore(
 }
 
 /** Walk sessions chronologically and find e1RM PRs (and flag first-time PRs). */
-export function computePersonalRecords(
-  sessions: ProgressSession[],
-): {
+export function computePersonalRecords(sessions: ProgressSession[]): {
   recentPrs: PersonalRecord[];
   bestByExercise: Map<string, PersonalRecord>;
   prDateKeys: Set<string>;
@@ -343,7 +340,10 @@ export function strongestLifts(
   if (preferred.length >= 4) return preferred.slice(0, 4);
 
   const rest = [...bestByExercise.values()]
-    .filter((p) => !COMPOUND_IDS.includes(p.exerciseId as (typeof COMPOUND_IDS)[number]))
+    .filter(
+      (p) =>
+        !COMPOUND_IDS.includes(p.exerciseId as (typeof COMPOUND_IDS)[number]),
+    )
     .sort((a, b) => b.estimated1Rm - a.estimated1Rm);
   const out = [...preferred];
   for (const p of rest) {
@@ -369,7 +369,10 @@ export function buildDayActivityDetails(
   });
 
   // Rebuild PR moments: a set is a PR if it equals the stored best and date matches
-  const prKeysBySession = new Map<string, Array<{ exerciseName: string; weight: number; reps: number }>>();
+  const prKeysBySession = new Map<
+    string,
+    Array<{ exerciseName: string; weight: number; reps: number }>
+  >();
   for (const pr of bestByExercise.values()) {
     const list = prKeysBySession.get(pr.sessionId) ?? [];
     list.push({
@@ -402,10 +405,7 @@ export function buildDayActivityDetails(
       workouts,
       activities: [],
       totalVolumeLbs: workouts.reduce((a, w) => a + w.volumeLbs, 0),
-      totalDurationSec: workouts.reduce(
-        (a, w) => a + (w.durationSec ?? 0),
-        0,
-      ),
+      totalDurationSec: workouts.reduce((a, w) => a + (w.durationSec ?? 0), 0),
       hasPr: prDateKeys.has(dateKey) || workouts.some((w) => w.prs.length > 0),
     });
   }
@@ -435,7 +435,8 @@ export function computeProgressStats(
     for (const line of session.lines) {
       const prev = exerciseCounts.get(line.exerciseId);
       if (prev) prev.n += 1;
-      else exerciseCounts.set(line.exerciseId, { name: line.nameSnapshot, n: 1 });
+      else
+        exerciseCounts.set(line.exerciseId, { name: line.nameSnapshot, n: 1 });
       const mg = muscleGroupForExercise(line.exerciseId, line.nameSnapshot);
       muscleCounts.set(mg, (muscleCounts.get(mg) ?? 0) + 1);
     }
@@ -502,8 +503,7 @@ export function computeMilestones(
 
   const oneYearKey = yearLaterKey(firstKey);
   const today = localDateKeyFromMs(Date.now());
-  const oneYearActive =
-    Boolean(oneYearKey && today >= oneYearKey && count > 0);
+  const oneYearActive = Boolean(oneYearKey && today >= oneYearKey && count > 0);
 
   const definitions: Milestone[] = [
     {
@@ -545,21 +545,24 @@ export function computeMilestones(
       id: "goal-weeks-4",
       title: "4-week goal streak",
       description: "Four consecutive weeks hitting your weekly goal.",
-      achievedAtKey: goalStreakLongest >= 4 || goalStreakCurrent >= 4 ? today : null,
+      achievedAtKey:
+        goalStreakLongest >= 4 || goalStreakCurrent >= 4 ? today : null,
       achieved: goalStreakLongest >= 4 || goalStreakCurrent >= 4,
     },
     {
       id: "goal-weeks-12",
       title: "12-week goal streak",
       description: "A full season of meeting your weekly goal.",
-      achievedAtKey: goalStreakLongest >= 12 || goalStreakCurrent >= 12 ? today : null,
+      achievedAtKey:
+        goalStreakLongest >= 12 || goalStreakCurrent >= 12 ? today : null,
       achieved: goalStreakLongest >= 12 || goalStreakCurrent >= 12,
     },
     {
       id: "goal-weeks-30",
       title: "30 consecutive weeks",
       description: "Meeting your weekly goal for 30 weeks.",
-      achievedAtKey: goalStreakLongest >= 30 || goalStreakCurrent >= 30 ? today : null,
+      achievedAtKey:
+        goalStreakLongest >= 30 || goalStreakCurrent >= 30 ? today : null,
       achieved: goalStreakLongest >= 30 || goalStreakCurrent >= 30,
     },
     {

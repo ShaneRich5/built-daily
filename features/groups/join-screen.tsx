@@ -11,23 +11,32 @@ import { formatPlanTime, joinNames } from "@/features/groups/groups-model";
 import { JoinView, type JoinPlanCard } from "@/features/groups/join-view";
 
 /** Pure: the landing's words from the preview doc (first names and counts only). */
-export function joinCopy(preview: InvitePreviewDoc | null, planId: string | null) {
+export function joinCopy(
+  preview: InvitePreviewDoc | null,
+  planId: string | null,
+) {
   if (!preview) {
     return {
       headline: "You’re invited to train together",
-      blurb: "Join to see each other’s week, plan workouts together and cheer each other on.",
+      blurb:
+        "Join to see each other’s week, plan workouts together and cheer each other on.",
       initials: [] as string[],
       plan: null,
       joinLabel: "Join",
     };
   }
-  const others = preview.memberFirstNames.filter((n) => n !== preview.invitedByName);
+  const others = preview.memberFirstNames.filter(
+    (n) => n !== preview.invitedByName,
+  );
   const buddy = preview.kind === "buddy";
   const headline = buddy
     ? `${preview.invitedByName} invited you to be gym buddies`
     : `${preview.invitedByName} invited you to ${preview.groupName}`;
   const workouts = preview.workoutsThisWeek;
-  const between = workouts > 0 ? ` ${workouts} workout${workouts === 1 ? "" : "s"} between them this week.` : "";
+  const between =
+    workouts > 0
+      ? ` ${workouts} workout${workouts === 1 ? "" : "s"} between them this week.`
+      : "";
   const blurb = buddy
     ? "Just the two of you. See each other’s week, plan sessions, keep each other going."
     : others.length > 0
@@ -58,11 +67,21 @@ export function joinCopy(preview: InvitePreviewDoc | null, planId: string | null
 }
 
 /** G6 wired: works signed out; after sign-up it comes back with `auto=1` and joins. */
-export function JoinScreen({ code: rawCode, planId, auto }: { code: string; planId: string | null; auto: boolean }) {
+export function JoinScreen({
+  code: rawCode,
+  planId,
+  auto,
+}: {
+  code: string;
+  planId: string | null;
+  auto: boolean;
+}) {
   const code = normalizeInviteCode(rawCode);
   const router = useRouter();
   const { user, loading, firebaseReady } = useAuth();
-  const [preview, setPreview] = useState<InvitePreviewDoc | null | undefined>(undefined);
+  const [preview, setPreview] = useState<InvitePreviewDoc | null | undefined>(
+    undefined,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const autoStarted = useRef(false);
@@ -89,7 +108,9 @@ export function JoinScreen({ code: rawCode, planId, auto }: { code: string; plan
         return;
       }
       if (planId) {
-        const joinedPlan = await joinSharedPlan(result.groupId, planId).catch(() => false);
+        const joinedPlan = await joinSharedPlan(result.groupId, planId).catch(
+          () => false,
+        );
         if (joinedPlan) {
           router.push(`/groups/${result.groupId}/plans/${planId}`);
           return;

@@ -4,7 +4,11 @@ import { ExerciseDetailsSheet } from "@/features/workout-session/exercise-detail
 import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-sheet";
 import { MoveExerciseSheet } from "@/features/workout-session/move-exercise-sheet";
 import { ReorderSheet } from "@/features/workout-session/reorder-sheet";
-import { flyHistory, pushDay, suggested } from "@/features/workout-session/story-fixtures";
+import {
+  flyHistory,
+  pushDay,
+  suggested,
+} from "@/features/workout-session/story-fixtures";
 import { WorkoutDetailsSheet } from "@/features/workout-session/workout-details-sheet";
 
 /**
@@ -97,7 +101,9 @@ export const ExerciseDetails: Story = {
           onUpdateSet={(setIndex, patch) =>
             setItem((it) => ({
               ...it,
-              sets: it.sets.map((s, i) => (i === setIndex ? { ...s, ...patch } : s)),
+              sets: it.sets.map((s, i) =>
+                i === setIndex ? { ...s, ...patch } : s,
+              ),
             }))
           }
           onAddSet={() => {}}

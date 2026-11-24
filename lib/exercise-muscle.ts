@@ -1,13 +1,7 @@
 import { getCatalogExerciseById } from "@/lib/exercise-catalog";
 import type { MuscleGroup } from "@/lib/progress-types";
 
-export type MuscleFocus =
-  | "full"
-  | "torso"
-  | "back"
-  | "arms"
-  | "legs"
-  | "core";
+export type MuscleFocus = "full" | "torso" | "back" | "arms" | "legs" | "core";
 
 export const MUSCLE_FOCUS_OPTIONS: Array<{ id: MuscleFocus; label: string }> = [
   { id: "full", label: "Full" },
@@ -43,7 +37,10 @@ const UPPER_GROUPS: ReadonlySet<MuscleGroup> = new Set([
 const NAME_HINTS: Array<{ re: RegExp; group: MuscleGroup }> = [
   { re: /bench|chest|fly|pec/i, group: "chest" },
   { re: /row|pulldown|pull[- ]?up|lat|deadlift/i, group: "back" },
-  { re: /dead[- ]?bug|leg raise|knee raise|plank|crunch|core|ab /i, group: "core" },
+  {
+    re: /dead[- ]?bug|leg raise|knee raise|plank|crunch|core|ab /i,
+    group: "core",
+  },
   { re: /squat|lunge|leg |calf|rdl|hip thrust/i, group: "legs" },
   { re: /ohp|overhead|raise|delt|shoulder/i, group: "shoulders" },
   { re: /curl|tricep|bicep|skull|extension/i, group: "arms" },

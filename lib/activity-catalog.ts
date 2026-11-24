@@ -30,8 +30,20 @@ export type ActivityCatalogEntry = {
 };
 
 export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
-  { id: "walk", name: "Walk", icon: "footprints", supportsDistance: true, isSocial: false },
-  { id: "run", name: "Run", icon: "timer", supportsDistance: true, isSocial: false },
+  {
+    id: "walk",
+    name: "Walk",
+    icon: "footprints",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "run",
+    name: "Run",
+    icon: "timer",
+    supportsDistance: true,
+    isSocial: false,
+  },
   {
     id: "dog-walk",
     name: "Dog walk",
@@ -40,10 +52,34 @@ export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
     isSocial: false,
     retired: true,
   },
-  { id: "bike", name: "Bike ride", icon: "bike", supportsDistance: true, isSocial: false },
-  { id: "hike", name: "Hike", icon: "mountain", supportsDistance: true, isSocial: false },
-  { id: "swim", name: "Swim", icon: "waves", supportsDistance: true, isSocial: false },
-  { id: "tennis", name: "Tennis", icon: "circle-dot", supportsDistance: false, isSocial: true },
+  {
+    id: "bike",
+    name: "Bike ride",
+    icon: "bike",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "hike",
+    name: "Hike",
+    icon: "mountain",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "swim",
+    name: "Swim",
+    icon: "waves",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "tennis",
+    name: "Tennis",
+    icon: "circle-dot",
+    supportsDistance: false,
+    isSocial: true,
+  },
   {
     id: "pickleball",
     name: "Pickleball",
@@ -65,7 +101,13 @@ export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
     supportsDistance: false,
     isSocial: false,
   },
-  { id: "dance", name: "Dance", icon: "music", supportsDistance: false, isSocial: false },
+  {
+    id: "dance",
+    name: "Dance",
+    icon: "music",
+    supportsDistance: false,
+    isSocial: false,
+  },
   {
     id: "play",
     name: "Playing with kids",
@@ -74,12 +116,20 @@ export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
     isSocial: false,
     retired: true,
   },
-  { id: "other", name: "Other", icon: "activity", supportsDistance: true, isSocial: false },
+  {
+    id: "other",
+    name: "Other",
+    icon: "activity",
+    supportsDistance: true,
+    isSocial: false,
+  },
 ];
 
 const BY_ID = new Map(ACTIVITY_CATALOG.map((a) => [a.id, a]));
 
-export function getActivityTypeById(id: string): ActivityCatalogEntry | undefined {
+export function getActivityTypeById(
+  id: string,
+): ActivityCatalogEntry | undefined {
   return BY_ID.get(id);
 }
 
@@ -87,7 +137,9 @@ export function getActivityTypeById(id: string): ActivityCatalogEntry | undefine
  * Types offered in the picker: everything not retired, plus `currentId`
  * so editing an old log of a retired type still shows it selected.
  */
-export function pickableActivityTypes(currentId?: string): ActivityCatalogEntry[] {
+export function pickableActivityTypes(
+  currentId?: string,
+): ActivityCatalogEntry[] {
   return ACTIVITY_CATALOG.filter((a) => !a.retired || a.id === currentId);
 }
 

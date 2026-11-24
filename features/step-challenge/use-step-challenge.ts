@@ -2,8 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { addDaysToDateKey, endOfWeekDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
-import { markChallengeCompleted, subscribeChallengesEndingSince } from "@/lib/challenge-repository";
+import {
+  addDaysToDateKey,
+  endOfWeekDateKey,
+  startOfWeekDateKey,
+} from "@/lib/calendar-views";
+import {
+  markChallengeCompleted,
+  subscribeChallengesEndingSince,
+} from "@/lib/challenge-repository";
 import type { SavedChallenge } from "@/lib/challenge-types";
 import { subscribeDailyMetricsInRange } from "@/lib/daily-metric-repository";
 import type { DailyMetricsDoc } from "@/lib/daily-metric-types";
@@ -32,16 +39,22 @@ export function useStepChallenge(todayKey: string) {
 
   useEffect(() => {
     if (!signedIn) return;
-    const patch = (next: Partial<RawChallengeData>) => setRaw((prev) => ({ ...prev, ...next }));
+    const patch = (next: Partial<RawChallengeData>) =>
+      setRaw((prev) => ({ ...prev, ...next }));
     // Last week and this week: enough for the running challenge or one that just ended.
     const weekStart = startOfWeekDateKey(todayKey);
     const unsubs = [
-      subscribeChallengesEndingSince(addDaysToDateKey(todayKey, -ENDED_VISIBLE_DAYS), (challenges) => {
-        patch({ challenges });
-        setLoaded(true);
-      }),
-      subscribeDailyMetricsInRange(addDaysToDateKey(weekStart, -7), endOfWeekDateKey(todayKey), (days) =>
-        patch({ days }),
+      subscribeChallengesEndingSince(
+        addDaysToDateKey(todayKey, -ENDED_VISIBLE_DAYS),
+        (challenges) => {
+          patch({ challenges });
+          setLoaded(true);
+        },
+      ),
+      subscribeDailyMetricsInRange(
+        addDaysToDateKey(weekStart, -7),
+        endOfWeekDateKey(todayKey),
+        (days) => patch({ days }),
       ),
     ];
     return () => {
@@ -51,9 +64,15 @@ export function useStepChallenge(todayKey: string) {
     };
   }, [signedIn, todayKey]);
 
-  const { shown, upcoming } = useMemo(() => pickHomeChallenge(raw.challenges, todayKey), [raw.challenges, todayKey]);
+  const { shown, upcoming } = useMemo(
+    () => pickHomeChallenge(raw.challenges, todayKey),
+    [raw.challenges, todayKey],
+  );
   const view = useMemo(
-    () => (shown ? buildStepChallengeCardView(shown, raw.days, todayKey, upcoming) : null),
+    () =>
+      shown
+        ? buildStepChallengeCardView(shown, raw.days, todayKey, upcoming)
+        : null,
     [shown, raw.days, todayKey, upcoming],
   );
 

@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { buildWeekCalendarCells } from "@/lib/calendar-views";
 import { addScheduledWorkout } from "@/lib/planner-repository";
 import { setWeeklyGoal } from "@/lib/progress-settings-repository";
-import { WEEKLY_GOAL_OPTIONS, type WeeklyGoalTarget } from "@/lib/progress-types";
+import {
+  WEEKLY_GOAL_OPTIONS,
+  type WeeklyGoalTarget,
+} from "@/lib/progress-types";
 import { STARTER_TEMPLATE_DEFINITIONS } from "@/lib/starter-templates";
 import { setOnboardingCompleted } from "@/lib/user-profile-repository";
 import { dateFromLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
@@ -188,8 +191,8 @@ export function OnboardingFlow() {
           </div>
           {selectedDays.length === 0 ? (
             <p className="text-sm text-zinc-500">
-              No days selected — press Finish to save your goal, and plan
-              days later from the planner.
+              No days selected — press Finish to save your goal, and plan days
+              later from the planner.
             </p>
           ) : null}
           <div className="space-y-4">
@@ -242,9 +245,7 @@ export function OnboardingFlow() {
             <Button
               type="button"
               variant="outline"
-              onClick={() =>
-                setStep(step === "templates" ? "days" : "goal")
-              }
+              onClick={() => setStep(step === "templates" ? "days" : "goal")}
               disabled={saving}
             >
               Back
@@ -275,7 +276,9 @@ export function OnboardingFlow() {
           {step === "templates" ? (
             <Button
               type="button"
-              onClick={() => void finish(weeklyGoal, selectedDays, templateByDay)}
+              onClick={() =>
+                void finish(weeklyGoal, selectedDays, templateByDay)
+              }
               disabled={saving}
             >
               {saving ? "Saving…" : "Finish"}

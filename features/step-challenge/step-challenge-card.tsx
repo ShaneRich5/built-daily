@@ -21,14 +21,24 @@ type StepChallengeCardProps = {
 };
 
 /** The weekly step challenge on Home, or a quiet way to start one. */
-export function StepChallengeCard({ view, busy = false, onStart, onLogDay, onEdit, onRepeat }: StepChallengeCardProps) {
+export function StepChallengeCard({
+  view,
+  busy = false,
+  onStart,
+  onLogDay,
+  onEdit,
+  onRepeat,
+}: StepChallengeCardProps) {
   if (!view) return <StartChallengeEntry onStart={onStart} />;
 
   const todayKey = view.days.find((d) => d.isToday)?.dateKey ?? null;
   const complete = view.state === "done";
 
   return (
-    <section aria-labelledby="step-challenge-heading" className="flex flex-col gap-2">
+    <section
+      aria-labelledby="step-challenge-heading"
+      className="flex flex-col gap-2"
+    >
       <h2 className={sectionLabel}>Step challenge</h2>
       <div
         className={cn(
@@ -39,10 +49,15 @@ export function StepChallengeCard({ view, busy = false, onStart, onLogDay, onEdi
         )}
       >
         <div className="flex items-baseline justify-between gap-2">
-          <h3 id="step-challenge-heading" className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+          <h3
+            id="step-challenge-heading"
+            className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50"
+          >
             {view.heading}
           </h3>
-          <span className="text-xs whitespace-nowrap text-zinc-500 dark:text-zinc-400">{view.rangeLabel}</span>
+          <span className="text-xs whitespace-nowrap text-zinc-500 dark:text-zinc-400">
+            {view.rangeLabel}
+          </span>
         </div>
 
         <div>
@@ -52,8 +67,12 @@ export function StepChallengeCard({ view, busy = false, onStart, onLogDay, onEdi
               {view.bigSuffix}
             </span>
           </p>
-          <p className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-400">{view.title}</p>
-          <p className="text-[13px] text-zinc-900 dark:text-zinc-100">{view.status}</p>
+          <p className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-400">
+            {view.title}
+          </p>
+          <p className="text-[13px] text-zinc-900 dark:text-zinc-100">
+            {view.status}
+          </p>
         </div>
 
         {view.showBar ? (
@@ -75,17 +94,28 @@ export function StepChallengeCard({ view, busy = false, onStart, onLogDay, onEdi
         <StepDayDots days={view.days} onPickDay={onLogDay} />
 
         {view.state === "active" && todayKey ? (
-          <button type="button" className={primaryButton} onClick={() => onLogDay(todayKey)}>
+          <button
+            type="button"
+            className={primaryButton}
+            onClick={() => onLogDay(todayKey)}
+          >
             Log today’s steps
           </button>
         ) : null}
         {view.repeatLabel ? (
-          <button type="button" className={primaryButton} disabled={busy} onClick={onRepeat}>
+          <button
+            type="button"
+            className={primaryButton}
+            disabled={busy}
+            onClick={onRepeat}
+          >
             {view.repeatLabel}
           </button>
         ) : null}
         {view.state !== "active" && view.nextWeekSet ? (
-          <p className="text-[13px] text-zinc-600 dark:text-zinc-400">Next week’s challenge is set.</p>
+          <p className="text-[13px] text-zinc-600 dark:text-zinc-400">
+            Next week’s challenge is set.
+          </p>
         ) : null}
 
         <div className="-mb-2 flex items-center justify-between gap-2">
@@ -93,13 +123,20 @@ export function StepChallengeCard({ view, busy = false, onStart, onLogDay, onEdi
             <p className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
               <span>Today: {view.today.value}</span>
               {view.today.source ? (
-                <span className={view.today.synced ? sourceChip : typedChip}>{view.today.source}</span>
+                <span className={view.today.synced ? sourceChip : typedChip}>
+                  {view.today.source}
+                </span>
               ) : null}
             </p>
           ) : (
             <span />
           )}
-          <button type="button" className={cn(ghostButton, "-mr-3 shrink-0")} disabled={busy} onClick={onEdit}>
+          <button
+            type="button"
+            className={cn(ghostButton, "-mr-3 shrink-0")}
+            disabled={busy}
+            onClick={onEdit}
+          >
             {view.state === "ended" ? "Try a different one" : "Edit"}
           </button>
         </div>
@@ -123,7 +160,9 @@ function StartChallengeEntry({ onStart }: { onStart: () => void }) {
         <Footprints className="size-[18px]" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Start a step challenge</span>
+        <span className="block text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+          Start a step challenge
+        </span>
         <span className="block text-[13px] text-zinc-500 dark:text-zinc-400">
           A weekly target with room for off days.
         </span>

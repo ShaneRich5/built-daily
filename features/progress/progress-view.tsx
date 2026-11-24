@@ -11,8 +11,15 @@ import type {
 } from "@/lib/progress-types";
 import { BodyWeightCard } from "@/features/progress/body-weight-card";
 import type { HomeConsistency, HomeWeekDay } from "@/features/home/home-model";
-import { MilestonesRow, StrengthCard, ThisWeekCard } from "@/features/progress/progress-cards";
-import { ClassicStreakTiles, ClassicThisWeekCard } from "@/features/progress/progress-cards-classic";
+import {
+  MilestonesRow,
+  StrengthCard,
+  ThisWeekCard,
+} from "@/features/progress/progress-cards";
+import {
+  ClassicStreakTiles,
+  ClassicThisWeekCard,
+} from "@/features/progress/progress-cards-classic";
 
 export type ProgressViewProps = {
   todayKey: string;
@@ -46,8 +53,12 @@ export function ProgressView(props: ProgressViewProps) {
     <div className="flex flex-1 flex-col gap-4">
       <header className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Progress</h1>
-          <p className="mt-0.5 text-[13px] text-zinc-500 dark:text-zinc-400">Showing up beats perfect.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Progress
+          </h1>
+          <p className="mt-0.5 text-[13px] text-zinc-500 dark:text-zinc-400">
+            Showing up beats perfect.
+          </p>
         </div>
         <button
           type="button"
@@ -69,8 +80,15 @@ export function ProgressView(props: ProgressViewProps) {
         />
       ) : (
         <>
-          <ClassicThisWeekCard week={props.week} momentum={props.momentum} movement={props.movementWeek} />
-          <ClassicStreakTiles current={props.goalStreak.current} longest={props.goalStreak.longest} />
+          <ClassicThisWeekCard
+            week={props.week}
+            momentum={props.momentum}
+            movement={props.movementWeek}
+          />
+          <ClassicStreakTiles
+            current={props.goalStreak.current}
+            longest={props.goalStreak.longest}
+          />
           <ProgressHeatmap {...props.heatmap} todayKey={props.todayKey} />
         </>
       )}

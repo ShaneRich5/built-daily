@@ -59,7 +59,10 @@ function batchFrom(body: unknown): unknown[] | null {
 
 export async function POST(request: Request) {
   if (!isFirebaseAdminConfigured()) {
-    return json({ error: "Firebase Admin credentials are not configured" }, 503);
+    return json(
+      { error: "Firebase Admin credentials are not configured" },
+      503,
+    );
   }
 
   const uid = await requireUid(request);
@@ -75,12 +78,18 @@ export async function POST(request: Request) {
   const batch = batchFrom(body);
   if (!batch || batch.length === 0) {
     return json(
-      { error: "Send a non-empty array of { date, metric, value, source }, or { entries: [...] }." },
+      {
+        error:
+          "Send a non-empty array of { date, metric, value, source }, or { entries: [...] }.",
+      },
       400,
     );
   }
   if (batch.length > DAILY_METRIC_MAX_BATCH) {
-    return json({ error: `Send at most ${DAILY_METRIC_MAX_BATCH} entries at once.` }, 400);
+    return json(
+      { error: `Send at most ${DAILY_METRIC_MAX_BATCH} entries at once.` },
+      400,
+    );
   }
 
   const todayKey = localDateKeyFromMs(Date.now());
@@ -92,7 +101,10 @@ export async function POST(request: Request) {
     else errors.push({ index, error: parsed.error });
   });
   if (errors.length > 0) {
-    return json({ error: "Nothing was saved. Fix these entries and resend.", errors }, 400);
+    return json(
+      { error: "Nothing was saved. Fix these entries and resend.", errors },
+      400,
+    );
   }
 
   try {

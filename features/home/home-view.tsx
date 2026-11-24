@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import { HomeCatchUp } from "@/features/home/home-catch-up";
 import { HomeRecent } from "@/features/home/home-recent";
 import { HomeStartCard } from "@/features/home/home-start-card";
-import { HomeTogetherCard, type HomeTogether } from "@/features/home/home-together-card";
+import {
+  HomeTogetherCard,
+  type HomeTogether,
+} from "@/features/home/home-together-card";
 import { HomeWeek } from "@/features/home/home-week";
 import { dateFromLocalDateKey } from "@/lib/workout-date";
 import type {
@@ -53,7 +56,13 @@ function todayHeading(todayKey: string): string {
   }).format(d);
 }
 
-export function HomeHeader({ todayKey, account }: { todayKey: string; account: ReactNode }) {
+export function HomeHeader({
+  todayKey,
+  account,
+}: {
+  todayKey: string;
+  account: ReactNode;
+}) {
   return (
     <header className="flex items-center justify-between gap-3">
       <div>
@@ -89,7 +98,9 @@ export function HomeView(props: HomeViewProps) {
           {props.catchUp && !props.inProgress ? (
             <HomeCatchUp todayKey={props.todayKey} {...props.catchUp} />
           ) : null}
-          {props.together && !props.inProgress ? <HomeTogetherCard together={props.together} /> : null}
+          {props.together && !props.inProgress ? (
+            <HomeTogetherCard together={props.together} />
+          ) : null}
           <HomeStartCard
             todayKey={props.todayKey}
             planned={props.planned}

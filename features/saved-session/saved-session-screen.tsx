@@ -16,10 +16,17 @@ import {
   reopenSessionAsInProgress,
   updateCompletedWorkoutSession,
 } from "@/lib/workout-session-repository";
-import { NOTE_LIMITS, type WorkoutPlanDoc, type WorkoutSessionDoc } from "@/lib/workout-types";
+import {
+  NOTE_LIMITS,
+  type WorkoutPlanDoc,
+  type WorkoutSessionDoc,
+} from "@/lib/workout-types";
 import { summarizeSavedSession } from "@/features/saved-session/saved-session-model";
 import { SavedSessionView } from "@/features/saved-session/saved-session-view";
-import { copyText, downloadTextFile } from "@/features/workout-session/journal-actions";
+import {
+  copyText,
+  downloadTextFile,
+} from "@/features/workout-session/journal-actions";
 import { initialDataFromSavedSession } from "@/features/workout-session/session-snapshot";
 import { WorkoutSessionScreen } from "@/features/workout-session/workout-session-screen";
 
@@ -34,7 +41,8 @@ type SavedSessionScreenProps = {
 function templateFromSession(session: WorkoutSessionDoc): WorkoutPlanDoc {
   const now = new Date();
   return {
-    name: session.title.trim().slice(0, NOTE_LIMITS.title) || "Workout template",
+    name:
+      session.title.trim().slice(0, NOTE_LIMITS.title) || "Workout template",
     createdAt: now,
     updatedAt: now,
     source: "custom",
@@ -137,13 +145,16 @@ export function SavedSessionScreen({
       }}
       onReopen={() =>
         void run(async () => {
-          if (!(await reopenSessionAsInProgress(sessionId))) throw new Error("reopen");
+          if (!(await reopenSessionAsInProgress(sessionId)))
+            throw new Error("reopen");
           router.push(`/workout?s=${encodeURIComponent(sessionId)}`);
         }, "Couldn’t reopen this workout.")
       }
       onSaveAsTemplate={() =>
         void run(async () => {
-          const templateId = await createWorkoutPlan(templateFromSession(session));
+          const templateId = await createWorkoutPlan(
+            templateFromSession(session),
+          );
           if (!templateId) throw new Error("template");
           router.push(`/templates/${encodeURIComponent(templateId)}`);
         }, "Couldn’t create a template from this workout.")
@@ -156,12 +167,21 @@ export function SavedSessionScreen({
         })
       }
       onDownloadJournal={() =>
-        downloadTextFile(workoutJournalFilename(session), formatWorkoutJournalEntry(session))
+        downloadTextFile(
+          workoutJournalFilename(session),
+          formatWorkoutJournalEntry(session),
+        )
       }
       onDelete={() => {
-        if (!window.confirm("Delete this workout permanently? This cannot be undone.")) return;
+        if (
+          !window.confirm(
+            "Delete this workout permanently? This cannot be undone.",
+          )
+        )
+          return;
         void run(async () => {
-          if (!(await deleteWorkoutSession(sessionId))) throw new Error("delete");
+          if (!(await deleteWorkoutSession(sessionId)))
+            throw new Error("delete");
           router.push(backHref);
         }, "Couldn’t delete this workout.");
       }}

@@ -64,7 +64,12 @@ export const Finished: Story = {
 export const FinishedNextWeekSet: Story = {
   name: "Finished, next week already set",
   args: {
-    view: cardView(challenge(daysHit), finishedWeek, "2026-11-27", challenge(daysHit, "2026-11-29")),
+    view: cardView(
+      challenge(daysHit),
+      finishedWeek,
+      "2026-11-27",
+      challenge(daysHit, "2026-11-29"),
+    ),
   },
 };
 
@@ -73,7 +78,15 @@ export const EndedShort: Story = {
   args: {
     view: cardView(
       challenge(daysHit),
-      stepWeek([{ manual: 8000 }, null, { apple_health: 7200 }, { apple_health: 9100 }, null, null, { manual: 4000 }]),
+      stepWeek([
+        { manual: 8000 },
+        null,
+        { apple_health: 7200 },
+        { apple_health: 9100 },
+        null,
+        null,
+        { manual: 4000 },
+      ]),
       "2026-11-30",
     ),
   },
@@ -81,17 +94,28 @@ export const EndedShort: Story = {
 
 export const TotalRule: Story = {
   name: "Total rule (50,000 this week)",
-  args: { view: cardView(challenge({ kind: "total", target: 50000 }), syncedWeek) },
+  args: {
+    view: cardView(challenge({ kind: "total", target: 50000 }), syncedWeek),
+  },
 };
 
 export const StreakRule: Story = {
   name: "Streak rule (6,000 a day, 7 days)",
-  args: { view: cardView(challenge({ kind: "streak", dailyTarget: 6000, length: 7 }), syncedWeek) },
+  args: {
+    view: cardView(
+      challenge({ kind: "streak", dailyTarget: 6000, length: 7 }),
+      syncedWeek,
+    ),
+  },
 };
 
 function Reopen({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="m-4 h-11 rounded-lg border border-zinc-200 px-4 text-sm font-medium">
+    <button
+      type="button"
+      onClick={onClick}
+      className="m-4 h-11 rounded-lg border border-zinc-200 px-4 text-sm font-medium"
+    >
       Open again
     </button>
   );
@@ -137,7 +161,13 @@ export const EditSheet: Story = {
   },
 };
 
-function LogSheetStory({ days, initialKey }: { days: ReturnType<typeof stepWeek>; initialKey: string }) {
+function LogSheetStory({
+  days,
+  initialKey,
+}: {
+  days: ReturnType<typeof stepWeek>;
+  initialKey: string;
+}) {
   const [open, setOpen] = useState(true);
   const [dateKey, setDateKey] = useState(initialKey);
   const view = cardView(challenge(daysHit), days);
@@ -174,7 +204,11 @@ export const LogSheetOverridden: Story = {
   parameters: { frame: "none" },
   render: () => (
     <LogSheetStory
-      days={stepWeek([{ apple_health: 8214 }, { manual: 9000, apple_health: 6900 }, { apple_health: 4120 }])}
+      days={stepWeek([
+        { apple_health: 8214 },
+        { manual: 9000, apple_health: 6900 },
+        { apple_health: 4120 },
+      ])}
       initialKey="2026-11-23"
     />
   ),

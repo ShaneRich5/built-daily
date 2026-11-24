@@ -61,7 +61,9 @@ export function MoveExerciseSheet({
           >
             <ArrowUpToLine className="size-4 text-zinc-500" aria-hidden />
             <span className="flex-1 font-medium">Move to the top</span>
-            {from === 0 ? <span className="text-xs text-zinc-500">Here now</span> : null}
+            {from === 0 ? (
+              <span className="text-xs text-zinc-500">Here now</span>
+            ) : null}
           </button>
         </li>
         {others.map((item, i) => {
@@ -75,11 +77,18 @@ export function MoveExerciseSheet({
                 disabled={current}
                 onClick={() => moveTo(toIndex)}
               >
-                <span className="w-4 font-mono text-xs text-zinc-400 tabular-nums">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate">
-                  After <strong className="font-semibold">{item.exercise.name}</strong>
+                <span className="w-4 font-mono text-xs text-zinc-400 tabular-nums">
+                  {i + 1}
                 </span>
-                {current ? <span className="text-xs text-zinc-500">Here now</span> : null}
+                <span className="min-w-0 flex-1 truncate">
+                  After{" "}
+                  <strong className="font-semibold">
+                    {item.exercise.name}
+                  </strong>
+                </span>
+                {current ? (
+                  <span className="text-xs text-zinc-500">Here now</span>
+                ) : null}
               </button>
             </li>
           );

@@ -13,10 +13,7 @@ import {
   challengeRuleToFirestore,
   firestoreToChallengeDoc,
 } from "@/lib/challenge-mapper";
-import type {
-  ChallengeRule,
-  SavedChallenge,
-} from "@/lib/challenge-types";
+import type { ChallengeRule, SavedChallenge } from "@/lib/challenge-types";
 import type { DailyMetricKey } from "@/lib/daily-metric-types";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 
@@ -47,7 +44,9 @@ export function subscribeChallengesEndingSince(
     (snap) => {
       const out: SavedChallenge[] = [];
       for (const d of snap.docs) {
-        const challenge = firestoreToChallengeDoc(d.data() as Record<string, unknown>);
+        const challenge = firestoreToChallengeDoc(
+          d.data() as Record<string, unknown>,
+        );
         if (challenge) out.push({ id: d.id, challenge });
       }
       out.sort(
@@ -103,7 +102,9 @@ export async function updateChallengeRule(
 }
 
 /** Records the first time a challenge was done. */
-export async function markChallengeCompleted(challengeId: string): Promise<boolean> {
+export async function markChallengeCompleted(
+  challengeId: string,
+): Promise<boolean> {
   const col = challengesCollectionRef();
   if (!col || !challengeId) return false;
   const now = Timestamp.now();

@@ -25,21 +25,30 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 /** Native share sheet when there is one, else copy. Resolves "copied" when it fell back. */
-export async function shareLink(input: { title: string; text: string; url: string }): Promise<"shared" | "copied" | "failed"> {
+export async function shareLink(input: {
+  title: string;
+  text: string;
+  url: string;
+}): Promise<"shared" | "copied" | "failed"> {
   if (typeof navigator !== "undefined" && navigator.share) {
     try {
       await navigator.share(input);
       return "shared";
     } catch (err) {
       // The person closed the share sheet: that's a choice, not a failure.
-      if (err instanceof DOMException && err.name === "AbortError") return "shared";
+      if (err instanceof DOMException && err.name === "AbortError")
+        return "shared";
     }
   }
   return (await copyText(input.url)) ? "copied" : "failed";
 }
 
 /** `/join/CODE`, with `?plan=ID` when inviting to a plan too. */
-export function inviteUrl(origin: string, code: string, planId: string | null): string {
+export function inviteUrl(
+  origin: string,
+  code: string,
+  planId: string | null,
+): string {
   const base = `${origin}/join/${code}`;
   return planId ? `${base}?plan=${encodeURIComponent(planId)}` : base;
 }
