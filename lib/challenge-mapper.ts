@@ -1,7 +1,9 @@
 import { Timestamp } from "firebase/firestore";
 import {
   CHALLENGE_LIMITS,
+  isChallengePeriod,
   type ChallengeDoc,
+  type ChallengePeriod,
   type ChallengeRule,
 } from "@/lib/challenge-types";
 import { isDailyMetricKey } from "@/lib/daily-metric-types";
@@ -24,14 +26,18 @@ function inRange(
   );
 }
 
-/** A rule with every field inside `CHALLENGE_LIMITS`, or null. */
-export function parseChallengeRule(raw: unknown): ChallengeRule | null {
+/** A rule with every field inside the period's `CHALLENGE_LIMITS`, or null. */
+export function parseChallengeRule(
+  raw: unknown,
+  period: ChallengePeriod = "week",
+): ChallengeRule | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
+  const limits = CHALLENGE_LIMITS[period];
   switch (r.kind) {
     case "days_hit":
-      return inRange(r.dailyTarget, CHALLENGE_LIMITS.dailyTarget) &&
-        inRange(r.daysNeeded, CHALLENGE_LIMITS.daysNeeded)
+      return inRange(r.dailyTarget, limits.dailyTarget) &&
+        inRange(r.daysNeeded, limits.daysNeeded)
         ? {
             kind: "days_hit",
             dailyTarget: r.dailyTarget,
@@ -39,12 +45,12 @@ export function parseChallengeRule(raw: unknown): ChallengeRule | null {
           }
         : null;
     case "total":
-      return inRange(r.target, CHALLENGE_LIMITS.total)
+      return inRange(r.target, limits.total)
         ? { kind: "total", target: r.target }
         : null;
     case "streak":
-      return inRange(r.dailyTarget, CHALLENGE_LIMITS.dailyTarget) &&
-        inRange(r.length, CHALLENGE_LIMITS.streakLength)
+      return inRange(r.dailyTarget, limits.dailyTarget) &&
+        inRange(r.length, limits.streakLength)
         ? { kind: "streak", dailyTarget: r.dailyTarget, length: r.length }
         : null;
     default:
@@ -80,6 +86,7 @@ export function challengeDocToFirestore(
   return {
     metric: doc.metric,
     rule: challengeRuleToFirestore(doc.rule),
+    period: doc.period,
     startDate: doc.startDate,
     endDate: doc.endDate,
     groupId: null,
@@ -93,7 +100,10 @@ export function firestoreToChallengeDoc(
   data: Record<string, unknown>,
 ): ChallengeDoc | null {
   if (!isDailyMetricKey(data.metric)) return null;
-  const rule = parseChallengeRule(data.rule);
+  // Docs from before monthly challenges have no period; they were all weekly.
+  const period = data.period == null ? "week" : data.period;
+  if (!isChallengePeriod(period)) return null;
+  const rule = parseChallengeRule(data.rule, period);
   if (!rule) return null;
 
   const { startDate, endDate } = data;
@@ -107,6 +117,7 @@ export function firestoreToChallengeDoc(
   return {
     metric: data.metric,
     rule,
+    period,
     startDate,
     endDate,
     groupId: null,

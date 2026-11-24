@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import type { ChallengePeriod } from "@/lib/challenge-types";
 import { DAILY_METRICS } from "@/lib/daily-metric-types";
 import { cn } from "@/lib/utils";
 import type {
@@ -9,6 +10,7 @@ import type {
   StepDayCell,
 } from "@/features/step-challenge/step-challenge-model";
 import { StepDayDots } from "@/features/step-challenge/step-day-dots";
+import { StepMonthGrid } from "@/features/step-challenge/step-month-grid";
 import {
   ghostButton,
   primaryButton,
@@ -20,8 +22,10 @@ const { max: MAX_STEPS } = DAILY_METRICS.steps;
 type LogStepsSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** The challenge week, so any past day can be picked and edited. */
-  week: StepDayCell[];
+  /** Week dots or a month grid, matching the card. */
+  period: ChallengePeriod;
+  /** The challenge's days, so any past day can be picked and edited. */
+  days: StepDayCell[];
   day: LogStepsDay;
   onPickDay: (dateKey: string) => void;
   /** Resolves false (or throws) when it couldn't be saved. */
@@ -34,7 +38,8 @@ type LogStepsSheetProps = {
 export function LogStepsSheet({
   open,
   onOpenChange,
-  week,
+  period,
+  days,
   day,
   onPickDay,
   onSave,
@@ -44,11 +49,19 @@ export function LogStepsSheet({
     <BottomSheet open={open} onOpenChange={onOpenChange} title={day.title}>
       {open ? (
         <div className="flex flex-col gap-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <StepDayDots
-            days={week}
-            selectedKey={day.dateKey}
-            onPickDay={onPickDay}
-          />
+          {period === "month" ? (
+            <StepMonthGrid
+              days={days}
+              selectedKey={day.dateKey}
+              onPickDay={onPickDay}
+            />
+          ) : (
+            <StepDayDots
+              days={days}
+              selectedKey={day.dateKey}
+              onPickDay={onPickDay}
+            />
+          )}
           {/* Keyed by day so switching days starts from that day's number. */}
           <LogStepsForm
             key={day.dateKey}

@@ -37,7 +37,7 @@ All mutable **personal** user data lives under:
 | `users/{userId}/settings/progress`           | Weekly workout goal, movement-days goal, optional goal body weight                                                                     |
 | `users/{userId}/bodyWeight/{entryId}`        | Scale check-ins (`dateKey`, `weightLbs`)                                                                                               |
 | `users/{userId}/dailyMetrics/{YYYY-MM-DD}`   | One doc per local day: every daily health metric (steps today), each source's number plus the resolved value                           |
-| `users/{userId}/challenges/{challengeId}`    | Personal step challenges: a rule and a Sunday–Saturday range; progress is derived                                                      |
+| `users/{userId}/challenges/{challengeId}`    | Personal step challenges: a rule and a Sunday–Saturday week or calendar month; progress is derived                                     |
 
 **Accountability groups** use top-level collections (membership-aware rules):
 
@@ -326,14 +326,15 @@ Types: [`lib/challenge-types.ts`](../lib/challenge-types.ts). Progress: [`lib/ch
 | ------------- | -------------------- | ---------------------------------------------------------------------------------- |
 | `metric`      | `"steps"`            | Any "sum, more is better" daily metric works with every rule                       |
 | `rule`        | `ChallengeRule`      | See below                                                                          |
-| `startDate`   | `string`             | Sunday, `YYYY-MM-DD`                                                               |
-| `endDate`     | `string`             | Saturday, `YYYY-MM-DD`                                                             |
+| `period`      | `"week"              | "month"`                                                                           | Missing on docs from before monthly challenges, read as `"week"` |
+| `startDate`   | `string`             | `YYYY-MM-DD`: Sunday, or the 1st for a month                                       |
+| `endDate`     | `string`             | `YYYY-MM-DD`: Saturday, or the month's last day                                    |
 | `groupId`     | `null`               | Reserved for group challenges (phase 2); rules require null for now                |
 | `completedAt` | `Date \| null`       | Set by the app the first time the challenge is done. Cleared when the rule changes |
 | `createdAt`   | `Date` / `Timestamp` |                                                                                    |
 | `updatedAt`   | `Date` / `Timestamp` |                                                                                    |
 
-`ChallengeRule` is one of:
+`ChallengeRule` is one of (week limits; a month allows `daysNeeded` and `length` up to 31 and `target` 20,000–1,500,000):
 
 | `kind`               | Fields                                       | Done when                                |
 | -------------------- | -------------------------------------------- | ---------------------------------------- |
@@ -864,8 +865,9 @@ Table challenges {
   userId string [not null]
   metric string [not null, note: 'steps']
   rule map [not null, note: 'days_hit | total | streak']
-  startDate string [not null, note: 'Sunday, YYYY-MM-DD']
-  endDate string [not null, note: 'Saturday, YYYY-MM-DD']
+  period string [note: 'week | month; missing = week']
+  startDate string [not null, note: 'Sunday, or the 1st for a month, YYYY-MM-DD']
+  endDate string [not null, note: 'Saturday, or the last day of the month, YYYY-MM-DD']
   groupId string [note: 'reserved, always null for now']
   completedAt timestamp
   createdAt timestamp [not null]

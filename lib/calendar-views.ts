@@ -33,6 +33,20 @@ export function endOfWeekDateKey(dateKey: string): string {
   return addDaysToDateKey(startOfWeekDateKey(dateKey), 6);
 }
 
+/** First day of the calendar month containing `dateKey`. */
+export function startOfMonthDateKey(dateKey: string): string {
+  const d = dateFromLocalDateKey(dateKey);
+  if (!d) return dateKey;
+  return monthDateRange(d.getFullYear(), d.getMonth()).startKey;
+}
+
+/** Last day of the calendar month containing `dateKey`. */
+export function endOfMonthDateKey(dateKey: string): string {
+  const d = dateFromLocalDateKey(dateKey);
+  if (!d) return dateKey;
+  return monthDateRange(d.getFullYear(), d.getMonth()).endKey;
+}
+
 export function shiftMonth(
   year: number,
   monthIndex: number,

@@ -2,6 +2,7 @@ import { ChevronRight, Footprints } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { StepChallengeCardView } from "@/features/step-challenge/step-challenge-model";
 import { StepDayDots } from "@/features/step-challenge/step-day-dots";
+import { StepMonthGrid } from "@/features/step-challenge/step-month-grid";
 import {
   ghostButton,
   primaryButton,
@@ -20,7 +21,7 @@ type StepChallengeCardProps = {
   onRepeat: () => void;
 };
 
-/** The weekly step challenge on Home, or a quiet way to start one. */
+/** The weekly or monthly step challenge on Home, or a quiet way to start one. */
 export function StepChallengeCard({
   view,
   busy = false,
@@ -78,7 +79,7 @@ export function StepChallengeCard({
         {view.showBar ? (
           <div
             role="progressbar"
-            aria-label="Progress toward the weekly total"
+            aria-label={`Progress toward the ${view.period === "month" ? "monthly" : "weekly"} total`}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(view.progress * 100)}
@@ -91,7 +92,11 @@ export function StepChallengeCard({
           </div>
         ) : null}
 
-        <StepDayDots days={view.days} onPickDay={onLogDay} />
+        {view.period === "month" ? (
+          <StepMonthGrid days={view.days} onPickDay={onLogDay} />
+        ) : (
+          <StepDayDots days={view.days} onPickDay={onLogDay} />
+        )}
 
         {view.state === "active" && todayKey ? (
           <button
@@ -112,9 +117,9 @@ export function StepChallengeCard({
             {view.repeatLabel}
           </button>
         ) : null}
-        {view.state !== "active" && view.nextWeekSet ? (
+        {view.state !== "active" && view.nextSet ? (
           <p className="text-[13px] text-zinc-600 dark:text-zinc-400">
-            Next week’s challenge is set.
+            Next {view.period}’s challenge is set.
           </p>
         ) : null}
 
@@ -164,7 +169,7 @@ function StartChallengeEntry({ onStart }: { onStart: () => void }) {
           Start a step challenge
         </span>
         <span className="block text-[13px] text-zinc-500 dark:text-zinc-400">
-          A weekly target with room for off days.
+          A weekly or monthly target with room for off days.
         </span>
       </span>
       <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden />

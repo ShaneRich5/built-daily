@@ -2,16 +2,12 @@
 
 import { useState } from "react";
 import {
-  addDaysToDateKey,
-  endOfWeekDateKey,
-  startOfWeekDateKey,
-} from "@/lib/calendar-views";
-import {
   startChallenge,
   updateChallengeRule,
 } from "@/lib/challenge-repository";
 import {
   DEFAULT_CHALLENGE_RULE,
+  type ChallengePeriod,
   type ChallengeRule,
 } from "@/lib/challenge-types";
 import { setManualDailyMetric } from "@/lib/daily-metric-repository";
@@ -20,7 +16,8 @@ import { StartChallengeSheet } from "@/features/step-challenge/start-challenge-s
 import { StepChallengeCard } from "@/features/step-challenge/step-challenge-card";
 import {
   buildLogStepsDay,
-  repeatStartDate,
+  challengeRange,
+  repeatRange,
 } from "@/features/step-challenge/step-challenge-model";
 import { useStepChallenge } from "@/features/step-challenge/use-step-challenge";
 
@@ -45,19 +42,20 @@ export function StepChallengeSection({ todayKey }: { todayKey: string }) {
   // Avoids flashing "Start a step challenge" before a running one loads.
   if (!loaded) return null;
 
-  const startThisWeek = (rule: ChallengeRule) =>
+  /** Covers the whole week or month containing today, so steps already in it count. */
+  const startNow = (rule: ChallengeRule, period: ChallengePeriod) =>
     startChallenge({
       metric: "steps",
       rule,
-      startDate: startOfWeekDateKey(todayKey),
-      endDate: endOfWeekDateKey(todayKey),
+      period,
+      ...challengeRange(period, todayKey),
     });
 
-  const submitRule = async (rule: ChallengeRule) => {
+  const submitRule = async (rule: ChallengeRule, period: ChallengePeriod) => {
     inBackground(
       sheet === "edit" && shown
         ? updateChallengeRule(shown.id, rule)
-        : startThisWeek(rule),
+        : startNow(rule, period),
     );
     setSheet(null);
     return true;
@@ -65,13 +63,12 @@ export function StepChallengeSection({ todayKey }: { todayKey: string }) {
 
   const repeat = () => {
     if (!shown) return;
-    const startDate = repeatStartDate(shown, todayKey);
     inBackground(
       startChallenge({
         metric: shown.challenge.metric,
         rule: shown.challenge.rule,
-        startDate,
-        endDate: addDaysToDateKey(startDate, 6),
+        period: shown.challenge.period,
+        ...repeatRange(shown, todayKey),
       }),
     );
   };
@@ -81,7 +78,7 @@ export function StepChallengeSection({ todayKey }: { todayKey: string }) {
       <StepChallengeCard
         view={view}
         onStart={() => setSheet("start")}
-        // A week that's over starts a fresh one; otherwise edit the running one.
+        // A challenge that's over starts a fresh one; otherwise edit the running one.
         onEdit={() => setSheet(view?.state === "ended" ? "start" : "edit")}
         onRepeat={repeat}
         onLogDay={(dateKey) => {
@@ -93,14 +90,17 @@ export function StepChallengeSection({ todayKey }: { todayKey: string }) {
         open={sheet === "start" || sheet === "edit"}
         onOpenChange={(open) => !open && setSheet(null)}
         mode={sheet === "edit" ? "edit" : "start"}
+        todayKey={todayKey}
         initialRule={view?.rule ?? DEFAULT_CHALLENGE_RULE}
+        initialPeriod={view?.period ?? "week"}
         onSubmit={submitRule}
       />
       {view ? (
         <LogStepsSheet
           open={sheet === "log"}
           onOpenChange={(open) => !open && setSheet(null)}
-          week={view.days}
+          period={view.period}
+          days={view.days}
           day={buildLogStepsDay(logKey, days)}
           onPickDay={setLogKey}
           onSave={async (dateKey, steps) => {

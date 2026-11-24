@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import {
   addDaysToDateKey,
+  endOfMonthDateKey,
   endOfWeekDateKey,
+  startOfMonthDateKey,
   startOfWeekDateKey,
 } from "@/lib/calendar-views";
 import {
@@ -41,8 +43,18 @@ export function useStepChallenge(todayKey: string) {
     if (!signedIn) return;
     const patch = (next: Partial<RawChallengeData>) =>
       setRaw((prev) => ({ ...prev, ...next }));
-    // Last week and this week: enough for the running challenge or one that just ended.
-    const weekStart = startOfWeekDateKey(todayKey);
+    // Enough days for a running week or month, or one that ended in the last
+    // few days: from last week or last month (whichever starts first)
+    // through the end of this week or month (whichever ends last).
+    const lastWeekStart = addDaysToDateKey(startOfWeekDateKey(todayKey), -7);
+    const endedMonthStart = startOfMonthDateKey(
+      addDaysToDateKey(todayKey, -ENDED_VISIBLE_DAYS),
+    );
+    const weekEnd = endOfWeekDateKey(todayKey);
+    const monthEnd = endOfMonthDateKey(todayKey);
+    const rangeStart =
+      lastWeekStart < endedMonthStart ? lastWeekStart : endedMonthStart;
+    const rangeEnd = weekEnd > monthEnd ? weekEnd : monthEnd;
     const unsubs = [
       subscribeChallengesEndingSince(
         addDaysToDateKey(todayKey, -ENDED_VISIBLE_DAYS),
@@ -51,10 +63,8 @@ export function useStepChallenge(todayKey: string) {
           setLoaded(true);
         },
       ),
-      subscribeDailyMetricsInRange(
-        addDaysToDateKey(weekStart, -7),
-        endOfWeekDateKey(todayKey),
-        (days) => patch({ days }),
+      subscribeDailyMetricsInRange(rangeStart, rangeEnd, (days) =>
+        patch({ days }),
       ),
     ];
     return () => {
