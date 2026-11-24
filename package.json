@@ -13,7 +13,8 @@
     "test:e2e": "playwright test",
     "mcp": "tsx mcp/server.ts",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test": "tsx --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
