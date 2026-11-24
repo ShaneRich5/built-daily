@@ -1,10 +1,20 @@
-import { addDaysToDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
+import {
+  addDaysToDateKey,
+  endOfMonthDateKey,
+  endOfWeekDateKey,
+  startOfMonthDateKey,
+  startOfWeekDateKey,
+} from "@/lib/calendar-views";
 import {
   describeChallengeRule,
   evaluateChallenge,
   type ChallengeTone,
 } from "@/lib/challenge-evaluate";
-import type { ChallengeRule, SavedChallenge } from "@/lib/challenge-types";
+import type {
+  ChallengePeriod,
+  ChallengeRule,
+  SavedChallenge,
+} from "@/lib/challenge-types";
 import { resolveDailyMetric } from "@/lib/daily-metric-resolve";
 import {
   DAILY_METRIC_SOURCE_LABELS,
@@ -12,8 +22,24 @@ import {
 } from "@/lib/daily-metric-types";
 import { dateFromLocalDateKey } from "@/lib/workout-date";
 
-/** How long a finished challenge stays on Home (through Tuesday of the next week). */
+/** How long a finished challenge stays on Home after its last day. */
 export const ENDED_VISIBLE_DAYS = 3;
+
+/** The week (Sunday–Saturday) or calendar month containing `dateKey`. */
+export function challengeRange(
+  period: ChallengePeriod,
+  dateKey: string,
+): { startDate: string; endDate: string } {
+  return period === "month"
+    ? {
+        startDate: startOfMonthDateKey(dateKey),
+        endDate: endOfMonthDateKey(dateKey),
+      }
+    : {
+        startDate: startOfWeekDateKey(dateKey),
+        endDate: endOfWeekDateKey(dateKey),
+      };
+}
 
 const DAY_NAMES = [
   "Sunday",
@@ -29,6 +55,8 @@ export type StepDayCell = {
   dateKey: string;
   /** "S", "M", … */
   letter: string;
+  /** 1–31, for the month grid. */
+  dayOfMonth: number;
   /** "8.2k", "–" (nothing yet), or "" for a day still ahead. */
   short: string;
   hit: boolean;
@@ -41,7 +69,8 @@ export type StepDayCell = {
 
 export type StepChallengeCardView = {
   id: string;
-  /** `ended`: the week is over and fell short. `done` can be mid-week. */
+  period: ChallengePeriod;
+  /** `ended`: the period is over and fell short. `done` can come early. */
   state: "active" | "done" | "ended";
   heading: string;
   rangeLabel: string;
@@ -57,9 +86,10 @@ export type StepChallengeCardView = {
   days: StepDayCell[];
   /** Today's number and where it came from, while the challenge is running. */
   today: { value: string; source: string | null; synced: boolean } | null;
-  /** "Same again next week" or "Same again this week"; null once that week is set. */
+  /** "Same again next week" or "Same again this month"; null once that one is set. */
   repeatLabel: string | null;
-  nextWeekSet: boolean;
+  /** The next week's or month's challenge already exists. */
+  nextSet: boolean;
   rule: ChallengeRule;
 };
 
@@ -116,7 +146,7 @@ export type HomeChallengePick = {
   upcoming: SavedChallenge | null;
 };
 
-/** Which challenge Home shows. Latest created wins if two cover the same week. */
+/** Which challenge Home shows. Latest created wins if two cover the same day. */
 export function pickHomeChallenge(
   rows: SavedChallenge[],
   todayKey: string,
@@ -141,14 +171,17 @@ export function pickHomeChallenge(
   return { shown: recentlyEnded ?? null, upcoming };
 }
 
-/** Sunday the repeat would start: next week while this one runs, else this week. */
-export function repeatStartDate(
+/**
+ * The range a repeat covers, in the same period: the next one while this one
+ * runs, else the one containing today.
+ */
+export function repeatRange(
   saved: SavedChallenge,
   todayKey: string,
-): string {
-  return saved.challenge.endDate >= todayKey
-    ? addDaysToDateKey(saved.challenge.endDate, 1)
-    : startOfWeekDateKey(todayKey);
+): { startDate: string; endDate: string } {
+  const { period, endDate } = saved.challenge;
+  const from = endDate >= todayKey ? addDaysToDateKey(endDate, 1) : todayKey;
+  return challengeRange(period, from);
 }
 
 export function buildStepChallengeCardView(
@@ -165,12 +198,16 @@ export function buildStepChallengeCardView(
   );
   const state = progress.done ? "done" : progress.ended ? "ended" : "active";
   const isTotal = challenge.rule.kind === "total";
+  const { period } = challenge;
+  const noun = period === "month" ? "month" : "week";
 
   const cells: StepDayCell[] = progress.days.map((d) => {
     const resolvedFrom = days[d.dateKey]?.metrics.steps?.resolvedFrom ?? null;
     const synced =
       !d.isFuture && resolvedFrom != null && resolvedFrom !== "manual";
     const name = dayName(d.dateKey);
+    // In a month grid the weekday alone is ambiguous, so say the date too.
+    const spoken = period === "month" ? dayTitle(d.dateKey) : name;
     const amount =
       d.value == null
         ? "nothing logged"
@@ -178,14 +215,15 @@ export function buildStepChallengeCardView(
     return {
       dateKey: d.dateKey,
       letter: name[0]!,
+      dayOfMonth: Number(d.dateKey.slice(8, 10)),
       short: d.isFuture ? "" : shortSteps(d.value),
       hit: d.hit,
       isToday: d.isToday,
       isFuture: d.isFuture,
       synced,
       label: d.isFuture
-        ? `${name}, not yet`
-        : `${name}, ${amount}${synced && resolvedFrom ? `, from ${DAILY_METRIC_SOURCE_LABELS[resolvedFrom]}` : ""}${
+        ? `${spoken}, not yet`
+        : `${spoken}, ${amount}${synced && resolvedFrom ? `, from ${DAILY_METRIC_SOURCE_LABELS[resolvedFrom]}` : ""}${
             d.hit && !isTotal ? ", target hit" : ""
           }. Edit steps.`,
     };
@@ -194,20 +232,21 @@ export function buildStepChallengeCardView(
   const todayEntry = days[todayKey]?.metrics.steps ?? null;
   const running =
     challenge.startDate <= todayKey && todayKey <= challenge.endDate;
-  const repeatStart = repeatStartDate(saved, todayKey);
-  const nextWeekSet =
+  const repeatStart = repeatRange(saved, todayKey).startDate;
+  const nextSet =
     upcoming != null && upcoming.challenge.startDate <= repeatStart;
 
   return {
     id: saved.id,
+    period,
     state,
     heading: progress.ended
-      ? "Last week’s steps"
+      ? `Last ${noun}’s steps`
       : progress.done
         ? "Challenge complete"
-        : "This week’s steps",
+        : `This ${noun}’s steps`,
     rangeLabel: rangeLabel(challenge.startDate, challenge.endDate),
-    title: describeChallengeRule(challenge.rule, challenge.metric),
+    title: describeChallengeRule(challenge.rule, challenge.metric, period),
     bigValue: progress.current.toLocaleString("en-US"),
     bigSuffix: isTotal
       ? `/ ${progress.goal.toLocaleString("en-US")}`
@@ -232,12 +271,12 @@ export function buildStepChallengeCardView(
         }
       : null,
     repeatLabel:
-      state === "active" || nextWeekSet
+      state === "active" || nextSet
         ? null
         : running
-          ? "Same again next week"
-          : "Same again this week",
-    nextWeekSet,
+          ? `Same again next ${noun}`
+          : `Same again this ${noun}`,
+    nextSet,
     rule: challenge.rule,
   };
 }

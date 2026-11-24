@@ -1,5 +1,6 @@
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import type {
+  ChallengePeriod,
   ChallengeRule,
   DaysHitRule,
   StreakRule,
@@ -23,7 +24,7 @@ export type ChallengeDay = {
   isFuture: boolean;
 };
 
-/** Where the week stands, in a word. There is no "failed". */
+/** Where the week or month stands, in a word. There is no "failed". */
 export type ChallengeTone = "on" | "tight" | "off" | "done";
 
 export type ChallengeProgress = {
@@ -46,10 +47,18 @@ export type ChallengeInput = {
   rule: ChallengeRule;
   startDate: string;
   endDate: string;
+  /** Only changes the wording; the range decides which days count. Defaults to "week". */
+  period?: ChallengePeriod;
 };
 
-/** Safety cap on a range's length (challenges are one week today). */
+/** Safety cap on a range's length (a calendar month at most). */
 const MAX_RANGE_DAYS = 31;
+
+/** How the copy names the period and when the next one starts. */
+const PERIOD_WORDS: Record<ChallengePeriod, { noun: string; next: string }> = {
+  week: { noun: "week", next: "Sunday" },
+  month: { noun: "month", next: "on the 1st" },
+};
 
 function fmt(n: number): string {
   return n.toLocaleString("en-US");
@@ -59,17 +68,21 @@ function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
-/** "7,000 steps on 5 of 7 days" */
+/** "7,000 steps on 5 of 7 days", or "7,000 steps on 20 days this month" */
 export function describeChallengeRule(
   rule: ChallengeRule,
   metric: DailyMetricKey = "steps",
+  period: ChallengePeriod = "week",
 ): string {
   const unit = DAILY_METRICS[metric].unit;
+  const { noun } = PERIOD_WORDS[period];
   switch (rule.kind) {
     case "days_hit":
-      return `${fmt(rule.dailyTarget)} ${unit} on ${rule.daysNeeded} of 7 days`;
+      return period === "week"
+        ? `${fmt(rule.dailyTarget)} ${unit} on ${rule.daysNeeded} of 7 days`
+        : `${fmt(rule.dailyTarget)} ${unit} on ${rule.daysNeeded} days this ${noun}`;
     case "total":
-      return `${fmt(rule.target)} ${unit} this week`;
+      return `${fmt(rule.target)} ${unit} this ${noun}`;
     case "streak":
       return `${fmt(rule.dailyTarget)} a day, ${rule.length} days running`;
   }
@@ -116,7 +129,15 @@ function buildDays(
   });
 }
 
-const FRESH_START = "A new week is a fresh start.";
+function freshStart(input: ChallengeInput): string {
+  return `A new ${PERIOD_WORDS[input.period ?? "week"].noun} is a fresh start.`;
+}
+
+/** "A new week starts Sunday." / "A new month starts on the 1st." */
+function nextStarts(input: ChallengeInput): string {
+  const { noun, next } = PERIOD_WORDS[input.period ?? "week"];
+  return `A new ${noun} starts ${next}.`;
+}
 
 export function evaluateDaysHit(
   input: ChallengeInput & { rule: DaysHitRule },
@@ -146,7 +167,7 @@ export function evaluateDaysHit(
       ...base,
       progress,
       tone: "off",
-      status: `${hit} of ${daysNeeded} days this time. ${FRESH_START}`,
+      status: `${hit} of ${daysNeeded} days this time. ${freshStart(input)}`,
     };
   }
   if (need > open) {
@@ -154,7 +175,7 @@ export function evaluateDaysHit(
       ...base,
       progress,
       tone: "off",
-      status: `Needs ${plural(need, "more day")} and ${open} ${open === 1 ? "is" : "are"} left. A new week starts Sunday.`,
+      status: `Needs ${plural(need, "more day")} and ${open} ${open === 1 ? "is" : "are"} left. ${nextStarts(input)}`,
     };
   }
   if (need === open) {
@@ -207,7 +228,7 @@ export function evaluateTotal(
     return {
       ...base,
       tone: "off",
-      status: `${fmt(sum)} ${unit} this time. ${FRESH_START}`,
+      status: `${fmt(sum)} ${unit} this time. ${freshStart(input)}`,
     };
   }
   const daysLeft = days.filter((d) => d.isToday || d.isFuture).length;
@@ -264,14 +285,15 @@ export function evaluateStreak(
     return {
       ...base,
       tone: "off",
-      status: `Longest run: ${plural(best, "day")}. ${FRESH_START}`,
+      status: `Longest run: ${plural(best, "day")}. ${freshStart(input)}`,
     };
   }
   if (length - run > openDayCount(days)) {
+    const { noun, next } = PERIOD_WORDS[input.period ?? "week"];
     return {
       ...base,
       tone: "off",
-      status: `A ${length}-day run can't fit in what's left of this week. Start a new one Sunday.`,
+      status: `A ${length}-day run can't fit in what's left of this ${noun}. Start a new one ${next}.`,
     };
   }
   return {

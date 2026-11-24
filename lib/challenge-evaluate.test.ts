@@ -187,3 +187,115 @@ describe("evaluateChallenge", () => {
     );
   });
 });
+
+describe("monthly challenges", () => {
+  /** November 2026: 30 days, Sunday the 1st. */
+  const november = {
+    metric: "steps" as const,
+    startDate: "2026-11-01",
+    endDate: "2026-11-30",
+    period: "month" as const,
+  };
+  const daysHitRule = {
+    kind: "days_hit" as const,
+    dailyTarget: 7000,
+    daysNeeded: 20,
+  };
+
+  /** The same value on November 1 through `lastDay`. */
+  function novemberDays(value: number, lastDay: number) {
+    const out: Record<string, number> = {};
+    for (let d = 1; d <= lastDay; d++) {
+      out[`2026-11-${String(d).padStart(2, "0")}`] = value;
+    }
+    return out;
+  }
+
+  it("covers every day of the month", () => {
+    const r = evaluateDaysHit(
+      { ...november, rule: daysHitRule },
+      {},
+      "2026-11-10",
+    );
+    assert.equal(r.days.length, 30);
+    assert.equal(r.days[0]!.dateKey, "2026-11-01");
+    assert.equal(r.days[29]!.dateKey, "2026-11-30");
+  });
+
+  it("counts spare days across the rest of the month", () => {
+    const r = evaluateDaysHit(
+      { ...november, rule: daysHitRule },
+      novemberDays(8000, 10),
+      "2026-11-10",
+    );
+    assert.equal(r.current, 10);
+    assert.equal(r.tone, "on");
+    assert.equal(r.status, "Needs 10 of the 20 days left, 10 to spare.");
+  });
+
+  it("points to the next month when the days can't fit", () => {
+    const r = evaluateDaysHit(
+      { ...november, rule: daysHitRule },
+      novemberDays(8000, 5),
+      "2026-11-25",
+    );
+    assert.equal(r.tone, "off");
+    assert.equal(
+      r.status,
+      "Needs 15 more days and 6 are left. A new month starts on the 1st.",
+    );
+  });
+
+  it("calls a new month a fresh start once it ends", () => {
+    const r = evaluateDaysHit(
+      { ...november, rule: daysHitRule },
+      novemberDays(8000, 5),
+      "2026-12-01",
+    );
+    assert.equal(r.ended, true);
+    assert.equal(
+      r.status,
+      "5 of 20 days this time. A new month is a fresh start.",
+    );
+  });
+
+  it("spreads a monthly total over the month's days", () => {
+    const r = evaluateTotal(
+      { ...november, rule: { kind: "total", target: 200000 } },
+      { "2026-11-01": 6700, "2026-11-02": 6600 },
+      "2026-11-02",
+    );
+    // 200,000 / 30 days ≈ 6,667, rounded to 6,700.
+    assert.deepEqual(
+      r.days.slice(0, 2).map((d) => d.hit),
+      [true, false],
+    );
+  });
+
+  it("says a run can't fit in what's left of the month", () => {
+    const r = evaluateStreak(
+      { ...november, rule: { kind: "streak", dailyTarget: 6000, length: 14 } },
+      {},
+      "2026-11-25",
+    );
+    assert.equal(
+      r.status,
+      "A 14-day run can't fit in what's left of this month. Start a new one on the 1st.",
+    );
+  });
+
+  it("describes monthly rules in plain words", () => {
+    assert.equal(
+      describeChallengeRule(daysHitRule, "steps", "month"),
+      "7,000 steps on 20 days this month",
+    );
+    assert.equal(
+      describeChallengeRule(
+        { kind: "total", target: 200000 },
+        "steps",
+        "month",
+      ),
+      "200,000 steps this month",
+    );
+  });
+});

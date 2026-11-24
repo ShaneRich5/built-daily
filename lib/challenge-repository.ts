@@ -13,7 +13,11 @@ import {
   challengeRuleToFirestore,
   firestoreToChallengeDoc,
 } from "@/lib/challenge-mapper";
-import type { ChallengeRule, SavedChallenge } from "@/lib/challenge-types";
+import type {
+  ChallengePeriod,
+  ChallengeRule,
+  SavedChallenge,
+} from "@/lib/challenge-types";
 import type { DailyMetricKey } from "@/lib/daily-metric-types";
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase";
 
@@ -26,7 +30,7 @@ function challengesCollectionRef() {
 
 /**
  * Challenges that end on or after `sinceDateKey`: the running one, one that
- * just finished, and next week's if it's already set. Single-field range, so
+ * just finished, and the next one if it's already set. Single-field range, so
  * no composite index.
  */
 export function subscribeChallengesEndingSince(
@@ -60,10 +64,11 @@ export function subscribeChallengesEndingSince(
   );
 }
 
-/** A personal challenge over `startDate`–`endDate` (a Sunday–Saturday week). */
+/** A personal challenge over `startDate`–`endDate`: a Sunday–Saturday week or a calendar month. */
 export async function startChallenge(input: {
   metric: DailyMetricKey;
   rule: ChallengeRule;
+  period: ChallengePeriod;
   startDate: string;
   endDate: string;
 }): Promise<string | null> {

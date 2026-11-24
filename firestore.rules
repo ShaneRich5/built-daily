@@ -262,27 +262,37 @@ service cloud.firestore {
       return d.get('metrics', {}).get('steps', {}).get('sources', {});
     }
 
-    function validChallengeRule(r) {
+    /** Bounds match CHALLENGE_LIMITS in lib/challenge-types.ts, per period. */
+    function validChallengeRule(r, period) {
+      let month = period == 'month';
+      let maxDays = month ? 31 : 7;
       return r is map && (
         (r.kind == 'days_hit'
           && r.keys().hasOnly(['kind', 'dailyTarget', 'daysNeeded'])
           && isIntLike(r.dailyTarget) && r.dailyTarget >= 1000 && r.dailyTarget <= 50000
-          && isIntLike(r.daysNeeded) && r.daysNeeded >= 1 && r.daysNeeded <= 7)
+          && isIntLike(r.daysNeeded) && r.daysNeeded >= 1 && r.daysNeeded <= maxDays)
         || (r.kind == 'total'
           && r.keys().hasOnly(['kind', 'target'])
-          && isIntLike(r.target) && r.target >= 5000 && r.target <= 500000)
+          && isIntLike(r.target)
+          && r.target >= (month ? 20000 : 5000)
+          && r.target <= (month ? 1500000 : 500000))
         || (r.kind == 'streak'
           && r.keys().hasOnly(['kind', 'dailyTarget', 'length'])
           && isIntLike(r.dailyTarget) && r.dailyTarget >= 1000 && r.dailyTarget <= 50000
-          && isIntLike(r.length) && r.length >= 2 && r.length <= 7)
+          && isIntLike(r.length) && r.length >= 2 && r.length <= maxDays)
       );
     }
 
-    /** Personal challenges only for now: `groupId` is reserved and must be null. */
+    /**
+     * Personal challenges only for now: `groupId` is reserved and must be null.
+     * `period` is optional because docs from before monthly challenges have
+     * none; they were all weekly.
+     */
     function validChallengeFields() {
       let d = request.resource.data;
+      let period = d.get('period', 'week');
       return d.keys().hasOnly([
-            'metric', 'rule', 'startDate', 'endDate', 'groupId',
+            'metric', 'rule', 'period', 'startDate', 'endDate', 'groupId',
             'completedAt', 'createdAt', 'updatedAt'
           ])
         && d.keys().hasAll([
@@ -290,7 +300,8 @@ service cloud.firestore {
             'completedAt', 'createdAt', 'updatedAt'
           ])
         && d.metric == 'steps'
-        && validChallengeRule(d.rule)
+        && period in ['week', 'month']
+        && validChallengeRule(d.rule, period)
         && d.startDate is string && validDateKey(d.startDate)
         && d.endDate is string && validDateKey(d.endDate)
         && d.endDate >= d.startDate

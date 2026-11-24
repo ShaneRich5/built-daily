@@ -15,6 +15,8 @@ shipped: group challenges (B, C), the iOS Shortcut bridge, native
 HealthKit / Health Connect, a "disconnect a source" control, the
 week-detail screen from the prototype, and deploying the new Firestore rules
 (writes to the new collections are denied until they're deployed).
+Monthly challenges were added afterwards: the same three rules over a whole
+calendar month, shown as a month grid on the card.
 The design was explored on 2026-11-24. Two private Claude Artifacts show it
 visually (ask Shane for access):
 
@@ -103,8 +105,9 @@ than any feature uses. Detailed analytics are also a non-goal (CLAUDE.md).
     | { kind: "days_hit", dailyTarget: 7000, daysNeeded: 5 }   // default
     | { kind: "total", target: 50000 }
     | { kind: "streak", dailyTarget: 6000, length: 7 },
-  startDate: "2026-11-22",   // Sunday
-  endDate: "2026-11-28",     // Saturday
+  period: "week",            // or "month"; missing on older docs = "week"
+  startDate: "2026-11-22",   // Sunday (a month: the 1st)
+  endDate: "2026-11-28",     // Saturday (a month: its last day)
   groupId: null,             // reserved for group challenges (phase 2)
   completedAt: Timestamp | null,
   createdAt, updatedAt,
@@ -119,8 +122,14 @@ minutes, distance) works with all three rules unchanged.
 - **The default is forgiving.** "7,000 steps on 5 of 7 days" leaves room for
   rest days and bad days, which matches "consistency over optimization."
 - **Streak is opt-in.** A broken streak feels bad, so it's never the default.
-- **Weeks run Sunday to Saturday**, like the rest of the app. Use the existing
-  week helpers in `lib/calendar-views.ts`.
+- **A challenge is a week or a month.** Weeks run Sunday to Saturday, like
+  the rest of the app; months are whole calendar months. Either way it covers
+  the whole period it starts in, so steps already logged count. Use the
+  existing helpers in `lib/calendar-views.ts`.
+- **Monthly presets scale the weekly ones:** 7,000 steps on 20 days (about
+  two off days a week), 200,000 steps in the month, or 6,000 a day for 14
+  days running. Month limits allow up to 31 days and a 1,500,000 total; the
+  start sheet caps day counts at the month's length.
 
 ### 5. Ways in
 
