@@ -6,11 +6,7 @@ import {
   type DailyMetricInput,
 } from "@/lib/daily-metric-input";
 import { localDateKeyFromMs } from "@/lib/workout-date";
-import {
-  mcpTokenVerifier,
-  requestWithBearerToken,
-  uidFromAuthInfo,
-} from "@/mcp/bearer";
+import { mcpTokenVerifier, uidFromAuthInfo } from "@/mcp/bearer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,10 +30,16 @@ function json(body: unknown, status = 200, headers?: HeadersInit): Response {
   return Response.json(body, { status, headers });
 }
 
-/** The token's owner, or a 401. Same tokens as the MCP server (PATs and OAuth). */
+/**
+ * The token's owner, or a 401. Same tokens as the MCP server (PATs and OAuth),
+ * sent as `Authorization: Bearer …` or, like the MCP route, `x-api-key`. Reads
+ * the headers directly so the body stays unread for `request.json()`.
+ */
 async function requireUid(request: Request): Promise<string | Response> {
-  const header = requestWithBearerToken(request).headers.get("authorization") ?? "";
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  const header = request.headers.get("authorization") ?? "";
+  const token = header.startsWith("Bearer ")
+    ? header.slice(7).trim()
+    : (request.headers.get("x-api-key")?.trim() ?? "");
   const challenge = { "WWW-Authenticate": 'Bearer realm="built-daily"' };
   if (!token) {
     return json({ error: "Missing bearer token." }, 401, challenge);
