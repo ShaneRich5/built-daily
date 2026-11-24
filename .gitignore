@@ -68,3 +68,9 @@ next-env.d.ts
 # storybook
 storybook-static/
 *storybook.log
+
+# Local AI-tool state: per machine, and may hold personal IDs or tokens.
+# .claude/skills/ and other shared Claude config stay tracked.
+.codex/
+.claude/settings.local.json
+.claude/worktrees/
