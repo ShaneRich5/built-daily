@@ -1,4 +1,4 @@
-import { getFirebaseAuth } from "@/lib/firebase";
+import { authedFetch } from "@/lib/authed-fetch";
 
 export type McpTokenSummary = {
   id: string;
@@ -6,15 +6,6 @@ export type McpTokenSummary = {
   createdAt: string | null;
   lastUsedAt: string | null;
 };
-
-async function authedFetch(path: string, init?: RequestInit): Promise<Response> {
-  const user = getFirebaseAuth()?.currentUser;
-  if (!user) throw new Error("Not signed in");
-  const idToken = await user.getIdToken();
-  const headers = new Headers(init?.headers);
-  headers.set("Authorization", `Bearer ${idToken}`);
-  return fetch(path, { ...init, headers });
-}
 
 /** Lists the signed-in user's MCP access tokens (metadata only). */
 export async function listMcpTokens(): Promise<McpTokenSummary[]> {
