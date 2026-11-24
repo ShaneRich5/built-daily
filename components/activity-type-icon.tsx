@@ -11,6 +11,7 @@ import {
   Mountain,
   Music,
   PersonStanding,
+  Timer,
   Waves,
 } from "lucide-react";
 import type { ActivityCatalogEntry } from "@/lib/activity-catalog";
@@ -25,6 +26,7 @@ const ICONS: Record<ActivityCatalogEntry["icon"], LucideIcon> = {
   "person-standing": PersonStanding,
   music: Music,
   dog: Dog,
+  timer: Timer,
   activity: Activity,
 };
 

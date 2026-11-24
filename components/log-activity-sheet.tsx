@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ACTIVITY_CATALOG,
   getActivityTypeById,
+  pickableActivityTypes,
 } from "@/lib/activity-catalog";
 import {
   logActivity,
@@ -211,7 +211,7 @@ export function LogActivitySheet({
                 Quick check-in for walks, rides, and sports—not a workout.
               </p>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {ACTIVITY_CATALOG.map((t) => (
+                {pickableActivityTypes().map((t) => (
                   <button
                     key={t.id}
                     type="button"

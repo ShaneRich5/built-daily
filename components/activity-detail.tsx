@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  ACTIVITY_CATALOG,
   getActivityTypeById,
+  pickableActivityTypes,
 } from "@/lib/activity-catalog";
 import {
   deleteActivity,
@@ -191,7 +191,7 @@ export function ActivityDetail({
         <div className="space-y-2">
           <Label>Activity type</Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {ACTIVITY_CATALOG.map((t) => {
+            {pickableActivityTypes(activity.activityTypeId).map((t) => {
               const active = t.id === typeId;
               return (
                 <button
