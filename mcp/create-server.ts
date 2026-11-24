@@ -47,7 +47,10 @@ function errorResult(message: string) {
 }
 
 const setInputSchema = z.object({
-  weight: z.number().optional().describe("Weight used, for weighted exercises."),
+  weight: z
+    .number()
+    .optional()
+    .describe("Weight used, for weighted exercises."),
   reps: z.number().int().optional().describe("Reps performed."),
   durationSec: z
     .number()
@@ -74,9 +77,7 @@ const exerciseInputSchema = z.object({
   exerciseId: z
     .string()
     .min(1)
-    .describe(
-      "Catalog exercise id — look it up first with search_exercises.",
-    ),
+    .describe("Catalog exercise id — look it up first with search_exercises."),
   note: z.string().max(400).optional().describe("Note for this exercise."),
   sets: z
     .array(setInputSchema)
@@ -91,9 +92,7 @@ const commonSessionFields = {
     .string()
     .max(200)
     .optional()
-    .describe(
-      'Workout title. Defaults to "Workout on <date>" when omitted.',
-    ),
+    .describe('Workout title. Defaults to "Workout on <date>" when omitted.'),
   status: z
     .enum(["completed", "in_progress"])
     .optional()
@@ -226,7 +225,7 @@ export function createBuiltDailyServer(uid: string): McpServer {
       description:
         "Recent completed sessions that include one exercise (newest first), with the sets logged each time, " +
         'plus the best set. "best" is by estimated 1RM for weight_reps, most reps for bodyweight_reps, longest ' +
-        "durationSec for duration, and longest distanceMiles for cardio. Use it to answer \"what did I do last " +
+        'durationSec for duration, and longest distanceMiles for cardio. Use it to answer "what did I do last ' +
         'time?" or to suggest a weight. Weights are in lbs. Scans the last 100 completed sessions.',
       inputSchema: z.object({
         exerciseId: z
@@ -307,7 +306,9 @@ export function createBuiltDailyServer(uid: string): McpServer {
           .array(exerciseInputSchema)
           .max(40)
           .optional()
-          .describe("Full replacement exercise/set list, if changing exercises."),
+          .describe(
+            "Full replacement exercise/set list, if changing exercises.",
+          ),
       }),
       annotations: writeDestructive,
     },

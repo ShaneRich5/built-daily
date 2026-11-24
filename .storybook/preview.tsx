@@ -4,7 +4,10 @@ import { useEffect } from "react";
 import "../app/globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
 
 const preview: Preview = {
   parameters: {
@@ -54,9 +57,14 @@ const preview: Preview = {
         const root = document.documentElement;
         root.classList.add(...fontClasses.split(" "));
         root.classList.toggle("dark", dark);
-        document.body.classList.add(geistSans.className, "bg-background", "text-foreground");
+        document.body.classList.add(
+          geistSans.className,
+          "bg-background",
+          "text-foreground",
+        );
       }, [dark, fontClasses]);
-      const width = context.globals.width === "desktop" ? "max-w-[672px]" : "max-w-[390px]";
+      const width =
+        context.globals.width === "desktop" ? "max-w-[672px]" : "max-w-[390px]";
       return (
         <div
           className={`${geistSans.variable} ${geistMono.variable} ${dark ? "dark" : ""}`}

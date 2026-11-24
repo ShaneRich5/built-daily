@@ -82,11 +82,15 @@ export function FinishLeftoversSheet({
               className="flex flex-col gap-2 border-b border-zinc-100 py-2.5 dark:border-zinc-800"
             >
               <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 truncate text-[15px] font-medium">{item.exercise.name}</span>
+                <span className="min-w-0 truncate text-[15px] font-medium">
+                  {item.exercise.name}
+                </span>
                 <span
                   className={cn(
                     "shrink-0 rounded-full border border-zinc-200 px-2 py-0.5 text-[11px] font-semibold tracking-wide uppercase dark:border-zinc-700",
-                    item.section === "maybe" ? "text-zinc-500 dark:text-zinc-400" : "text-zinc-900 dark:text-zinc-100",
+                    item.section === "maybe"
+                      ? "text-zinc-500 dark:text-zinc-400"
+                      : "text-zinc-900 dark:text-zinc-100",
                   )}
                 >
                   {item.section === "maybe" ? "Maybe" : "Plan"}
@@ -96,7 +100,9 @@ export function FinishLeftoversSheet({
                 role="group"
                 aria-label={`What to do with ${item.exercise.name}`}
                 className="grid gap-[3px] rounded-[10px] border border-zinc-200 bg-zinc-100 p-[3px] dark:border-zinc-700 dark:bg-zinc-900"
-                style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
+                style={{
+                  gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`,
+                }}
               >
                 {options.map(({ choice, label }) => {
                   const pressed = choices[item.lineId] === choice;

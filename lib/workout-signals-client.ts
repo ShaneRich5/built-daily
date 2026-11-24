@@ -1,4 +1,11 @@
-import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import { activityTypeName } from "@/lib/activity-catalog";
 import { firestoreToActivityDoc } from "@/lib/activity-mapper";
 import { getFirestoreDb } from "@/lib/firebase";
@@ -18,7 +25,9 @@ const ACTIVITY_LOOKBACK = 400;
  * SDK and recomputes their show-up signals from source. Shared by group and
  * public-profile writers so both stay correct the same way.
  */
-export async function computeUserWorkoutSignals(uid: string): Promise<WorkoutSignals> {
+export async function computeUserWorkoutSignals(
+  uid: string,
+): Promise<WorkoutSignals> {
   const db = getFirestoreDb();
   if (!db) return computeWorkoutSignals([]);
 
@@ -42,13 +51,17 @@ export async function computeUserWorkoutSignals(uid: string): Promise<WorkoutSig
 
   const sessions = [];
   for (const d of sessionsSnap.docs) {
-    const session = firestoreToWorkoutSessionDoc(d.data() as Record<string, unknown>);
+    const session = firestoreToWorkoutSessionDoc(
+      d.data() as Record<string, unknown>,
+    );
     if (session) sessions.push(session);
   }
 
   const activities: ActivityDaySummary[] = [];
   for (const d of activitiesSnap.docs) {
-    const activity = firestoreToActivityDoc(d.data() as Record<string, unknown>);
+    const activity = firestoreToActivityDoc(
+      d.data() as Record<string, unknown>,
+    );
     if (!activity) continue;
     activities.push({
       activityDate: activity.activityDate,

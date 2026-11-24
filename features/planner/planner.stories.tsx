@@ -7,7 +7,12 @@ import { calendarDays, calendarTitle } from "@/features/planner/planner-model";
 import { PlannerView } from "@/features/planner/planner-view";
 
 const TODAY = "2026-11-08";
-const none: PlannerDayMarkers = { hasWorkout: false, hasPlan: false, hasReminder: false, hasActivity: false };
+const none: PlannerDayMarkers = {
+  hasWorkout: false,
+  hasPlan: false,
+  hasReminder: false,
+  hasActivity: false,
+};
 const markers = new Map<string, PlannerDayMarkers>([
   ["2026-11-02", { ...none, hasWorkout: true }],
   ["2026-11-04", { ...none, hasActivity: true }],
@@ -39,7 +44,13 @@ const meta = {
     onNext: noop,
     agendaHeading: "Tue, Nov 10",
     agenda: [
-      { kind: "planned", id: "p1", title: "Leg day", meta: "Planned · 4 exercises", startHref: "/workout?p=legs" },
+      {
+        kind: "planned",
+        id: "p1",
+        title: "Leg day",
+        meta: "Planned · 4 exercises",
+        startHref: "/workout?p=legs",
+      },
     ],
     canPlan: true,
     onPlan: noop,
@@ -76,13 +87,28 @@ export const PastDay: Story = {
     agendaHeading: "Thu, Nov 5",
     canPlan: false,
     agenda: [
-      { kind: "completed", id: "s1", title: "Push day", meta: "Done · 4 exercises · 14 sets", href: "#" },
-      { kind: "activity", id: "a1", title: "Walk", meta: "35 min · 1.8 mi", href: "#" },
+      {
+        kind: "completed",
+        id: "s1",
+        title: "Push day",
+        meta: "Done · 4 exercises · 14 sets",
+        href: "#",
+      },
+      {
+        kind: "activity",
+        id: "a1",
+        title: "Walk",
+        meta: "35 min · 1.8 mi",
+        href: "#",
+      },
     ],
   },
 };
 
-export const NoTemplates: Story = { name: "New user", args: { templates: [], agenda: [] } };
+export const NoTemplates: Story = {
+  name: "New user",
+  args: { templates: [], agenda: [] },
+};
 
 const plans: SavedWorkoutPlan[] = [
   {
@@ -93,8 +119,18 @@ const plans: SavedWorkoutPlan[] = [
       updatedAt: new Date(),
       source: "custom",
       lines: [
-        { lineId: "1", exerciseId: "bench", nameSnapshot: "Barbell bench press", metric: "weight_reps" },
-        { lineId: "2", exerciseId: "ohp", nameSnapshot: "Overhead press", metric: "weight_reps" },
+        {
+          lineId: "1",
+          exerciseId: "bench",
+          nameSnapshot: "Barbell bench press",
+          metric: "weight_reps",
+        },
+        {
+          lineId: "2",
+          exerciseId: "ohp",
+          nameSnapshot: "Overhead press",
+          metric: "weight_reps",
+        },
       ],
     },
   },
@@ -107,7 +143,11 @@ export const PlanASheet: StoryObj<typeof PlanSheet> = {
     const [open, setOpen] = useState(true);
     return (
       <>
-        <button type="button" onClick={() => setOpen(true)} className="m-4 h-11 rounded-lg border px-4 text-sm">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="m-4 h-11 rounded-lg border px-4 text-sm"
+        >
           Open again
         </button>
         <PlanSheet
@@ -130,7 +170,11 @@ export const PlanLater: StoryObj<typeof PlanSheet> = {
     const [open, setOpen] = useState(true);
     return (
       <>
-        <button type="button" onClick={() => setOpen(true)} className="m-4 h-11 rounded-lg border px-4 text-sm">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="m-4 h-11 rounded-lg border px-4 text-sm"
+        >
           Open again
         </button>
         <PlanSheet

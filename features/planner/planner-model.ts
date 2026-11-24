@@ -30,7 +30,13 @@ export type PlannerCalendarDay = {
 export type PlannerAgendaItem =
   | { kind: "completed"; id: string; title: string; meta: string; href: string }
   | { kind: "activity"; id: string; title: string; meta: string; href: string }
-  | { kind: "planned"; id: string; title: string; meta: string; startHref: string | null }
+  | {
+      kind: "planned";
+      id: string;
+      title: string;
+      meta: string;
+      startHref: string | null;
+    }
   | { kind: "reminder"; id: string; title: string; meta: string };
 
 function parts(dateKey: string): { year: number; monthIndex: number } {
@@ -41,7 +47,11 @@ function parts(dateKey: string): { year: number; monthIndex: number } {
 function longDayLabel(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
   if (!d) return dateKey;
-  return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" }).format(d);
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  }).format(d);
 }
 
 /** "Tue, Nov 10" */
@@ -92,7 +102,11 @@ export function calendarDays(
 }
 
 /** Move the calendar a week or a month. Month view anchors on the 1st. */
-export function shiftAnchor(view: PlannerView, anchorKey: string, delta: -1 | 1): string {
+export function shiftAnchor(
+  view: PlannerView,
+  anchorKey: string,
+  delta: -1 | 1,
+): string {
   if (view === "week") return addDaysToDateKey(anchorKey, delta * 7);
   const { year, monthIndex } = parts(anchorKey);
   const next = shiftMonth(year, monthIndex, delta);
@@ -102,19 +116,33 @@ export function shiftAnchor(view: PlannerView, anchorKey: string, delta: -1 | 1)
 export function calendarTitle(view: PlannerView, anchorKey: string): string {
   if (view === "month") {
     const d = dateFromLocalDateKey(anchorKey);
-    return d ? new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(d) : "";
+    return d
+      ? new Intl.DateTimeFormat("en-US", {
+          month: "long",
+          year: "numeric",
+        }).format(d)
+      : "";
   }
   const start = dateFromLocalDateKey(startOfWeekDateKey(anchorKey));
   const end = dateFromLocalDateKey(endOfWeekDateKey(anchorKey));
   if (!start || !end) return "";
-  const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  });
   return `${fmt.format(start)} – ${fmt.format(end)}`;
 }
 
 /** The date range to subscribe to so every visible cell has its markers. */
-export function visibleRange(view: PlannerView, anchorKey: string): { startKey: string; endKey: string } {
+export function visibleRange(
+  view: PlannerView,
+  anchorKey: string,
+): { startKey: string; endKey: string } {
   if (view === "week") {
-    return { startKey: startOfWeekDateKey(anchorKey), endKey: endOfWeekDateKey(anchorKey) };
+    return {
+      startKey: startOfWeekDateKey(anchorKey),
+      endKey: endOfWeekDateKey(anchorKey),
+    };
   }
   const { year, monthIndex } = parts(anchorKey);
   const first = `${year}-${String(monthIndex + 1).padStart(2, "0")}-01`;
@@ -128,7 +156,10 @@ function plural(n: number, word: string): string {
 }
 
 /** Everything on one day, in the order it happened (planned and reminders last). */
-export function dayAgenda(items: PlannerListItem[], dateKey: string): PlannerAgendaItem[] {
+export function dayAgenda(
+  items: PlannerListItem[],
+  dateKey: string,
+): PlannerAgendaItem[] {
   return items
     .filter((item) => item.dateKey === dateKey)
     .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
@@ -146,17 +177,32 @@ export function dayAgenda(items: PlannerListItem[], dateKey: string): PlannerAge
             href: `/sessions/${item.id}`,
           };
         case "activity":
-          return { kind: "activity", id: item.id, title: item.title, meta: item.meta, href: `/activities/${item.id}` };
+          return {
+            kind: "activity",
+            id: item.id,
+            title: item.title,
+            meta: item.meta,
+            href: `/activities/${item.id}`,
+          };
         case "planned":
           return {
             kind: "planned",
             id: item.id,
             title: item.title,
             meta: `Planned · ${plural(item.exerciseCount, "exercise")}`,
-            startHref: buildWorkoutHref(item.title, item.planId, item.exerciseIds),
+            startHref: buildWorkoutHref(
+              item.title,
+              item.planId,
+              item.exerciseIds,
+            ),
           };
         case "reminder":
-          return { kind: "reminder", id: item.id, title: item.title, meta: "Reminder" };
+          return {
+            kind: "reminder",
+            id: item.id,
+            title: item.title,
+            meta: "Reminder",
+          };
       }
     });
 }

@@ -3,7 +3,11 @@ import { cn } from "@/lib/utils";
 import { Avatar, DayDot } from "@/features/groups/group-ui";
 import type { MemberWeek, WeekDay } from "@/features/groups/groups-model";
 
-const MARK_WORD = { trained: "trained", planned: "planned", none: "nothing yet" } as const;
+const MARK_WORD = {
+  trained: "trained",
+  planned: "planned",
+  none: "nothing yet",
+} as const;
 
 /**
  * One grid for the whole week: a row of day headers, then one row per member.
@@ -37,7 +41,8 @@ export function WeekGrid({
             role="columnheader"
             className={cn(
               "flex flex-col items-center rounded-t-lg pt-1.5 pb-1 text-[11px] leading-tight text-zinc-500 dark:text-zinc-400",
-              d.isToday && "bg-zinc-100 font-bold text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50",
+              d.isToday &&
+                "bg-zinc-100 font-bold text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50",
             )}
           >
             <span aria-hidden>{d.letter}</span>
@@ -53,9 +58,19 @@ export function WeekGrid({
       </div>
       {rows.map((row, r) => (
         <div key={row.uid} role="row" className={cn("grid items-center", cols)}>
-          <span role="rowheader" className="flex min-w-0 items-center gap-2 py-2">
+          <span
+            role="rowheader"
+            className="flex min-w-0 items-center gap-2 py-2"
+          >
             <Avatar name={row.name} size="sm" />
-            <span className={cn("truncate", row.isMe ? "font-semibold text-zinc-900 dark:text-zinc-50" : "text-zinc-700 dark:text-zinc-300")}>
+            <span
+              className={cn(
+                "truncate",
+                row.isMe
+                  ? "font-semibold text-zinc-900 dark:text-zinc-50"
+                  : "text-zinc-700 dark:text-zinc-300",
+              )}
+            >
               {row.isMe ? "You" : row.name}
             </span>
           </span>
@@ -69,7 +84,10 @@ export function WeekGrid({
                 d.isToday && r === rows.length - 1 && "rounded-b-lg",
               )}
             >
-              <DayDot mark={row.marks[i]!} label={`${row.isMe ? "You" : row.name}, ${d.short} ${d.dayOfMonth}: ${MARK_WORD[row.marks[i]!]}`} />
+              <DayDot
+                mark={row.marks[i]!}
+                label={`${row.isMe ? "You" : row.name}, ${d.short} ${d.dayOfMonth}: ${MARK_WORD[row.marks[i]!]}`}
+              />
               {togetherDays?.has(d.dateKey) && r === 0 ? (
                 <Users
                   className="absolute -bottom-1 size-3 text-emerald-700 dark:text-emerald-400"
@@ -79,7 +97,10 @@ export function WeekGrid({
             </span>
           ))}
           {showCounts ? (
-            <span role="cell" className="text-right font-mono text-[13px] text-zinc-600 tabular-nums dark:text-zinc-300">
+            <span
+              role="cell"
+              className="text-right font-mono text-[13px] text-zinc-600 tabular-nums dark:text-zinc-300"
+            >
               {row.done}/{row.goal}
             </span>
           ) : null}
@@ -99,7 +120,11 @@ export function WeekLegend() {
         <DayDot mark="planned" /> Planned
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span className="inline-block size-4 rounded bg-zinc-100 dark:bg-zinc-900" aria-hidden /> Today
+        <span
+          className="inline-block size-4 rounded bg-zinc-100 dark:bg-zinc-900"
+          aria-hidden
+        />{" "}
+        Today
       </span>
     </div>
   );

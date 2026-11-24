@@ -32,7 +32,9 @@ function toDate(value: unknown): Date | null {
   ) {
     try {
       const date = (value as { toDate: () => Date }).toDate();
-      return date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
+      return date instanceof Date && !Number.isNaN(date.getTime())
+        ? date
+        : null;
     } catch {
       return null;
     }
@@ -67,7 +69,8 @@ async function fetchUserWorkoutSignals(uid: string) {
     if (!startedAt) continue;
     sessions.push({
       status: typeof data.status === "string" ? data.status : "",
-      workoutDate: typeof data.workoutDate === "string" ? data.workoutDate : null,
+      workoutDate:
+        typeof data.workoutDate === "string" ? data.workoutDate : null,
       endedAt: toDate(data.endedAt),
       startedAt,
     });
@@ -88,14 +91,21 @@ async function fetchUserWorkoutSignals(uid: string) {
   return computeWorkoutSignals(sessions, activities);
 }
 
-function displayNameFrom(data: Record<string, unknown> | undefined): string | null {
+function displayNameFrom(
+  data: Record<string, unknown> | undefined,
+): string | null {
   const name = data?.displayName;
-  return typeof name === "string" && name.trim() ? name.trim().slice(0, 80) : null;
+  return typeof name === "string" && name.trim()
+    ? name.trim().slice(0, 80)
+    : null;
 }
 
-function weeklyGoalFrom(data: Record<string, unknown> | undefined): WeeklyGoalTarget {
+function weeklyGoalFrom(
+  data: Record<string, unknown> | undefined,
+): WeeklyGoalTarget {
   const goal = data?.weeklyGoal;
-  return typeof goal === "number" && [2, 3, 4, 5, 6, 7].includes(Math.round(goal))
+  return typeof goal === "number" &&
+    [2, 3, 4, 5, 6, 7].includes(Math.round(goal))
     ? (Math.round(goal) as WeeklyGoalTarget)
     : 3;
 }

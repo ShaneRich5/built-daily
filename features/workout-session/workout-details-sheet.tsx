@@ -10,11 +10,19 @@ import type { SessionState } from "@/features/workout-session/session-reducer";
 type WorkoutDetailsSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  state: Pick<SessionState, "title" | "workoutDate" | "workoutTime" | "workoutNote">;
+  state: Pick<
+    SessionState,
+    "title" | "workoutDate" | "workoutTime" | "workoutNote"
+  >;
   startedAtMs: number;
   exercises: CatalogExercise[];
   onMetaChange: (
-    patch: Partial<Pick<SessionState, "title" | "workoutDate" | "workoutTime" | "workoutNote">>,
+    patch: Partial<
+      Pick<
+        SessionState,
+        "title" | "workoutDate" | "workoutTime" | "workoutNote"
+      >
+    >,
   ) => void;
 };
 

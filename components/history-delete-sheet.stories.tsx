@@ -3,12 +3,22 @@ import { useState } from "react";
 import { HistoryDeleteSheet } from "@/components/history-delete-sheet";
 
 /** The sheet with local state, so Delete shows "Deleting…" briefly and Cancel closes it. */
-function SheetDemo({ workouts, activities }: { workouts: number; activities: number }) {
+function SheetDemo({
+  workouts,
+  activities,
+}: {
+  workouts: number;
+  activities: number;
+}) {
   const [open, setOpen] = useState(true);
   const [deleting, setDeleting] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="m-4 h-11 rounded-lg border px-4 text-sm">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="m-4 h-11 rounded-lg border px-4 text-sm"
+      >
         Open again
       </button>
       <HistoryDeleteSheet
@@ -48,5 +58,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const WorkoutsAndActivity: Story = { name: "Workouts and an activity" };
-export const OneWorkout: Story = { name: "One workout", args: { workouts: 1, activities: 0 } };
-export const ActivitiesOnly: Story = { name: "Activities only", args: { workouts: 0, activities: 2 } };
+export const OneWorkout: Story = {
+  name: "One workout",
+  args: { workouts: 1, activities: 0 },
+};
+export const ActivitiesOnly: Story = {
+  name: "Activities only",
+  args: { workouts: 0, activities: 2 },
+};

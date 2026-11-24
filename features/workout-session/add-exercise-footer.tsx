@@ -40,7 +40,10 @@ export function AddExerciseFooter({
       </button>
       {suggestions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span id="usually-next-label" className="text-xs text-zinc-500 dark:text-zinc-400">
+          <span
+            id="usually-next-label"
+            className="text-xs text-zinc-500 dark:text-zinc-400"
+          >
             {isFirst ? "You usually start with:" : "Usually next:"}
           </span>
           <ul aria-labelledby="usually-next-label" className="contents">

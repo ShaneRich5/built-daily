@@ -1,5 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { buildHomeConsistency, buildHomeWeek, buildWeekGoal } from "@/features/home/home-model";
+import {
+  buildHomeConsistency,
+  buildHomeWeek,
+  buildWeekGoal,
+} from "@/features/home/home-model";
 import { sampleHistory } from "@/features/home/home-sample-history";
 import { HomeWeek } from "@/features/home/home-week";
 
@@ -11,7 +15,13 @@ function cardArgs(options: Parameters<typeof sampleHistory>[0]) {
     todayKey,
     days: buildHomeWeek(todayKey, sessions, activities, entries),
     goal: buildWeekGoal(sessions, 3, todayKey),
-    consistency: buildHomeConsistency(todayKey, sessions, activities, entries, 3),
+    consistency: buildHomeConsistency(
+      todayKey,
+      sessions,
+      activities,
+      entries,
+      3,
+    ),
   };
 }
 
@@ -21,7 +31,13 @@ const TYPICAL = { shortWeeks: [5, 9] };
 const meta = {
   title: "Home/This week card",
   component: HomeWeek,
-  args: cardArgs({ todayKey: "2026-11-11", ...TYPICAL, doneThisWeek: [1], walksThisWeek: [2], plannedThisWeek: [4] }),
+  args: cardArgs({
+    todayKey: "2026-11-11",
+    ...TYPICAL,
+    doneThisWeek: [1],
+    walksThisWeek: [2],
+    plannedThisWeek: [4],
+  }),
   parameters: {
     docs: {
       description: {
@@ -39,7 +55,12 @@ export const MidWeek: Story = { name: "Mid-week · two to go" };
 
 export const FridayOneToGo: Story = {
   name: "Friday · one more keeps it going",
-  args: cardArgs({ todayKey: "2026-11-13", ...TYPICAL, doneThisWeek: [1, 3], plannedThisWeek: [5] }),
+  args: cardArgs({
+    todayKey: "2026-11-13",
+    ...TYPICAL,
+    doneThisWeek: [1, 3],
+    plannedThisWeek: [5],
+  }),
 };
 
 export const SaturdayOneToGo: Story = {
@@ -49,7 +70,11 @@ export const SaturdayOneToGo: Story = {
 
 export const GoalMet: Story = {
   name: "Goal met this week",
-  args: cardArgs({ todayKey: "2026-11-13", ...TYPICAL, doneThisWeek: [1, 3, 5] }),
+  args: cardArgs({
+    todayKey: "2026-11-13",
+    ...TYPICAL,
+    doneThisWeek: [1, 3, 5],
+  }),
 };
 
 export const OutOfReach: Story = {
@@ -59,7 +84,12 @@ export const OutOfReach: Story = {
 
 export const NoStreakYet: Story = {
   name: "No streak yet",
-  args: cardArgs({ todayKey: "2026-11-11", pastWeeks: 3, shortWeeks: [1], doneThisWeek: [1] }),
+  args: cardArgs({
+    todayKey: "2026-11-11",
+    pastWeeks: 3,
+    shortWeeks: [1],
+    doneThisWeek: [1],
+  }),
 };
 
 export const NewUser: Story = {

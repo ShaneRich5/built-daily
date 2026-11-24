@@ -4,7 +4,10 @@ import { Search } from "lucide-react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { EXERCISE_CATALOG, type CatalogExercise } from "@/lib/exercise-catalog";
 import { muscleGroupLabel } from "@/lib/exercise-muscle";
-import { metricLabel, type SessionExercise } from "@/features/workout-session/session-model";
+import {
+  metricLabel,
+  type SessionExercise,
+} from "@/features/workout-session/session-model";
 
 /** How many "Similar" picks to show under the saved alternates. */
 const SIMILAR_LIMIT = 4;
@@ -26,7 +29,10 @@ const sectionLabel =
 function similarTo(item: SessionExercise): CatalogExercise[] {
   const primary = item.exercise.primary;
   if (!primary) return [];
-  const skip = new Set([item.exercise.id, ...item.alternates.map((alt) => alt.id)]);
+  const skip = new Set([
+    item.exercise.id,
+    ...item.alternates.map((alt) => alt.id),
+  ]);
   return EXERCISE_CATALOG.filter(
     (exercise) => exercise.primary === primary && !skip.has(exercise.id),
   ).slice(0, SIMILAR_LIMIT);
@@ -75,10 +81,18 @@ export function SwapExerciseSheet({
         </button>
 
         {item.alternates.length > 0 ? (
-          <SwapList label="Your alternates for this slot" exercises={item.alternates} onPick={pick} />
+          <SwapList
+            label="Your alternates for this slot"
+            exercises={item.alternates}
+            onPick={pick}
+          />
         ) : null}
         {similar.length > 0 && primary ? (
-          <SwapList label={`Similar · ${muscleGroupLabel(primary)}`} exercises={similar} onPick={pick} />
+          <SwapList
+            label={`Similar · ${muscleGroupLabel(primary)}`}
+            exercises={similar}
+            onPick={pick}
+          />
         ) : null}
       </div>
     </BottomSheet>
@@ -100,9 +114,15 @@ function SwapList({
       <ul className="flex flex-col">
         {exercises.map((exercise) => (
           <li key={exercise.id}>
-            <button type="button" className={rowButton} onClick={() => onPick(exercise)}>
+            <button
+              type="button"
+              className={rowButton}
+              onClick={() => onPick(exercise)}
+            >
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-medium">{exercise.name}</span>
+                <span className="block truncate text-[15px] font-medium">
+                  {exercise.name}
+                </span>
                 <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
                   {metricLabel(exercise.metric)}
                 </span>

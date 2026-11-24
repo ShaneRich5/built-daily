@@ -1,10 +1,16 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { addDaysToDateKey } from "@/lib/calendar-views";
-import { DEFAULT_PROGRESS_SETTINGS, type SavedBodyWeightEntry } from "@/lib/progress-types";
+import {
+  DEFAULT_PROGRESS_SETTINGS,
+  type SavedBodyWeightEntry,
+} from "@/lib/progress-types";
 import type { SavedActivity } from "@/lib/activity-types";
 import type { SessionSummary } from "@/lib/workout-session-repository";
-import { buildHomeConsistency, buildHomeWeek } from "@/features/home/home-model";
+import {
+  buildHomeConsistency,
+  buildHomeWeek,
+} from "@/features/home/home-model";
 import { GoalsSheet } from "@/features/progress/goals-sheet";
 import { ProgressView } from "@/features/progress/progress-view";
 
@@ -17,7 +23,8 @@ function sampleActivity() {
   for (let i = 1; i < 120; i++) {
     const key = addDaysToDateKey(TODAY, -i);
     const dow = new Date(`${key}T12:00:00`).getDay();
-    if ((dow === 1 || dow === 4 || dow === 6) && i % 11 !== 0) workouts.set(key, 1);
+    if ((dow === 1 || dow === 4 || dow === 6) && i % 11 !== 0)
+      workouts.set(key, 1);
     else if (dow === 3 && i % 2 === 0) walks.set(key, 1);
   }
   workouts.set("2026-11-09", 1);
@@ -71,7 +78,13 @@ const weights: SavedBodyWeightEntry[] = Array.from({ length: 12 }, (_, i) => ({
   },
 }));
 
-const lift = (exerciseId: string, exerciseName: string, weight: number, reps: number, dateKey: string) => ({
+const lift = (
+  exerciseId: string,
+  exerciseName: string,
+  weight: number,
+  reps: number,
+  dateKey: string,
+) => ({
   exerciseId,
   exerciseName,
   weight,
@@ -88,7 +101,8 @@ const meta = {
   argTypes: {
     redesign: {
       control: "boolean",
-      description: "The `progress-redesign` flag (Vercel Flags) on the real page: on = new design, off = old.",
+      description:
+        "The `progress-redesign` flag (Vercel Flags) on the real page: on = new design, off = old.",
     },
   },
   args: {
@@ -104,10 +118,19 @@ const meta = {
     },
     goalStreak: { current: 4, longest: 6 },
     week: { weekStartKey: "2026-11-08", target: 3, completed: 1, met: false },
-    movementWeek: { weekStartKey: "2026-11-08", target: 5, completed: 2, met: false },
+    movementWeek: {
+      weekStartKey: "2026-11-08",
+      target: 5,
+      completed: 2,
+      met: false,
+    },
     weekDays: buildHomeWeek(TODAY, summaries, walkActivities, []),
     consistency: buildHomeConsistency(TODAY, summaries, walkActivities, [], 3),
-    heatmap: { activity: workouts, activityByDay: walks, dayDetails: new Map() },
+    heatmap: {
+      activity: workouts,
+      activityByDay: walks,
+      dayDetails: new Map(),
+    },
     lifts: [
       lift("bench", "Barbell bench press", 145, 6, "2026-11-05"),
       lift("squat", "Barbell back squat", 205, 5, "2026-11-02"),
@@ -116,9 +139,27 @@ const meta = {
     weights,
     goalWeightLbs: 178,
     milestones: [
-      { id: "first", title: "First workout", description: "", achievedAtKey: "2026-07-01", achieved: true },
-      { id: "ten", title: "10 workouts", description: "", achievedAtKey: "2026-08-01", achieved: true },
-      { id: "fifty", title: "50 workouts", description: "", achievedAtKey: null, achieved: false },
+      {
+        id: "first",
+        title: "First workout",
+        description: "",
+        achievedAtKey: "2026-07-01",
+        achieved: true,
+      },
+      {
+        id: "ten",
+        title: "10 workouts",
+        description: "",
+        achievedAtKey: "2026-08-01",
+        achieved: true,
+      },
+      {
+        id: "fifty",
+        title: "50 workouts",
+        description: "",
+        achievedAtKey: null,
+        achieved: false,
+      },
     ],
     onOpenGoals: () => {},
     onLogWeight: async () => {},
@@ -139,14 +180,31 @@ export const NewUser: Story = {
   name: "New user",
   args: {
     week: { weekStartKey: "2026-11-08", target: 3, completed: 0, met: false },
-    movementWeek: { weekStartKey: "2026-11-08", target: 5, completed: 0, met: false },
+    movementWeek: {
+      weekStartKey: "2026-11-08",
+      target: 5,
+      completed: 0,
+      met: false,
+    },
     weekDays: buildHomeWeek(TODAY, [], [], []),
     consistency: buildHomeConsistency(TODAY, [], [], [], 3),
-    heatmap: { activity: new Map(), activityByDay: new Map(), dayDetails: new Map() },
+    heatmap: {
+      activity: new Map(),
+      activityByDay: new Map(),
+      dayDetails: new Map(),
+    },
     lifts: [],
     weights: [],
     goalWeightLbs: null,
-    milestones: [{ id: "first", title: "First workout", description: "", achievedAtKey: null, achieved: false }],
+    milestones: [
+      {
+        id: "first",
+        title: "First workout",
+        description: "",
+        achievedAtKey: null,
+        achieved: false,
+      },
+    ],
   },
 };
 
@@ -157,7 +215,11 @@ export const Goals: StoryObj<typeof GoalsSheet> = {
     const [open, setOpen] = useState(true);
     return (
       <>
-        <button type="button" onClick={() => setOpen(true)} className="m-4 h-11 rounded-lg border px-4 text-sm">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="m-4 h-11 rounded-lg border px-4 text-sm"
+        >
           Open again
         </button>
         <GoalsSheet

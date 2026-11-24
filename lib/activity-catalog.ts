@@ -24,12 +24,48 @@ export type ActivityCatalogEntry = {
 };
 
 export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
-  { id: "walk", name: "Walk", icon: "footprints", supportsDistance: true, isSocial: false },
-  { id: "dog-walk", name: "Dog walk", icon: "dog", supportsDistance: true, isSocial: false },
-  { id: "bike", name: "Bike ride", icon: "bike", supportsDistance: true, isSocial: false },
-  { id: "hike", name: "Hike", icon: "mountain", supportsDistance: true, isSocial: false },
-  { id: "swim", name: "Swim", icon: "waves", supportsDistance: true, isSocial: false },
-  { id: "tennis", name: "Tennis", icon: "circle-dot", supportsDistance: false, isSocial: true },
+  {
+    id: "walk",
+    name: "Walk",
+    icon: "footprints",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "dog-walk",
+    name: "Dog walk",
+    icon: "dog",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "bike",
+    name: "Bike ride",
+    icon: "bike",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "hike",
+    name: "Hike",
+    icon: "mountain",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "swim",
+    name: "Swim",
+    icon: "waves",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
+    id: "tennis",
+    name: "Tennis",
+    icon: "circle-dot",
+    supportsDistance: false,
+    isSocial: true,
+  },
   {
     id: "pickleball",
     name: "Pickleball",
@@ -51,7 +87,13 @@ export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
     supportsDistance: false,
     isSocial: false,
   },
-  { id: "dance", name: "Dance", icon: "music", supportsDistance: false, isSocial: false },
+  {
+    id: "dance",
+    name: "Dance",
+    icon: "music",
+    supportsDistance: false,
+    isSocial: false,
+  },
   {
     id: "play",
     name: "Playing with kids",
@@ -59,12 +101,20 @@ export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
     supportsDistance: false,
     isSocial: false,
   },
-  { id: "other", name: "Other", icon: "activity", supportsDistance: true, isSocial: false },
+  {
+    id: "other",
+    name: "Other",
+    icon: "activity",
+    supportsDistance: true,
+    isSocial: false,
+  },
 ];
 
 const BY_ID = new Map(ACTIVITY_CATALOG.map((a) => [a.id, a]));
 
-export function getActivityTypeById(id: string): ActivityCatalogEntry | undefined {
+export function getActivityTypeById(
+  id: string,
+): ActivityCatalogEntry | undefined {
   return BY_ID.get(id);
 }
 

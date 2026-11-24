@@ -45,9 +45,9 @@ export default function SessionDetailPage() {
 
 function SessionDetailLoader({ sessionId }: { sessionId: string }) {
   const { user, loading, firebaseReady } = useAuth();
-  const [loaded, setLoaded] = useState<
-    SavedWorkoutSession | null | "loading"
-  >("loading");
+  const [loaded, setLoaded] = useState<SavedWorkoutSession | null | "loading">(
+    "loading",
+  );
 
   useEffect(() => {
     if (!firebaseReady || loading) return;

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import type { ActiveWorkoutFinishSnapshot } from "@/lib/workout-session-mapper";
 import {
   exerciseHistoriesFromSessions,
@@ -71,7 +65,14 @@ export function useWorkoutSession(
     const id = window.setTimeout(() => {
       void onPersist(
         toFinishSnapshot(
-          { title, workoutDate, workoutTime, workoutNote, exercises, openLineId: null },
+          {
+            title,
+            workoutDate,
+            workoutTime,
+            workoutNote,
+            exercises,
+            openLineId: null,
+          },
           {
             activeDurationMs,
             sessionStartedAtMs: startedAtMs,
@@ -81,7 +82,17 @@ export function useWorkoutSession(
       );
     }, AUTOSAVE_DELAY_MS);
     return () => window.clearTimeout(id);
-  }, [onPersist, title, workoutDate, workoutTime, workoutNote, exercises, activeDurationMs, startedAtMs, planId]);
+  }, [
+    onPersist,
+    title,
+    workoutDate,
+    workoutTime,
+    workoutNote,
+    exercises,
+    activeDurationMs,
+    startedAtMs,
+    planId,
+  ]);
 
   const [recent, setRecent] = useState<{
     loaded: boolean;
@@ -94,7 +105,10 @@ export function useWorkoutSession(
       .catch(() => [])
       .then((sessions) => {
         if (!cancelled) {
-          setRecent({ loaded: true, sessions: sessions.filter((s) => s.id !== excludeId) });
+          setRecent({
+            loaded: true,
+            sessions: sessions.filter((s) => s.id !== excludeId),
+          });
         }
       });
     return () => {
@@ -104,7 +118,10 @@ export function useWorkoutSession(
 
   // Only recompute history when the exercise list itself changes, not on every keystroke.
   const exerciseKey = exercises
-    .map((item) => `${item.exercise.id}:${item.exercise.metric}:${item.exercise.name}`)
+    .map(
+      (item) =>
+        `${item.exercise.id}:${item.exercise.metric}:${item.exercise.name}`,
+    )
     .join("|");
   const catalogExercises = useMemo(
     () => exercises.map((item) => item.exercise),
@@ -119,12 +136,18 @@ export function useWorkoutSession(
     () => suggestNextExercises(recent.sessions, catalogExercises),
     [recent.sessions, catalogExercises],
   );
-  const recent12 = useMemo(() => recentExercises(recent.sessions), [recent.sessions]);
+  const recent12 = useMemo(
+    () => recentExercises(recent.sessions),
+    [recent.sessions],
+  );
   // The search sheet's "Suggested" tab: next-up picks first, topped up with recent ones.
   const suggestedForSearch = useMemo(() => {
     const inWorkout = new Set(catalogExercises.map((exercise) => exercise.id));
     const seen = new Set<string>();
-    return [...suggestNextExercises(recent.sessions, catalogExercises, 8), ...recent12]
+    return [
+      ...suggestNextExercises(recent.sessions, catalogExercises, 8),
+      ...recent12,
+    ]
       .filter((exercise) => {
         if (inWorkout.has(exercise.id) || seen.has(exercise.id)) return false;
         seen.add(exercise.id);

@@ -1,6 +1,12 @@
 "use client";
 
-import { ArrowRight, ChevronDown, Copy, Plus, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Copy,
+  Plus,
+  SlidersHorizontal,
+} from "lucide-react";
 import type { SetLog } from "@/lib/workout-types";
 import { cn } from "@/lib/utils";
 import { ExerciseStatusIcon } from "@/features/workout-session/exercise-status-icon";
@@ -14,7 +20,10 @@ import {
   type SessionExercise,
   type SetRow,
 } from "@/features/workout-session/session-model";
-import { QuickSetRow, setGridColumns } from "@/features/workout-session/set-row";
+import {
+  QuickSetRow,
+  setGridColumns,
+} from "@/features/workout-session/set-row";
 
 export type ExerciseCardProps = {
   item: SessionExercise;
@@ -32,24 +41,36 @@ export type ExerciseCardProps = {
   onNextExercise: () => void;
 };
 
-function cardSubtitle(item: SessionExercise, open: boolean, lastTimeSets?: SetLog[]): string {
+function cardSubtitle(
+  item: SessionExercise,
+  open: boolean,
+  lastTimeSets?: SetLog[],
+): string {
   const { sets, exercise, note } = item;
   const lastTime = lastTimeSets ? summarizeSetLogs(lastTimeSets) : "";
   const progress = exerciseProgress(sets);
   const noteBit = note.trim() ? " · Note" : "";
 
   if (open) {
-    return (lastTime ? `Last time · ${lastTime}` : metricLabel(exercise.metric)) + noteBit;
+    return (
+      (lastTime ? `Last time · ${lastTime}` : metricLabel(exercise.metric)) +
+      noteBit
+    );
   }
   if (progress === "done") {
-    return (summarizeSetRows(sets, exercise.metric) || `${sets.length} sets done`) + noteBit;
+    return (
+      (summarizeSetRows(sets, exercise.metric) || `${sets.length} sets done`) +
+      noteBit
+    );
   }
   if (progress === "in_progress") {
     const done = sets.filter((set) => set.done).length;
     const logged = summarizeSetRows(sets, exercise.metric);
     return `${done} of ${sets.length} sets done${logged ? ` · ${logged}` : ""}${noteBit}`;
   }
-  return (lastTime ? `Not started · Last ${lastTime}` : "Not started") + noteBit;
+  return (
+    (lastTime ? `Not started · Last ${lastTime}` : "Not started") + noteBit
+  );
 }
 
 /** One exercise: a one-line row when closed, the quick set logger when open. */

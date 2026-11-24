@@ -5,7 +5,10 @@ import { useAuth } from "@/components/auth-provider";
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import { getCatalogExerciseById } from "@/lib/exercise-catalog";
 import { syncUpcomingPlansToGroupsThrottled } from "@/lib/group-plan-sync";
-import { subscribeGroupPlansInRange, type SavedSharedPlan } from "@/lib/group-plan-repository";
+import {
+  subscribeGroupPlansInRange,
+  type SavedSharedPlan,
+} from "@/lib/group-plan-repository";
 import {
   subscribeAccountabilityGroup,
   subscribeGroupCheersForDay,
@@ -18,7 +21,10 @@ import {
 } from "@/lib/group-repository";
 import { STARTER_TEMPLATE_DEFINITIONS } from "@/lib/starter-templates";
 import { localDateKeyFromMs } from "@/lib/workout-date";
-import { subscribeUserWorkoutPlans, type SavedWorkoutPlan } from "@/lib/workout-plan-repository";
+import {
+  subscribeUserWorkoutPlans,
+  type SavedWorkoutPlan,
+} from "@/lib/workout-plan-repository";
 import { exercisesFromTemplate } from "@/features/groups/groups-model";
 import type { PlanTemplateOption } from "@/features/groups/plan-together-sheet";
 
@@ -34,14 +40,24 @@ export function useTodayKey(): string {
 }
 
 /** Your templates first, then starters, as plan-sheet chips (names + set counts only). */
-export function templateOptions(plans: SavedWorkoutPlan[]): PlanTemplateOption[] {
+export function templateOptions(
+  plans: SavedWorkoutPlan[],
+): PlanTemplateOption[] {
   const mine = plans
     .filter((p) => p.plan.lines.length > 0)
-    .map((p) => ({ id: p.id, name: p.plan.name, exercises: exercisesFromTemplate(p.plan.lines) }));
+    .map((p) => ({
+      id: p.id,
+      name: p.plan.name,
+      exercises: exercisesFromTemplate(p.plan.lines),
+    }));
   const starters = STARTER_TEMPLATE_DEFINITIONS.map((s) => ({
     id: s.id,
     name: s.name,
-    exercises: s.exerciseIds.map((id) => ({ id, name: getCatalogExerciseById(id)?.name ?? id, sets: null })),
+    exercises: s.exerciseIds.map((id) => ({
+      id,
+      name: getCatalogExerciseById(id)?.name ?? id,
+      sets: null,
+    })),
   }));
   return [...mine, ...starters].slice(0, TEMPLATE_CHIPS);
 }
@@ -114,7 +130,9 @@ export function useGroupsHome() {
   const { user, firebaseReady, loading } = useAuth();
   const todayKey = useTodayKey();
   const signedIn = Boolean(user) && firebaseReady;
-  const [memberships, setMemberships] = useState<SavedGroupMembership[] | null>(null);
+  const [memberships, setMemberships] = useState<SavedGroupMembership[] | null>(
+    null,
+  );
   const [byGroup, setByGroup] = useState<Record<string, GroupSnapshot>>({});
   const [firstCheers, setFirstCheers] = useState<SavedCheer[]>([]);
   const [templates, setTemplates] = useState<SavedWorkoutPlan[]>([]);
@@ -122,7 +140,10 @@ export function useGroupsHome() {
   useEffect(() => {
     if (!signedIn) return;
     syncUpcomingPlansToGroupsThrottled();
-    const unsubs = [subscribeUserGroupMemberships(setMemberships), subscribeUserWorkoutPlans(setTemplates)];
+    const unsubs = [
+      subscribeUserGroupMemberships(setMemberships),
+      subscribeUserWorkoutPlans(setTemplates),
+    ];
     return () => {
       for (const u of unsubs) u();
       setMemberships(null);
@@ -137,13 +158,20 @@ export function useGroupsHome() {
     const patch = (id: string, next: Partial<GroupSnapshot>) =>
       setByGroup((prev) => ({
         ...prev,
-        [id]: { ...(prev[id] ?? { group: undefined, members: [], plans: [] }), ...next },
+        [id]: {
+          ...(prev[id] ?? { group: undefined, members: [], plans: [] }),
+          ...next,
+        },
       }));
-    const unsubs = ids.split(",").flatMap((id) => [
-      subscribeAccountabilityGroup(id, (group) => patch(id, { group })),
-      subscribeGroupMembers(id, (members) => patch(id, { members })),
-      subscribeGroupPlansInRange(id, todayKey, end, (plans) => patch(id, { plans })),
-    ]);
+    const unsubs = ids
+      .split(",")
+      .flatMap((id) => [
+        subscribeAccountabilityGroup(id, (group) => patch(id, { group })),
+        subscribeGroupMembers(id, (members) => patch(id, { members })),
+        subscribeGroupPlansInRange(id, todayKey, end, (plans) =>
+          patch(id, { plans }),
+        ),
+      ]);
     return () => {
       for (const u of unsubs) u();
       setByGroup({});

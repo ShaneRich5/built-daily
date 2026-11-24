@@ -36,7 +36,8 @@ export function useShowBottomTabBar(): boolean {
   const pathname = usePathname();
   const { user, firebaseReady } = useAuth();
   // A saved workout has its own bottom action bar.
-  const hidden = HIDDEN_PATHS.has(pathname) || pathname.startsWith("/sessions/");
+  const hidden =
+    HIDDEN_PATHS.has(pathname) || pathname.startsWith("/sessions/");
   return Boolean(user) && firebaseReady && !hidden;
 }
 

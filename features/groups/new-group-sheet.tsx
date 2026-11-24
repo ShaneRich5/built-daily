@@ -7,7 +7,11 @@ import { GROUP_LIMITS, type GroupKind } from "@/lib/group-types";
 import { cn } from "@/lib/utils";
 import { primaryGreen, sectionLabel } from "@/features/groups/group-ui";
 
-export type NewGroupInput = { kind: GroupKind; name: string; buddyNickname: string | null };
+export type NewGroupInput = {
+  kind: GroupKind;
+  name: string;
+  buddyNickname: string | null;
+};
 
 const input =
   "h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-[15px] text-zinc-900 placeholder:text-zinc-400 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50";
@@ -50,7 +54,13 @@ export function NewGroupSheet({
   );
 }
 
-function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) => Promise<boolean>; atLimit: boolean }) {
+function NewGroupForm({
+  onCreate,
+  atLimit,
+}: {
+  onCreate: (input: NewGroupInput) => Promise<boolean>;
+  atLimit: boolean;
+}) {
   const [kind, setKind] = useState<GroupKind>("buddy");
   const [nickname, setNickname] = useState("");
   const [name, setName] = useState("");
@@ -69,9 +79,12 @@ function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) 
         name: kind === "buddy" ? "Gym buddies" : name.trim(),
         buddyNickname: kind === "buddy" ? nickname.trim() || null : null,
       });
-      if (!ok) setError("Couldn’t create it. Check your connection and try again.");
+      if (!ok)
+        setError("Couldn’t create it. Check your connection and try again.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn’t create it. Try again.");
+      setError(
+        err instanceof Error ? err.message : "Couldn’t create it. Try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -85,7 +98,11 @@ function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) 
         void submit();
       }}
     >
-      <div role="radiogroup" aria-label="Who's it for" className="flex flex-col gap-2">
+      <div
+        role="radiogroup"
+        aria-label="Who's it for"
+        className="flex flex-col gap-2"
+      >
         {KINDS.map((k) => {
           const on = kind === k.kind;
           return (
@@ -106,14 +123,22 @@ function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) 
                 aria-hidden
                 className={cn(
                   "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2",
-                  on ? "border-emerald-700 dark:border-emerald-500" : "border-zinc-300 dark:border-zinc-600",
+                  on
+                    ? "border-emerald-700 dark:border-emerald-500"
+                    : "border-zinc-300 dark:border-zinc-600",
                 )}
               >
-                {on ? <span className="size-2.5 rounded-full bg-emerald-700 dark:bg-emerald-500" /> : null}
+                {on ? (
+                  <span className="size-2.5 rounded-full bg-emerald-700 dark:bg-emerald-500" />
+                ) : null}
               </span>
               <span>
-                <span className="block text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{k.title}</span>
-                <span className="mt-0.5 block text-[13px] text-zinc-600 dark:text-zinc-400">{k.body}</span>
+                <span className="block text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+                  {k.title}
+                </span>
+                <span className="mt-0.5 block text-[13px] text-zinc-600 dark:text-zinc-400">
+                  {k.body}
+                </span>
               </span>
             </button>
           );
@@ -122,7 +147,9 @@ function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) 
 
       {kind === "buddy" ? (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Who’s it with? (just for you)</span>
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            Who’s it with? (just for you)
+          </span>
           <input
             className={input}
             value={nickname}
@@ -131,12 +158,15 @@ function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) 
             onChange={(e) => setNickname(e.target.value)}
           />
           <span className="text-xs text-zinc-500 dark:text-zinc-400">
-            Shows as “You &amp; {nickname.trim() || "Alex"}” until they join with their own name.
+            Shows as “You &amp; {nickname.trim() || "Alex"}” until they join
+            with their own name.
           </span>
         </label>
       ) : (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Group name</span>
+          <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            Group name
+          </span>
           <input
             className={input}
             value={name}
@@ -151,11 +181,17 @@ function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) 
         <h3 className={sectionLabel}>What they’ll see</h3>
         <ul className="mt-2 flex flex-col gap-1.5 text-[13px] text-zinc-700 dark:text-zinc-300">
           <li className="flex gap-2">
-            <Check className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
+            <Check
+              className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400"
+              aria-hidden
+            />
             Days you train and plan, and the workout name
           </li>
           <li className="flex gap-2">
-            <Check className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400" aria-hidden />
+            <Check
+              className="mt-0.5 size-4 shrink-0 text-emerald-700 dark:text-emerald-400"
+              aria-hidden
+            />
             Your weekly goal and how close you are
           </li>
           <li className="flex gap-2">
@@ -170,9 +206,15 @@ function NewGroupForm({ onCreate, atLimit }: { onCreate: (input: NewGroupInput) 
           You’re in {GROUP_LIMITS.maxGroupsPerUser} groups, the most for now.
         </p>
       ) : null}
-      {error ? <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p>
+      ) : null}
 
-      <button type="submit" disabled={!ready || busy || atLimit} className={primaryGreen}>
+      <button
+        type="submit"
+        disabled={!ready || busy || atLimit}
+        className={primaryGreen}
+      >
         {busy ? "Creating…" : "Create & get invite link"}
       </button>
     </form>

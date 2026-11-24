@@ -61,9 +61,7 @@ export function SessionMuscleFilterBanner({
       <p className="min-w-0 flex-1">
         <span
           className={`block text-sm font-medium ${
-            dark
-              ? "text-slate-100"
-              : "text-emerald-950 dark:text-emerald-100"
+            dark ? "text-slate-100" : "text-emerald-950 dark:text-emerald-100"
           }`}
         >
           {copy.title}

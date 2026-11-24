@@ -87,13 +87,19 @@ function relativeDayLabel(dateKey: string, todayKey: string): string {
   if (dateKey >= addDaysToDateKey(todayKey, -6)) {
     return new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d);
   }
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(d);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(d);
 }
 
 /** The calendar day a session belongs to: its workout date, else when it ended or started. */
 export function sessionDayKey(s: SessionSummary): string {
   if (s.workoutDate) return s.workoutDate;
-  const ms = s.status === "completed" && s.endedAt ? s.endedAt.getTime() : s.startedAt.getTime();
+  const ms =
+    s.status === "completed" && s.endedAt
+      ? s.endedAt.getTime()
+      : s.startedAt.getTime();
   return localDateKeyFromMs(ms);
 }
 
@@ -123,7 +129,9 @@ export function buildHomeTemplates(
       return {
         id,
         name: plan.name,
-        meta: last ? `${exercises} · last done ${relativeDayLabel(last, todayKey)}` : exercises,
+        meta: last
+          ? `${exercises} · last done ${relativeDayLabel(last, todayKey)}`
+          : exercises,
         startHref: buildWorkoutHref(
           plan.name,
           id,
@@ -135,7 +143,9 @@ export function buildHomeTemplates(
 }
 
 /** The newest workout still in progress, if any. */
-export function pickInProgress(sessions: SessionSummary[]): HomeInProgress | null {
+export function pickInProgress(
+  sessions: SessionSummary[],
+): HomeInProgress | null {
   const open = sessions
     .filter((s) => s.status === "in_progress")
     .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())[0];
@@ -146,7 +156,10 @@ export function pickInProgress(sessions: SessionSummary[]): HomeInProgress | nul
   }).format(open.startedAt);
   const parts = [`Started ${started}`];
   if (open.exerciseCount > 0) {
-    parts.push(plural(open.exerciseCount, "exercise"), plural(open.setCount, "set"));
+    parts.push(
+      plural(open.exerciseCount, "exercise"),
+      plural(open.setCount, "set"),
+    );
   }
   return {
     id: open.id,
@@ -180,7 +193,8 @@ function dayDetail(
 ): string {
   if (state === "workout") return "workout logged";
   if (state === "activity") return "activity logged";
-  if (state === "planned") return `${planned?.label.trim() || "Workout"} planned`;
+  if (state === "planned")
+    return `${planned?.label.trim() || "Workout"} planned`;
   return isPast ? "rest day" : "nothing planned";
 }
 
@@ -195,7 +209,8 @@ export function buildHomeWeek(
   const activityDays = new Set(activities.map((a) => a.activity.activityDate));
   const plannedByDay = new Map<string, ScheduledWorkoutEntry>();
   for (const e of entries) {
-    if (e.status === "planned" && !plannedByDay.has(e.dateKey)) plannedByDay.set(e.dateKey, e);
+    if (e.status === "planned" && !plannedByDay.has(e.dateKey))
+      plannedByDay.set(e.dateKey, e);
   }
 
   const start = startOfWeekDateKey(todayKey);
@@ -240,7 +255,10 @@ export function buildHomeRecent(
     const dayKey = sessionDayKey(s);
     const parts = [shortDayLabel(dayKey)];
     if (s.exerciseCount > 0) {
-      parts.push(plural(s.exerciseCount, "exercise"), plural(s.setCount, "set"));
+      parts.push(
+        plural(s.exerciseCount, "exercise"),
+        plural(s.setCount, "set"),
+      );
     }
     rows.push({
       item: {
@@ -257,7 +275,8 @@ export function buildHomeRecent(
     const type = getActivityTypeById(activity.activityTypeId);
     const parts = [shortDayLabel(activity.activityDate)];
     if (activity.durationMin != null) parts.push(`${activity.durationMin} min`);
-    if (activity.distanceMiles != null) parts.push(`${activity.distanceMiles} mi`);
+    if (activity.distanceMiles != null)
+      parts.push(`${activity.distanceMiles} mi`);
     rows.push({
       item: {
         id,
@@ -297,7 +316,9 @@ function plannedWhen(dateKey: string, todayKey: string): string {
   if (dateKey === todayKey) return "today";
   if (dateKey === addDaysToDateKey(todayKey, 1)) return "tomorrow";
   const label = shortDayLabel(dateKey);
-  return dateKey <= addDaysToDateKey(todayKey, 6) ? (label.split(",")[0] ?? label) : label;
+  return dateKey <= addDaysToDateKey(todayKey, 6)
+    ? (label.split(",")[0] ?? label)
+    : label;
 }
 
 /** The start card's headline and one line under it. The weekly count lives in This week. */
@@ -314,11 +335,14 @@ export function startCopy(
   }
   return {
     headline: "Ready when you are",
-    detail: hasTemplates ? "Pick a template or start empty." : "Start an empty workout, or make a template.",
+    detail: hasTemplates
+      ? "Pick a template or start empty."
+      : "Start an empty workout, or make a template.",
   };
 }
 
-export type HomeChartDay = "workout" | "activity" | "rest" | "today" | "planned" | "ahead";
+export type HomeChartDay =
+  "workout" | "activity" | "rest" | "today" | "planned" | "ahead";
 
 export type HomeChartWeek = {
   startKey: string;
@@ -349,7 +373,11 @@ function itemsByDay(
   startKey: string,
   endKey: string,
 ): Record<string, HomeRecentItem[]> {
-  const rows: Array<{ dateKey: string; sortKey: string; item: HomeRecentItem }> = [];
+  const rows: Array<{
+    dateKey: string;
+    sortKey: string;
+    item: HomeRecentItem;
+  }> = [];
   for (const s of sessions) {
     if (s.status !== "completed") continue;
     const dateKey = sessionDayKey(s);
@@ -374,7 +402,8 @@ function itemsByDay(
     if (dateKey < startKey || dateKey > endKey) continue;
     const parts: string[] = [];
     if (activity.durationMin != null) parts.push(`${activity.durationMin} min`);
-    if (activity.distanceMiles != null) parts.push(`${activity.distanceMiles} mi`);
+    if (activity.distanceMiles != null)
+      parts.push(`${activity.distanceMiles} mi`);
     rows.push({
       dateKey,
       sortKey: `${activity.activityTime ?? "99:99"}-${activity.createdAt.getTime()}`,
@@ -407,13 +436,19 @@ export function buildHomeConsistency(
   const plannedDays = new Set(
     entries.filter((e) => e.status === "planned").map((e) => e.dateKey),
   );
-  const { current, longest } = goalWeekStreak(workoutDays, weeklyGoal, todayKey);
+  const { current, longest } = goalWeekStreak(
+    workoutDays,
+    weeklyGoal,
+    todayKey,
+  );
 
   const thisWeekStart = startOfWeekDateKey(todayKey);
   const weeks: HomeChartWeek[] = [];
   for (let w = weekCount - 1; w >= 0; w--) {
     const startKey = addDaysToDateKey(thisWeekStart, -7 * w);
-    const dateKeys = Array.from({ length: 7 }, (_, i) => addDaysToDateKey(startKey, i));
+    const dateKeys = Array.from({ length: 7 }, (_, i) =>
+      addDaysToDateKey(startKey, i),
+    );
     const days = dateKeys.map((dateKey): HomeChartDay => {
       if (workoutDays.has(dateKey)) return "workout";
       if (activityDays.has(dateKey)) return "activity";
@@ -422,7 +457,12 @@ export function buildHomeConsistency(
       return plannedDays.has(dateKey) ? "planned" : "ahead";
     });
     const hit = workoutsInWeek(workoutDays, startKey) >= weeklyGoal;
-    weeks.push({ startKey, dateKeys, days, goal: hit ? "hit" : w === 0 ? "open" : "missed" });
+    weeks.push({
+      startKey,
+      dateKeys,
+      days,
+      goal: hit ? "hit" : w === 0 ? "open" : "missed",
+    });
   }
 
   const finished = weeks.slice(0, -1);
@@ -449,7 +489,11 @@ function moreWorkouts(n: number): string {
 }
 
 /** One encouraging line under the weekly count. Never talks about losing the streak. */
-export function weekNudge(goal: HomeWeekGoal, streak: number, todayKey: string): string {
+export function weekNudge(
+  goal: HomeWeekGoal,
+  streak: number,
+  todayKey: string,
+): string {
   const remaining = goal.target - goal.completed;
   if (remaining <= 0) {
     return streak > 1

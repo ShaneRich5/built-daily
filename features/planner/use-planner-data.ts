@@ -10,10 +10,16 @@ import {
   subscribeScheduledWorkoutsInRange,
   subscribeUnscheduledWorkouts,
 } from "@/lib/planner-repository";
-import type { ScheduledWorkoutEntry, UnscheduledWorkoutEntry } from "@/lib/planner-types";
+import type {
+  ScheduledWorkoutEntry,
+  UnscheduledWorkoutEntry,
+} from "@/lib/planner-types";
 import { subscribeProgressSettings } from "@/lib/progress-settings-repository";
 import { DEFAULT_PROGRESS_SETTINGS } from "@/lib/progress-types";
-import { subscribeUserWorkoutPlans, type SavedWorkoutPlan } from "@/lib/workout-plan-repository";
+import {
+  subscribeUserWorkoutPlans,
+  type SavedWorkoutPlan,
+} from "@/lib/workout-plan-repository";
 import {
   subscribeRecentCompletedSessions,
   type SessionSummary,
@@ -27,7 +33,10 @@ const NEARBY_PAST_DAYS = 7;
 const NEARBY_FUTURE_DAYS = 13;
 
 /** Workouts, activities, plans and templates for the planner, live from Firestore. */
-export function usePlannerData(range: { startKey: string; endKey: string }, todayKey: string) {
+export function usePlannerData(
+  range: { startKey: string; endKey: string },
+  todayKey: string,
+) {
   const { user, firebaseReady } = useAuth();
   const signedIn = Boolean(user) && firebaseReady;
   const [plans, setPlans] = useState<SavedWorkoutPlan[]>([]);
@@ -36,7 +45,9 @@ export function usePlannerData(range: { startKey: string; endKey: string }, toda
   const [scheduled, setScheduled] = useState<ScheduledWorkoutEntry[]>([]);
   const [nearby, setNearby] = useState<ScheduledWorkoutEntry[]>([]);
   const [unscheduled, setUnscheduled] = useState<UnscheduledWorkoutEntry[]>([]);
-  const [weeklyGoal, setWeeklyGoal] = useState<number>(DEFAULT_PROGRESS_SETTINGS.weeklyGoal);
+  const [weeklyGoal, setWeeklyGoal] = useState<number>(
+    DEFAULT_PROGRESS_SETTINGS.weeklyGoal,
+  );
 
   useEffect(() => {
     if (!signedIn) return;
@@ -45,7 +56,9 @@ export function usePlannerData(range: { startKey: string; endKey: string }, toda
       subscribeRecentCompletedSessions(setSessions, { maxDocs: 500 }),
       subscribeRecentActivities(setActivities, { maxDocs: 400 }),
       subscribeUnscheduledWorkouts(setUnscheduled),
-      subscribeProgressSettings((settings) => setWeeklyGoal(settings.weeklyGoal)),
+      subscribeProgressSettings((settings) =>
+        setWeeklyGoal(settings.weeklyGoal),
+      ),
       subscribeScheduledWorkoutsInRange(
         addDaysToDateKey(todayKey, -NEARBY_PAST_DAYS),
         addDaysToDateKey(todayKey, NEARBY_FUTURE_DAYS),
@@ -57,11 +70,18 @@ export function usePlannerData(range: { startKey: string; endKey: string }, toda
 
   useEffect(() => {
     if (!signedIn) return;
-    return subscribeScheduledWorkoutsInRange(range.startKey, range.endKey, setScheduled);
+    return subscribeScheduledWorkoutsInRange(
+      range.startKey,
+      range.endKey,
+      setScheduled,
+    );
   }, [signedIn, range.startKey, range.endKey]);
 
   // Done or skipped plans are history now; only open ones show on the calendar.
-  const open = useMemo(() => scheduled.filter((entry) => entry.status === "planned"), [scheduled]);
+  const open = useMemo(
+    () => scheduled.filter((entry) => entry.status === "planned"),
+    [scheduled],
+  );
   const items = useMemo(
     () => buildPlannerListItems(sessions, open, activities),
     [sessions, open, activities],

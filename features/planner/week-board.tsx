@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Activity, Check, ChevronLeft, ChevronRight, GripVertical, Plus } from "lucide-react";
+import {
+  Activity,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   targetFor,
@@ -53,8 +60,12 @@ function PlanCard({
         onClick={onOpen}
         className="flex min-h-13 min-w-0 flex-1 flex-col justify-center rounded-l-xl pl-3 text-left"
       >
-        <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">{card.title}</span>
-        <span className="block truncate text-xs text-zinc-600 dark:text-zinc-400">{card.meta}</span>
+        <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+          {card.title}
+        </span>
+        <span className="block truncate text-xs text-zinc-600 dark:text-zinc-400">
+          {card.meta}
+        </span>
       </button>
       <button
         type="button"
@@ -64,7 +75,9 @@ function PlanCard({
         className={cn(
           iconButton,
           "rounded-[10px]",
-          picked ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-600 dark:text-zinc-400",
+          picked
+            ? "text-emerald-700 dark:text-emerald-400"
+            : "text-zinc-600 dark:text-zinc-400",
         )}
       >
         <GripVertical className="size-[18px]" aria-hidden />
@@ -88,10 +101,16 @@ function DoneRow({ item }: { item: BoardDay["done"][number] }) {
         )}
         aria-hidden
       >
-        {item.kind === "workout" ? <Check className="size-3.5" /> : <Activity className="size-3.5" />}
+        {item.kind === "workout" ? (
+          <Check className="size-3.5" />
+        ) : (
+          <Activity className="size-3.5" />
+        )}
       </span>
       <span className="min-w-0 flex-1 truncate">{item.title}</span>
-      <span className="sr-only">{item.kind === "workout" ? "workout done" : "activity logged"}</span>
+      <span className="sr-only">
+        {item.kind === "workout" ? "workout done" : "activity logged"}
+      </span>
     </Link>
   );
 }
@@ -113,18 +132,33 @@ export function WeekBoard({
   onPrev,
   onNext,
 }: WeekBoardProps) {
-  const showTray = tray.length > 0 || (picked !== null && picked.dateKey !== null);
+  const showTray =
+    tray.length > 0 || (picked !== null && picked.dateKey !== null);
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex items-center justify-between">
-        <button type="button" aria-label="Previous week" onClick={onPrev} className={iconButton}>
+        <button
+          type="button"
+          aria-label="Previous week"
+          onClick={onPrev}
+          className={iconButton}
+        >
           <ChevronLeft className="size-[18px]" aria-hidden />
         </button>
         <div className="text-center">
-          <p className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">{board.title}</p>
-          <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">{board.subtitle}</p>
+          <p className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+            {board.title}
+          </p>
+          <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+            {board.subtitle}
+          </p>
         </div>
-        <button type="button" aria-label="Next week" onClick={onNext} className={iconButton}>
+        <button
+          type="button"
+          aria-label="Next week"
+          onClick={onNext}
+          className={iconButton}
+        >
           <ChevronRight className="size-[18px]" aria-hidden />
         </button>
       </div>
@@ -141,7 +175,9 @@ export function WeekBoard({
             >
               Unscheduled
             </h2>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">No day yet</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              No day yet
+            </p>
           </div>
           {tray.map((card) => (
             <PlanCard
@@ -182,7 +218,9 @@ export function WeekBoard({
                 )}
               >
                 <div className="flex w-10 shrink-0 flex-col items-center gap-0.5">
-                  <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">{day.dow}</span>
+                  <span className="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
+                    {day.dow}
+                  </span>
                   <span
                     className={cn(
                       "inline-flex size-7.5 items-center justify-center rounded-full text-sm font-semibold",
@@ -205,7 +243,9 @@ export function WeekBoard({
                       key={card.id}
                       card={card}
                       picked={picked?.id === card.id}
-                      onPick={() => onPick(picked?.id === card.id ? null : card)}
+                      onPick={() =>
+                        onPick(picked?.id === card.id ? null : card)
+                      }
                       onOpen={() => onOpenCard(card)}
                     />
                   ))}
@@ -248,8 +288,12 @@ export function WeekBoard({
           className="fixed inset-x-3 bottom-[calc(0.75rem+var(--bottom-nav-height,0px))] z-40 mx-auto flex max-w-2xl items-center gap-2.5 rounded-[14px] bg-zinc-900 py-2 pr-2 pl-3.5 text-white shadow-xl dark:bg-zinc-100 dark:text-zinc-900"
         >
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold">Moving {picked.title}</span>
-            <span className="block text-xs text-zinc-300 dark:text-zinc-600">Tap a day to drop it there</span>
+            <span className="block truncate text-sm font-semibold">
+              Moving {picked.title}
+            </span>
+            <span className="block text-xs text-zinc-300 dark:text-zinc-600">
+              Tap a day to drop it there
+            </span>
           </span>
           <button
             type="button"

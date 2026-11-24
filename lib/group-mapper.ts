@@ -73,7 +73,11 @@ export function generateInviteCode(): string {
 }
 
 export function normalizeInviteCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+  return raw
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 12);
 }
 
 export function displayNameFromAuth(user: {
@@ -110,7 +114,9 @@ export function asGroupKind(v: unknown): GroupKind {
 
 /** Groups created before buddies existed have no cap stored: they hold 12. */
 export function asMaxMembers(v: unknown): number {
-  return v === GROUP_LIMITS.buddyMembers ? GROUP_LIMITS.buddyMembers : GROUP_LIMITS.maxMembers;
+  return v === GROUP_LIMITS.buddyMembers
+    ? GROUP_LIMITS.buddyMembers
+    : GROUP_LIMITS.maxMembers;
 }
 
 export function firestoreToGroupDoc(
@@ -176,7 +182,10 @@ function asUpcomingPlans(v: unknown): MemberUpcomingPlan[] {
     if (!row || typeof row !== "object") continue;
     const r = row as Record<string, unknown>;
     const dateKey = asDateKey(r.dateKey);
-    const label = typeof r.label === "string" ? r.label.trim().slice(0, GROUP_LIMITS.workoutLabel) : "";
+    const label =
+      typeof r.label === "string"
+        ? r.label.trim().slice(0, GROUP_LIMITS.workoutLabel)
+        : "";
     if (dateKey && label) out.push({ dateKey, label });
   }
   return out.slice(0, GROUP_LIMITS.upcomingPlansMax);
@@ -203,7 +212,8 @@ export function firestoreToMemberDoc(
   const lastWorkoutAt =
     lastWorkoutAtRaw == null ? null : asTimestamp(lastWorkoutAtRaw);
   const currentStreak =
-    typeof data.currentStreak === "number" && Number.isFinite(data.currentStreak)
+    typeof data.currentStreak === "number" &&
+    Number.isFinite(data.currentStreak)
       ? Math.max(0, Math.round(data.currentStreak))
       : 0;
   const workoutsThisWeek =
@@ -222,7 +232,10 @@ export function firestoreToMemberDoc(
     weeklyGoal: asWeeklyGoal(data.weeklyGoal),
     workoutsThisWeek,
     trainedDays: asDateKeyList(data.trainedDays, GROUP_LIMITS.trainedDaysMax),
-    lastWorkoutLabel: asShortString(data.lastWorkoutLabel, GROUP_LIMITS.workoutLabel),
+    lastWorkoutLabel: asShortString(
+      data.lastWorkoutLabel,
+      GROUP_LIMITS.workoutLabel,
+    ),
     upcomingPlans: asUpcomingPlans(data.upcomingPlans),
   };
 }
@@ -316,10 +329,16 @@ function asExercises(v: unknown): SharedPlanExercise[] {
 
 function asUidList(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
-  return [...new Set(v.filter((x): x is string => typeof x === "string" && x.length > 0))];
+  return [
+    ...new Set(
+      v.filter((x): x is string => typeof x === "string" && x.length > 0),
+    ),
+  ];
 }
 
-export function sharedPlanToFirestore(plan: SharedPlanDoc): Record<string, unknown> {
+export function sharedPlanToFirestore(
+  plan: SharedPlanDoc,
+): Record<string, unknown> {
   return {
     groupId: plan.groupId,
     dateKey: plan.dateKey,
@@ -332,13 +351,18 @@ export function sharedPlanToFirestore(plan: SharedPlanDoc): Record<string, unkno
     createdByName: plan.createdByName,
     going: plan.going,
     goingAt: Object.fromEntries(
-      Object.entries(plan.goingAt).map(([uid, at]) => [uid, Timestamp.fromDate(at)]),
+      Object.entries(plan.goingAt).map(([uid, at]) => [
+        uid,
+        Timestamp.fromDate(at),
+      ]),
     ),
     createdAt: Timestamp.fromDate(plan.createdAt),
   };
 }
 
-export function firestoreToSharedPlan(data: Record<string, unknown>): SharedPlanDoc | null {
+export function firestoreToSharedPlan(
+  data: Record<string, unknown>,
+): SharedPlanDoc | null {
   const groupId = typeof data.groupId === "string" ? data.groupId : "";
   const dateKey = asDateKey(data.dateKey);
   const label = asShortString(data.label, SHARED_PLAN_LIMITS.label);
@@ -347,7 +371,9 @@ export function firestoreToSharedPlan(data: Record<string, unknown>): SharedPlan
   if (!groupId || !dateKey || !label || !createdBy || !createdAt) return null;
   const goingAt: Record<string, Date> = {};
   if (data.goingAt && typeof data.goingAt === "object") {
-    for (const [uid, at] of Object.entries(data.goingAt as Record<string, unknown>)) {
+    for (const [uid, at] of Object.entries(
+      data.goingAt as Record<string, unknown>,
+    )) {
       const d = asTimestamp(at);
       if (d) goingAt[uid] = d;
     }
@@ -361,7 +387,8 @@ export function firestoreToSharedPlan(data: Record<string, unknown>): SharedPlan
     exercises: asExercises(data.exercises),
     note: asShortString(data.note, SHARED_PLAN_LIMITS.note),
     createdBy,
-    createdByName: asShortString(data.createdByName, GROUP_LIMITS.displayName) ?? "Member",
+    createdByName:
+      asShortString(data.createdByName, GROUP_LIMITS.displayName) ?? "Member",
     going: asUidList(data.going).slice(0, SHARED_PLAN_LIMITS.going),
     goingAt,
     createdAt,
@@ -376,7 +403,9 @@ function asNameList(v: unknown, max: number): string[] {
     .slice(0, max);
 }
 
-export function invitePreviewToFirestore(doc: InvitePreviewDoc): Record<string, unknown> {
+export function invitePreviewToFirestore(
+  doc: InvitePreviewDoc,
+): Record<string, unknown> {
   return {
     groupId: doc.groupId,
     groupName: doc.groupName,
@@ -390,13 +419,17 @@ export function invitePreviewToFirestore(doc: InvitePreviewDoc): Record<string, 
   };
 }
 
-export function firestoreToInvitePreview(data: Record<string, unknown>): InvitePreviewDoc | null {
+export function firestoreToInvitePreview(
+  data: Record<string, unknown>,
+): InvitePreviewDoc | null {
   const groupId = typeof data.groupId === "string" ? data.groupId : "";
   const groupName = asShortString(data.groupName, GROUP_LIMITS.name);
   if (!groupId || !groupName) return null;
   const plans: Record<string, InvitePreviewPlan> = {};
   if (data.plans && typeof data.plans === "object") {
-    for (const [id, raw] of Object.entries(data.plans as Record<string, unknown>)) {
+    for (const [id, raw] of Object.entries(
+      data.plans as Record<string, unknown>,
+    )) {
       if (!raw || typeof raw !== "object") continue;
       const r = raw as Record<string, unknown>;
       const dateKey = asDateKey(r.dateKey);
@@ -407,7 +440,10 @@ export function firestoreToInvitePreview(data: Record<string, unknown>): InviteP
         label,
         time: asTime(r.time),
         where: asShortString(r.where, SHARED_PLAN_LIMITS.where),
-        goingFirstNames: asNameList(r.goingFirstNames, SHARED_PLAN_LIMITS.going),
+        goingFirstNames: asNameList(
+          r.goingFirstNames,
+          SHARED_PLAN_LIMITS.going,
+        ),
       };
     }
   }
@@ -415,14 +451,19 @@ export function firestoreToInvitePreview(data: Record<string, unknown>): InviteP
     groupId,
     groupName,
     kind: asGroupKind(data.kind),
-    invitedByName: asShortString(data.invitedByName, GROUP_LIMITS.displayName) ?? "A friend",
-    memberFirstNames: asNameList(data.memberFirstNames, GROUP_LIMITS.maxMembers),
+    invitedByName:
+      asShortString(data.invitedByName, GROUP_LIMITS.displayName) ?? "A friend",
+    memberFirstNames: asNameList(
+      data.memberFirstNames,
+      GROUP_LIMITS.maxMembers,
+    ),
     memberCount:
       typeof data.memberCount === "number" && Number.isFinite(data.memberCount)
         ? Math.max(0, Math.round(data.memberCount))
         : 0,
     workoutsThisWeek:
-      typeof data.workoutsThisWeek === "number" && Number.isFinite(data.workoutsThisWeek)
+      typeof data.workoutsThisWeek === "number" &&
+      Number.isFinite(data.workoutsThisWeek)
         ? Math.max(0, Math.round(data.workoutsThisWeek))
         : 0,
     plans,
@@ -437,7 +478,9 @@ export function firestoreToInvitePreview(data: Record<string, unknown>): InviteP
  * Treat it as stale — and show 0 — once a full week has passed with no
  * activity at all, rather than storing an expiring value.
  */
-export function cheerDocId(cheer: Pick<CheerDoc, "dateKey" | "toUid" | "fromUid">): string {
+export function cheerDocId(
+  cheer: Pick<CheerDoc, "dateKey" | "toUid" | "fromUid">,
+): string {
   return `${cheer.dateKey}_${cheer.toUid}_${cheer.fromUid}`;
 }
 
@@ -482,4 +525,3 @@ export function effectiveGroupMemberStreak(
     ? 0
     : member.currentStreak;
 }
-

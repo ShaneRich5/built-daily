@@ -13,7 +13,11 @@ type SessionHeaderProps = {
   editing?: { dirty: boolean; onCancel: () => void };
 };
 
-function volumeLine(exerciseCount: number, setCount: number, doneSetCount: number): string {
+function volumeLine(
+  exerciseCount: number,
+  setCount: number,
+  doneSetCount: number,
+): string {
   if (exerciseCount === 0) return "No exercises yet";
   const exercises = `${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"}`;
   return `${exercises} · ${doneSetCount} of ${setCount} set${setCount === 1 ? "" : "s"} done`;
@@ -38,7 +42,9 @@ export function SessionHeader({
           >
             Cancel
           </button>
-          <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Editing workout</span>
+          <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+            Editing workout
+          </span>
           <span
             className="w-14 text-right text-xs text-amber-700 dark:text-amber-400"
             aria-live="polite"

@@ -44,12 +44,16 @@ const LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
 function weekdayShort(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
-  return d ? new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d) : "";
+  return d
+    ? new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d)
+    : "";
 }
 
 function weekdayLong(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
-  return d ? new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(d) : "";
+  return d
+    ? new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(d)
+    : "";
 }
 
 function dayOfMonth(dateKey: string): number {
@@ -88,9 +92,12 @@ export function nextSevenDays(todayKey: string): WeekDay[] {
 /** "Nov 8 – 14" (or "Oct 31 – Nov 6" across months). */
 export function weekRangeLabel(todayKey: string): string {
   const start = dateFromLocalDateKey(startOfWeekDateKey(todayKey));
-  const end = dateFromLocalDateKey(addDaysToDateKey(startOfWeekDateKey(todayKey), 6));
+  const end = dateFromLocalDateKey(
+    addDaysToDateKey(startOfWeekDateKey(todayKey), 6),
+  );
   if (!start || !end) return "";
-  const month = (d: Date) => new Intl.DateTimeFormat("en-US", { month: "short" }).format(d);
+  const month = (d: Date) =>
+    new Intl.DateTimeFormat("en-US", { month: "short" }).format(d);
   return start.getMonth() === end.getMonth()
     ? `${month(start)} ${start.getDate()} – ${end.getDate()}`
     : `${month(start)} ${start.getDate()} – ${month(end)} ${end.getDate()}`;
@@ -103,19 +110,29 @@ function trainedDaySet(member: GroupMemberDoc): Set<string> {
   return days;
 }
 
-export function memberTrainedOn(member: GroupMemberDoc, dateKey: string): boolean {
+export function memberTrainedOn(
+  member: GroupMemberDoc,
+  dateKey: string,
+): boolean {
   return trainedDaySet(member).has(dateKey);
 }
 
-export function memberPlansOn(member: GroupMemberDoc, dateKey: string): boolean {
+export function memberPlansOn(
+  member: GroupMemberDoc,
+  dateKey: string,
+): boolean {
   return member.upcomingPlans.some((p) => p.dateKey === dateKey);
 }
 
 /** Workouts done this week. Rows without `trainedDays` fall back to the stored count. */
 export function doneThisWeek(member: GroupMemberDoc, todayKey: string): number {
   const weekStart = startOfWeekDateKey(todayKey);
-  const inWeek = [...trainedDaySet(member)].filter((d) => d >= weekStart && d <= todayKey).length;
-  const lastInWeek = member.lastWorkoutDateKey !== null && member.lastWorkoutDateKey >= weekStart;
+  const inWeek = [...trainedDaySet(member)].filter(
+    (d) => d >= weekStart && d <= todayKey,
+  ).length;
+  const lastInWeek =
+    member.lastWorkoutDateKey !== null &&
+    member.lastWorkoutDateKey >= weekStart;
   return lastInWeek ? Math.max(inWeek, member.workoutsThisWeek) : inWeek;
 }
 
@@ -133,7 +150,9 @@ export function buildMemberWeek(
     return "none";
   });
   const done = doneThisWeek(member, todayKey);
-  const plannedLeft = marks.filter((m, i) => m === "planned" && days[i]!.dateKey >= todayKey).length;
+  const plannedLeft = marks.filter(
+    (m, i) => m === "planned" && days[i]!.dateKey >= todayKey,
+  ).length;
   return {
     uid: member.uid,
     name: firstName(member.displayName),
@@ -141,7 +160,8 @@ export function buildMemberWeek(
     marks,
     done,
     goal: member.weeklyGoal,
-    onTrack: done >= member.weeklyGoal || done + plannedLeft >= member.weeklyGoal,
+    onTrack:
+      done >= member.weeklyGoal || done + plannedLeft >= member.weeklyGoal,
     trainedToday: trained.has(todayKey),
   };
 }
@@ -152,7 +172,9 @@ export function buildGroupWeek(
   todayKey: string,
   myUid: string | null,
 ): MemberWeek[] {
-  const rows = members.map(({ member }) => buildMemberWeek(member, todayKey, myUid));
+  const rows = members.map(({ member }) =>
+    buildMemberWeek(member, todayKey, myUid),
+  );
   return [...rows.filter((r) => r.isMe), ...rows.filter((r) => !r.isMe)];
 }
 
@@ -181,7 +203,9 @@ export function groupSummary(week: MemberWeek[]): string {
 /** "4 members · 2 on track · Dev trained today" */
 export function groupCompactSummary(week: MemberWeek[]): string {
   const onTrack = week.filter((m) => m.onTrack).length;
-  const today = week.filter((m) => m.trainedToday && !m.isMe).map((m) => m.name);
+  const today = week
+    .filter((m) => m.trainedToday && !m.isMe)
+    .map((m) => m.name);
   const parts = [pluralMembers(week.length), `${onTrack} on track`];
   if (today.length > 0) parts.push(`${joinNames(today, 2)} trained today`);
   return parts.join(" · ");
@@ -202,7 +226,8 @@ export function trainedTodayDetail(
   return others
     .map((o) => {
       const m = byUid.get(o.uid);
-      const label = m?.lastWorkoutDateKey === todayKey ? m.lastWorkoutLabel : null;
+      const label =
+        m?.lastWorkoutDateKey === todayKey ? m.lastWorkoutLabel : null;
       return label ? `${o.name}: ${label}` : o.name;
     })
     .join(" · ");
@@ -212,7 +237,8 @@ export function trainedTodayDetail(
 export function formatPlanTime(time: string | null): string | null {
   if (!time) return null;
   const [h, m] = time.split(":").map(Number);
-  if (h === undefined || m === undefined || Number.isNaN(h) || Number.isNaN(m)) return null;
+  if (h === undefined || m === undefined || Number.isNaN(h) || Number.isNaN(m))
+    return null;
   const period = h < 12 ? "AM" : "PM";
   const hour = h % 12 === 0 ? 12 : h % 12;
   return `${hour}:${String(m).padStart(2, "0")} ${period}`;
@@ -222,7 +248,11 @@ export function formatPlanTime(time: string | null): string | null {
 export function formatPlanDay(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
   return d
-    ? new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(d)
+    ? new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(d)
     : dateKey;
 }
 
@@ -243,13 +273,21 @@ export type PlanRow = {
   href: string;
 };
 
-function goingNames(plan: SharedPlanDoc, names: Map<string, string>, myUid: string | null): string[] {
-  const others = plan.going.filter((uid) => uid !== myUid).map((uid) => names.get(uid) ?? "Someone");
+function goingNames(
+  plan: SharedPlanDoc,
+  names: Map<string, string>,
+  myUid: string | null,
+): string[] {
+  const others = plan.going
+    .filter((uid) => uid !== myUid)
+    .map((uid) => names.get(uid) ?? "Someone");
   return plan.going.includes(myUid ?? "") ? [...others, "you"] : others;
 }
 
 function nameMap(members: GroupMemberRow[]): Map<string, string> {
-  return new Map(members.map(({ member }) => [member.uid, firstName(member.displayName)]));
+  return new Map(
+    members.map(({ member }) => [member.uid, firstName(member.displayName)]),
+  );
 }
 
 export function sharedPlanHref(groupId: string, planId: string): string {
@@ -318,7 +356,8 @@ export function crewCountsByDay(
   for (const { dateKey } of days) {
     out[dateKey] = members.filter(
       ({ member }) =>
-        member.uid !== myUid && (memberTrainedOn(member, dateKey) || memberPlansOn(member, dateKey)),
+        member.uid !== myUid &&
+        (memberTrainedOn(member, dateKey) || memberPlansOn(member, dateKey)),
     ).length;
   }
   return out;
@@ -333,17 +372,25 @@ export function groupDisplayName(
 ): string {
   if (group.kind !== "buddy") return group.name;
   const other = members.find(({ member }) => member.uid !== myUid);
-  const name = other ? firstName(other.member.displayName) : buddyNickname?.trim();
+  const name = other
+    ? firstName(other.member.displayName)
+    : buddyNickname?.trim();
   return name ? `You & ${name}` : "You & your buddy";
 }
 
 /** "Oct 3": when the second person joined (or when it was made, if alone). */
-export function buddiesSinceLabel(group: AccountabilityGroupDoc, members: GroupMemberRow[]): string {
+export function buddiesSinceLabel(
+  group: AccountabilityGroupDoc,
+  members: GroupMemberRow[],
+): string {
   const latest = members.reduce(
     (max, { member }) => (member.joinedAt > max ? member.joinedAt : max),
     group.createdAt,
   );
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(latest);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(latest);
 }
 
 export type BuddySummary = {
@@ -367,10 +414,13 @@ export function buildBuddySummary(
   const togetherDays = new Set<string>();
   if (week.length === 2) {
     days.forEach((d, i) => {
-      if (week[0]!.marks[i] !== "none" && week[1]!.marks[i] !== "none") togetherDays.add(d.dateKey);
+      if (week[0]!.marks[i] !== "none" && week[1]!.marks[i] !== "none")
+        togetherDays.add(d.dateKey);
     });
   }
-  const streaks = members.map(({ member }) => effectiveGroupMemberStreak(member, todayKey));
+  const streaks = members.map(({ member }) =>
+    effectiveGroupMemberStreak(member, todayKey),
+  );
   const weeks = members.length === 2 ? Math.min(...streaks) : 0;
   return {
     bothOnTrack: week.length === 2 && week.every((m) => m.onTrack),
@@ -380,15 +430,24 @@ export function buildBuddySummary(
 }
 
 /** "Sat planned" — the next day still planned this week, for the buddy footer. */
-export function nextPlannedLabel(row: MemberWeek, todayKey: string): string | null {
+export function nextPlannedLabel(
+  row: MemberWeek,
+  todayKey: string,
+): string | null {
   const days = buildWeekDays(todayKey);
-  const i = row.marks.findIndex((m, idx) => m === "planned" && days[idx]!.dateKey >= todayKey);
+  const i = row.marks.findIndex(
+    (m, idx) => m === "planned" && days[idx]!.dateKey >= todayKey,
+  );
   return i >= 0 ? `${days[i]!.short} planned` : null;
 }
 
 /** Template → plan exercises (names + set counts only). */
 export function exercisesFromTemplate(
-  lines: { exerciseId: string; nameSnapshot: string; targetSets?: number | null }[],
+  lines: {
+    exerciseId: string;
+    nameSnapshot: string;
+    targetSets?: number | null;
+  }[],
 ): { id: string; name: string; sets: number | null }[] {
   return lines.slice(0, 20).map((l) => ({
     id: l.exerciseId,

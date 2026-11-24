@@ -25,14 +25,24 @@ import {
   weekRangeLabel,
   type PlanRow,
 } from "@/features/groups/groups-model";
-import { ConnectedInviteSheet, ConnectedPlanSheet } from "@/features/groups/group-sheets";
+import {
+  ConnectedInviteSheet,
+  ConnectedPlanSheet,
+} from "@/features/groups/group-sheets";
 import { GroupView, type BuddyDetails } from "@/features/groups/group-view";
 import { useGroupData } from "@/features/groups/use-group-data";
 
-const quiet = "rounded-xl border border-dashed border-zinc-200 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-800";
+const quiet =
+  "rounded-xl border border-dashed border-zinc-200 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-800";
 
 /** G2 / G8 wired to Firestore. `openInvite` opens G5 on arrival (right after creating). */
-export function GroupScreen({ groupId, openInvite = false }: { groupId: string; openInvite?: boolean }) {
+export function GroupScreen({
+  groupId,
+  openInvite = false,
+}: {
+  groupId: string;
+  openInvite?: boolean;
+}) {
   const router = useRouter();
   const data = useGroupData(groupId);
   const myUid = data.user?.uid ?? null;
@@ -49,8 +59,14 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
     const rows = buildGroupWeek(members, data.todayKey, myUid);
     const title = groupDisplayName(group, members, myUid, data.buddyNickname);
     const others = trainedTodayOthers(rows);
-    const cheeredByMe = new Set(data.cheers.filter((c) => c.cheer.fromUid === myUid).map((c) => c.cheer.toUid));
-    const planRows: PlanRow[] = data.plans.map((p) => buildGroupPlanRow(p, members, myUid));
+    const cheeredByMe = new Set(
+      data.cheers
+        .filter((c) => c.cheer.fromUid === myUid)
+        .map((c) => c.cheer.toUid),
+    );
+    const planRows: PlanRow[] = data.plans.map((p) =>
+      buildGroupPlanRow(p, members, myUid),
+    );
     let buddy: BuddyDetails | null = null;
     if (group.kind === "buddy") {
       const other = rows.find((r) => !r.isMe);
@@ -60,7 +76,9 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
         since: buddiesSinceLabel(group, members),
         ...summary,
         next: planRows[0] ?? null,
-        nextPlanned: Object.fromEntries(rows.map((r) => [r.uid, nextPlannedLabel(r, data.todayKey)])),
+        nextPlanned: Object.fromEntries(
+          rows.map((r) => [r.uid, nextPlannedLabel(r, data.todayKey)]),
+        ),
       };
     }
     return {
@@ -82,13 +100,25 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
       planRows,
       buddy,
     };
-  }, [data.group, members, data.cheers, data.plans, data.todayKey, data.buddyNickname, myUid]);
+  }, [
+    data.group,
+    members,
+    data.cheers,
+    data.plans,
+    data.todayKey,
+    data.buddyNickname,
+    myUid,
+  ]);
 
-  if (!data.firebaseReady) return <p className={quiet}>Add Firebase configuration to use groups.</p>;
+  if (!data.firebaseReady)
+    return <p className={quiet}>Add Firebase configuration to use groups.</p>;
   if (!data.authLoading && !data.user) {
     return (
       <p className={quiet}>
-        <Link href={`/login?next=/groups/${groupId}`} className="font-semibold text-zinc-900 underline dark:text-zinc-100">
+        <Link
+          href={`/login?next=/groups/${groupId}`}
+          className="font-semibold text-zinc-900 underline dark:text-zinc-100"
+        >
           Sign in
         </Link>{" "}
         to see this group.
@@ -99,7 +129,9 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
     return (
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Group not found</h1>
-        <p className="text-sm text-zinc-500">You may not be a member, or it was deleted.</p>
+        <p className="text-sm text-zinc-500">
+          You may not be a member, or it was deleted.
+        </p>
         <Link href="/groups" className="text-sm font-semibold underline">
           Back to Groups
         </Link>
@@ -108,7 +140,11 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
   }
   if (!view || data.members === null) {
     return (
-      <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading">
+      <div
+        className="flex flex-col gap-4"
+        aria-busy="true"
+        aria-label="Loading"
+      >
         <div className="h-16 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-900" />
         <div className="h-72 animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-900" />
       </div>
@@ -120,9 +156,12 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
   const imIn = async (row: PlanRow) => {
     setBusyPlanId(row.id);
     try {
-      if (!(await joinSharedPlan(row.groupId, row.id))) throw new Error("not saved");
+      if (!(await joinSharedPlan(row.groupId, row.id)))
+        throw new Error("not saved");
     } catch {
-      window.alert("Couldn’t add you to that plan. Check your connection and try again.");
+      window.alert(
+        "Couldn’t add you to that plan. Check your connection and try again.",
+      );
     } finally {
       setBusyPlanId(null);
     }
@@ -130,9 +169,7 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
 
   const cheer = async () => {
     // A buddy can always cheer the other person; a group cheers whoever trained today.
-    const targets = view.buddy
-      ? view.rows.filter((r) => !r.isMe)
-      : view.others;
+    const targets = view.buddy ? view.rows.filter((r) => !r.isMe) : view.others;
     setCheerBusy(true);
     try {
       await Promise.all(
@@ -148,17 +185,21 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
   const leave = async () => {
     const othersRemain = members.length > 1;
     if (isOwner && othersRemain) {
-      window.alert("You started this one. Delete it for everyone, or ask everyone else to leave first.");
+      window.alert(
+        "You started this one. Delete it for everyone, or ask everyone else to leave first.",
+      );
       return;
     }
-    if (!window.confirm(isOwner ? "Leave and delete it?" : "Leave this group?")) return;
+    if (!window.confirm(isOwner ? "Leave and delete it?" : "Leave this group?"))
+      return;
     const ok = await leaveAccountabilityGroup(groupId).catch(() => false);
     if (ok) router.push("/groups");
     else window.alert("Couldn’t leave. Try again.");
   };
 
   const remove = async () => {
-    if (!window.confirm("Delete this for everyone? This can’t be undone.")) return;
+    if (!window.confirm("Delete this for everyone? This can’t be undone."))
+      return;
     const ok = await deleteAccountabilityGroup(groupId).catch(() => false);
     if (ok) router.push("/groups");
     else window.alert("Couldn’t delete it. Try again.");
@@ -167,7 +208,8 @@ export function GroupScreen({ groupId, openInvite = false }: { groupId: string; 
   const convert = async () => {
     const name = window.prompt("Name the group", "Gym crew");
     if (!name?.trim()) return;
-    if (!(await convertBuddyToGroup(groupId, name))) window.alert("Couldn’t change it. Try again.");
+    if (!(await convertBuddyToGroup(groupId, name)))
+      window.alert("Couldn’t change it. Try again.");
   };
 
   return (

@@ -1,7 +1,10 @@
 /**
  * Sample data for Storybook stories only. Not imported by the app.
  */
-import { getCatalogExerciseById, type CatalogExercise } from "@/lib/exercise-catalog";
+import {
+  getCatalogExerciseById,
+  type CatalogExercise,
+} from "@/lib/exercise-catalog";
 import type { ExerciseHistoryEntry } from "@/lib/workout-session-repository";
 import type { SetLog } from "@/lib/workout-types";
 import {
@@ -12,7 +15,8 @@ import {
 
 export function catalog(id: string): CatalogExercise {
   const exercise = getCatalogExerciseById(id);
-  if (!exercise) throw new Error(`Unknown catalog exercise "${id}" in story fixtures`);
+  if (!exercise)
+    throw new Error(`Unknown catalog exercise "${id}" in story fixtures`);
   return exercise;
 }
 

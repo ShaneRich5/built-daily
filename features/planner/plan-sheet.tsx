@@ -66,7 +66,9 @@ export function PlanSheet({
   onPlan,
 }: PlanSheetProps) {
   const options = planOptions(plans);
-  const [dateKey, setDateKey] = useState(initialDateKey < todayKey ? todayKey : initialDateKey);
+  const [dateKey, setDateKey] = useState(
+    initialDateKey < todayKey ? todayKey : initialDateKey,
+  );
   /** No day yet: goes to the planner's Unscheduled tray. */
   const [later, setLater] = useState(initialLater);
   const [picked, setPicked] = useState<string>(options[0]?.id ?? REMINDER_ID);
@@ -77,11 +79,21 @@ export function PlanSheet({
   const dayChips = [
     { key: todayKey, label: "Today" },
     { key: tomorrowKey, label: "Tomorrow" },
-    ...(initialDateKey > tomorrowKey ? [{ key: initialDateKey, label: agendaHeading(initialDateKey, todayKey) }] : []),
+    ...(initialDateKey > tomorrowKey
+      ? [
+          {
+            key: initialDateKey,
+            label: agendaHeading(initialDateKey, todayKey),
+          },
+        ]
+      : []),
   ];
   const customDay = !later && !dayChips.some((c) => c.key === dateKey);
   const option = options.find((o) => o.id === picked);
-  const dayName = agendaHeading(dateKey, todayKey).replace(/^(Today|Tomorrow) · /, "");
+  const dayName = agendaHeading(dateKey, todayKey).replace(
+    /^(Today|Tomorrow) · /,
+    "",
+  );
   const label = option ? option.name : reminder.trim() || "Workout";
 
   const submit = async () => {
@@ -123,7 +135,9 @@ export function PlanSheet({
     >
       <div className="flex flex-col gap-5 px-4 pt-1 pb-6">
         <fieldset className="flex flex-col gap-2">
-          <legend className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">When</legend>
+          <legend className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+            When
+          </legend>
           <div className="flex flex-wrap gap-1.5">
             {dayChips.map((c) => (
               <button
@@ -184,46 +198,64 @@ export function PlanSheet({
         </fieldset>
 
         <fieldset className="flex flex-col gap-2">
-          <legend className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">What</legend>
+          <legend className="pb-2 text-xs font-medium tracking-wide text-zinc-500 uppercase">
+            What
+          </legend>
           <div
             role="radiogroup"
             aria-label="Workout"
             className="flex flex-col overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-800"
           >
-            {[...options, { id: REMINDER_ID, name: "Just a reminder", meta: "No exercises — decide on the day" }].map(
-              (o) => {
-                const checked = picked === o.id;
-                return (
-                  <button
-                    key={o.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={checked}
-                    onClick={() => setPicked(o.id)}
-                    className={cn(
-                      "flex min-h-13 items-center gap-3 border-b border-zinc-100 px-3 text-left last:border-b-0 dark:border-zinc-800",
-                      checked ? "bg-emerald-50 dark:bg-emerald-950/40" : "bg-white dark:bg-zinc-950",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "size-5 shrink-0 rounded-full",
-                        checked ? "border-[6px] border-emerald-700 dark:border-emerald-500" : "border-[1.5px] border-zinc-300 dark:border-zinc-600",
-                      )}
-                      aria-hidden
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">{o.name}</span>
-                      <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{o.meta}</span>
-                    </span>
-                  </button>
-                );
+            {[
+              ...options,
+              {
+                id: REMINDER_ID,
+                name: "Just a reminder",
+                meta: "No exercises — decide on the day",
               },
-            )}
+            ].map((o) => {
+              const checked = picked === o.id;
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  onClick={() => setPicked(o.id)}
+                  className={cn(
+                    "flex min-h-13 items-center gap-3 border-b border-zinc-100 px-3 text-left last:border-b-0 dark:border-zinc-800",
+                    checked
+                      ? "bg-emerald-50 dark:bg-emerald-950/40"
+                      : "bg-white dark:bg-zinc-950",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "size-5 shrink-0 rounded-full",
+                      checked
+                        ? "border-[6px] border-emerald-700 dark:border-emerald-500"
+                        : "border-[1.5px] border-zinc-300 dark:border-zinc-600",
+                    )}
+                    aria-hidden
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
+                      {o.name}
+                    </span>
+                    <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {o.meta}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
           {picked === REMINDER_ID ? (
             <div className="flex flex-col gap-1.5 pt-1">
-              <label htmlFor="plan-reminder" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <label
+                htmlFor="plan-reminder"
+                className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
+              >
                 Reminder
               </label>
               <input

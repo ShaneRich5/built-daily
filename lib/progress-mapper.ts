@@ -29,7 +29,10 @@ function asTimestamp(v: unknown): Date | null {
 }
 
 function asWeeklyGoal(v: unknown): WeeklyGoalTarget {
-  if (typeof v === "number" && WEEKLY_GOAL_OPTIONS.includes(v as WeeklyGoalTarget)) {
+  if (
+    typeof v === "number" &&
+    WEEKLY_GOAL_OPTIONS.includes(v as WeeklyGoalTarget)
+  ) {
     return v as WeeklyGoalTarget;
   }
   return DEFAULT_PROGRESS_SETTINGS.weeklyGoal;

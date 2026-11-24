@@ -1,10 +1,19 @@
 import Link from "next/link";
 import { ArrowLeft, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
-import { ConnectClaudeCard, type ConnectClaudeCardProps } from "@/features/settings/connect-claude-card";
+import {
+  ConnectClaudeCard,
+  type ConnectClaudeCardProps,
+} from "@/features/settings/connect-claude-card";
 import { InstallAppCard } from "@/features/settings/install-app-card";
-import { PublicProfileCard, type PublicProfileCardProps } from "@/features/settings/public-profile-card";
-import { SettingsSection, secondaryButton } from "@/features/settings/settings-ui";
+import {
+  PublicProfileCard,
+  type PublicProfileCardProps,
+} from "@/features/settings/public-profile-card";
+import {
+  SettingsSection,
+  secondaryButton,
+} from "@/features/settings/settings-ui";
 
 /** Back to home and the page title, the same header History uses. */
 export function SettingsHeader() {
@@ -17,13 +26,21 @@ export function SettingsHeader() {
       >
         <ArrowLeft className="size-5" aria-hidden />
       </Link>
-      <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Settings</h1>
+      <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+        Settings
+      </h1>
     </header>
   );
 }
 
 /** Who's signed in, with the round initial that Home's account button shows. */
-export function AccountCard({ email, onSignOut }: { email: string | null; onSignOut: () => void }) {
+export function AccountCard({
+  email,
+  onSignOut,
+}: {
+  email: string | null;
+  onSignOut: () => void;
+}) {
   const initial = email?.trim().charAt(0).toUpperCase() || "?";
   return (
     <SettingsSection id="account-heading" title="Account">
@@ -35,7 +52,9 @@ export function AccountCard({ email, onSignOut }: { email: string | null; onSign
           {initial}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-xs text-zinc-500 dark:text-zinc-400">Signed in as</span>
+          <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+            Signed in as
+          </span>
           <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
             {email ?? "Unknown account"}
           </span>
@@ -69,7 +88,12 @@ export type SettingsViewProps = {
 };
 
 /** Account, installing the app (when the browser can), sharing, then the Claude connector. */
-export function SettingsView({ email, onSignOut, profile, connect }: SettingsViewProps) {
+export function SettingsView({
+  email,
+  onSignOut,
+  profile,
+  connect,
+}: SettingsViewProps) {
   return (
     <div className="flex flex-1 flex-col gap-5">
       <SettingsHeader />

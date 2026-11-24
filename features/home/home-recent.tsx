@@ -5,7 +5,10 @@ import type { HomeRecentItem } from "@/features/home/home-model";
 /** The last few finished workouts and activities, with a way into full history. */
 export function HomeRecent({ items }: { items: HomeRecentItem[] }) {
   return (
-    <section aria-labelledby="home-recent-heading" className="flex flex-col gap-2">
+    <section
+      aria-labelledby="home-recent-heading"
+      className="flex flex-col gap-2"
+    >
       <div className="flex items-center justify-between">
         <h2
           id="home-recent-heading"
@@ -47,9 +50,14 @@ export function HomeRecent({ items }: { items: HomeRecentItem[] }) {
                   <span className="block truncate text-[15px] font-medium text-zinc-900 dark:text-zinc-50">
                     {item.title}
                   </span>
-                  <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{item.meta}</span>
+                  <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    {item.meta}
+                  </span>
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-zinc-400" aria-hidden />
+                <ChevronRight
+                  className="size-4 shrink-0 text-zinc-400"
+                  aria-hidden
+                />
               </Link>
             </li>
           ))}

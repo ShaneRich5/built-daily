@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  MUSCLE_FOCUS_OPTIONS,
-  type MuscleFocus,
-} from "@/lib/exercise-muscle";
+import { MUSCLE_FOCUS_OPTIONS, type MuscleFocus } from "@/lib/exercise-muscle";
 
 export function MuscleFocusPicker({
   value,

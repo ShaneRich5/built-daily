@@ -1,6 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
-import { crewCountsByDay, buildBuddySummary, buildComingUpRow, buildGroupPlanRow, buildGroupWeek, buildWeekDays, groupCompactSummary, groupSummary, nextPlannedLabel, nextSevenDays, trainedTodayDetail, trainedTodayOthers } from "@/features/groups/groups-model";
+import {
+  crewCountsByDay,
+  buildBuddySummary,
+  buildComingUpRow,
+  buildGroupPlanRow,
+  buildGroupWeek,
+  buildWeekDays,
+  groupCompactSummary,
+  groupSummary,
+  nextPlannedLabel,
+  nextSevenDays,
+  trainedTodayDetail,
+  trainedTodayOthers,
+} from "@/features/groups/groups-model";
 import { GroupView } from "@/features/groups/group-view";
 import { GroupsView } from "@/features/groups/groups-view";
 import { InviteSheet } from "@/features/groups/invite-sheet";
@@ -9,7 +22,14 @@ import { JoinView } from "@/features/groups/join-view";
 import { NewGroupSheet } from "@/features/groups/new-group-sheet";
 import { PlanTogetherSheet } from "@/features/groups/plan-together-sheet";
 import { PlanView } from "@/features/groups/plan-view";
-import { buddyPair, crew, crewPlans, ME, templates, TODAY } from "@/features/groups/story-fixtures";
+import {
+  buddyPair,
+  crew,
+  crewPlans,
+  ME,
+  templates,
+  TODAY,
+} from "@/features/groups/story-fixtures";
 
 /** Groups Together (G1–G8), on mock data for Tue Nov 10, 2026. */
 const meta = {
@@ -28,13 +48,21 @@ export const G1GroupsTab: Story = {
   render: () => (
     <GroupsView
       loaded
-      comingUp={crewPlans.map((p) => buildComingUpRow(p, "Morning Crew", crew, ME))}
+      comingUp={crewPlans.map((p) =>
+        buildComingUpRow(p, "Morning Crew", crew, ME),
+      )}
       featured={{
         id: "g-crew",
         name: "Morning Crew",
         href: "#",
         summary: groupSummary(week),
-        members: week.map((m) => ({ uid: m.uid, name: m.name, progress: `${m.done}/${m.goal}`, trainedToday: m.trainedToday, isMe: m.isMe })),
+        members: week.map((m) => ({
+          uid: m.uid,
+          name: m.name,
+          progress: `${m.done}/${m.goal}`,
+          trainedToday: m.trainedToday,
+          isMe: m.isMe,
+        })),
         cheerNames: others.map((o) => o.name),
         cheeredAll: false,
         code: "K7Q2MDXA",
@@ -44,7 +72,9 @@ export const G1GroupsTab: Story = {
           id: "g-office",
           name: "Office lunch lifters",
           href: "#",
-          summary: groupCompactSummary(buildGroupWeek(crew.slice(2, 6), TODAY, ME)),
+          summary: groupCompactSummary(
+            buildGroupWeek(crew.slice(2, 6), TODAY, ME),
+          ),
           avatarNames: ["Priya", "Jordan", "Dev", "Alex"],
         },
       ]}
@@ -62,7 +92,19 @@ export const G1GroupsTab: Story = {
 export const G1Empty: Story = {
   name: "G1 · No groups yet",
   render: () => (
-    <GroupsView loaded comingUp={[]} featured={null} others={[]} busyPlanId={null} cheerBusy={false} onJoin={noop} onNew={noop} onImIn={noop} onCheer={noop} onShare={noop} />
+    <GroupsView
+      loaded
+      comingUp={[]}
+      featured={null}
+      others={[]}
+      busyPlanId={null}
+      cheerBusy={false}
+      onJoin={noop}
+      onNew={noop}
+      onImIn={noop}
+      onCheer={noop}
+      onShare={noop}
+    />
   ),
 };
 
@@ -97,7 +139,17 @@ export const G2GroupDetail: Story = {
 
 const buddyWeek = buildGroupWeek(buddyPair, TODAY, ME);
 const buddyNext = buildGroupPlanRow(
-  { id: "p-sat", plan: { ...crewPlans[1]!.plan, dateKey: "2026-11-14", label: "Pull day", time: "09:00", where: "Iron Works Gym", going: [ME, "u-alex"] } },
+  {
+    id: "p-sat",
+    plan: {
+      ...crewPlans[1]!.plan,
+      dateKey: "2026-11-14",
+      label: "Pull day",
+      time: "09:00",
+      where: "Iron Works Gym",
+      going: [ME, "u-alex"],
+    },
+  },
   buddyPair,
   ME,
 );
@@ -117,7 +169,9 @@ export const G8Buddy: Story = {
         since: "Oct 3",
         ...buildBuddySummary(buddyPair, buddyWeek, TODAY),
         next: buddyNext,
-        nextPlanned: Object.fromEntries(buddyWeek.map((r) => [r.uid, nextPlannedLabel(r, TODAY)])),
+        nextPlanned: Object.fromEntries(
+          buddyWeek.map((r) => [r.uid, nextPlannedLabel(r, TODAY)]),
+        ),
       }}
     />
   ),
@@ -132,7 +186,15 @@ export const G8BuddyWaiting: Story = {
       rows={buddyWeek.slice(0, 1)}
       trainedToday={null}
       planRows={[]}
-      buddy={{ otherName: "Alex", since: "Nov 10", bothOnTrack: false, weeksBothHitGoal: null, togetherDays: new Set(), next: null, nextPlanned: {} }}
+      buddy={{
+        otherName: "Alex",
+        since: "Nov 10",
+        bothOnTrack: false,
+        weeksBothHitGoal: null,
+        togetherDays: new Set(),
+        next: null,
+        nextPlanned: {},
+      }}
     />
   ),
 };
@@ -196,7 +258,13 @@ export const G6JoinSignedOut: Story = {
           memberCount: 6,
           workoutsThisWeek: 9,
           plans: {
-            "p-legs": { dateKey: "2026-11-12", time: "06:30", where: "Iron Works Gym", label: "Leg day", goingFirstNames: ["Priya", "Sam"] },
+            "p-legs": {
+              dateKey: "2026-11-12",
+              time: "06:30",
+              where: "Iron Works Gym",
+              label: "Leg day",
+              goingFirstNames: ["Priya", "Sam"],
+            },
           },
           updatedAt: new Date(),
         },
@@ -215,13 +283,25 @@ export const G6JoinSignedOut: Story = {
 export const G6JoinSignedIn: Story = {
   name: "G6 · Join landing (signed in, no preview)",
   render: () => (
-    <JoinView {...joinCopy(null, null)} signedIn busy={false} error={null} signUpHref="#" signInHref="#" onJoin={noop} />
+    <JoinView
+      {...joinCopy(null, null)}
+      signedIn
+      busy={false}
+      error={null}
+      signUpHref="#"
+      signInHref="#"
+      onJoin={noop}
+    />
   ),
 };
 
 function Reopen({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="m-4 h-11 rounded-lg border border-zinc-200 px-4 text-sm font-medium">
+    <button
+      type="button"
+      onClick={onClick}
+      className="m-4 h-11 rounded-lg border border-zinc-200 px-4 text-sm font-medium"
+    >
       Open again
     </button>
   );
@@ -247,7 +327,9 @@ export const G3PlanTogether: Story = {
           defaultGroupId="g-crew"
           crewCounts={crewCountsByDay(crew, nextSevenDays(TODAY), ME)}
           onSubmit={async (input) => {
-            alert(`Plan ${input.label} on ${input.dateKey} at ${input.time ?? "anytime"}`);
+            alert(
+              `Plan ${input.label} on ${input.dateKey} at ${input.time ?? "anytime"}`,
+            );
             return true;
           }}
         />
@@ -268,7 +350,9 @@ export const G4New: Story = {
           open={open}
           onOpenChange={setOpen}
           onCreate={async (input) => {
-            alert(`Create ${input.kind}: ${input.name} (${input.buddyNickname ?? "-"})`);
+            alert(
+              `Create ${input.kind}: ${input.name} (${input.buddyNickname ?? "-"})`,
+            );
             return true;
           }}
         />
@@ -294,8 +378,20 @@ export const G5Invite: Story = {
           code="K7Q2MDXA"
           origin="https://builtdaily.app"
           plans={[
-            { id: "p-legs", weekday: "Thu", dayOfMonth: 12, label: "Leg day", meta: "6:30 AM · Iron Works Gym" },
-            { id: "p-pull", weekday: "Fri", dayOfMonth: 13, label: "Pull day", meta: "6:00 PM" },
+            {
+              id: "p-legs",
+              weekday: "Thu",
+              dayOfMonth: 12,
+              label: "Leg day",
+              meta: "6:30 AM · Iron Works Gym",
+            },
+            {
+              id: "p-pull",
+              weekday: "Fri",
+              dayOfMonth: 13,
+              label: "Pull day",
+              meta: "6:00 PM",
+            },
           ]}
           initialPlanId="p-legs"
           isOwner

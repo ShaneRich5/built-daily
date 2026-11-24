@@ -17,16 +17,26 @@ import {
 import { SHARED_PLAN_LIMITS } from "@/lib/group-types";
 import { buildWorkoutHref } from "@/lib/planner-list-items";
 import { localDateKeyFromMs } from "@/lib/workout-date";
-import { formatPlanDay, formatPlanTime, groupDisplayName, joinNames } from "@/features/groups/groups-model";
+import {
+  formatPlanDay,
+  formatPlanTime,
+  groupDisplayName,
+  joinNames,
+} from "@/features/groups/groups-model";
 import { primaryGreen } from "@/features/groups/group-ui";
 import { ConnectedInviteSheet } from "@/features/groups/group-sheets";
 import { PlanView } from "@/features/groups/plan-view";
 import { useGroupData } from "@/features/groups/use-group-data";
 
-const quiet = "rounded-xl border border-dashed border-zinc-200 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-800";
+const quiet =
+  "rounded-xl border border-dashed border-zinc-200 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-800";
 
 /** "Planned it" / "Said I'm in today" / "Said I'm in yesterday" / "Said I'm in Mon". */
-export function goingDetail(at: Date | undefined, isCreator: boolean, todayKey: string): string {
+export function goingDetail(
+  at: Date | undefined,
+  isCreator: boolean,
+  todayKey: string,
+): string {
   if (isCreator) return "Planned it";
   if (!at) return "Going";
   const key = localDateKeyFromMs(at.getTime());
@@ -35,11 +45,19 @@ export function goingDetail(at: Date | undefined, isCreator: boolean, todayKey: 
   return `Said I’m in ${new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(at)}`;
 }
 
-export function PlanScreen({ groupId, planId }: { groupId: string; planId: string }) {
+export function PlanScreen({
+  groupId,
+  planId,
+}: {
+  groupId: string;
+  planId: string;
+}) {
   const router = useRouter();
   const data = useGroupData(groupId);
   const myUid = data.user?.uid ?? null;
-  const [plan, setPlan] = useState<SavedSharedPlan | null | undefined>(undefined);
+  const [plan, setPlan] = useState<SavedSharedPlan | null | undefined>(
+    undefined,
+  );
   const [busy, setBusy] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -53,19 +71,40 @@ export function PlanScreen({ groupId, planId }: { groupId: string; planId: strin
   const view = useMemo(() => {
     if (!plan || !data.group) return null;
     const p = plan.plan;
-    const names = new Map(members.map(({ member }) => [member.uid, firstName(member.displayName)]));
-    const nameOf = (uid: string) => (uid === myUid ? "You" : (names.get(uid) ?? "Someone"));
-    const notGoing = members.filter(({ member }) => !p.going.includes(member.uid) && member.uid !== myUid);
-    const notYetNames = notGoing.map(({ member }) => firstName(member.displayName));
+    const names = new Map(
+      members.map(({ member }) => [member.uid, firstName(member.displayName)]),
+    );
+    const nameOf = (uid: string) =>
+      uid === myUid ? "You" : (names.get(uid) ?? "Someone");
+    const notGoing = members.filter(
+      ({ member }) => !p.going.includes(member.uid) && member.uid !== myUid,
+    );
+    const notYetNames = notGoing.map(({ member }) =>
+      firstName(member.displayName),
+    );
     const d = new Date(`${p.dateKey}T12:00:00`);
-    const catalogIds = p.exercises.map((e) => e.id).filter((id) => !id.startsWith("custom-"));
+    const catalogIds = p.exercises
+      .map((e) => e.id)
+      .filter((id) => !id.startsWith("custom-"));
     return {
-      groupName: groupDisplayName(data.group.group, members, myUid, data.buddyNickname),
+      groupName: groupDisplayName(
+        data.group.group,
+        members,
+        myUid,
+        data.buddyNickname,
+      ),
       weekday: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d),
       dayOfMonth: d.getDate(),
-      meta: [formatPlanTime(p.time) ?? "Anytime", p.where].filter(Boolean).join(" · "),
+      meta: [formatPlanTime(p.time) ?? "Anytime", p.where]
+        .filter(Boolean)
+        .join(" · "),
       plannedBy: p.createdBy === myUid ? "you" : firstName(p.createdByName),
-      note: p.note ? { author: p.createdBy === myUid ? "You" : firstName(p.createdByName), text: p.note } : null,
+      note: p.note
+        ? {
+            author: p.createdBy === myUid ? "You" : firstName(p.createdByName),
+            text: p.note,
+          }
+        : null,
       going: p.going.map((uid) => ({
         uid,
         name: nameOf(uid),
@@ -84,11 +123,15 @@ export function PlanScreen({ groupId, planId }: { groupId: string; planId: strin
     };
   }, [plan, data.group, members, myUid, data.todayKey, data.buddyNickname]);
 
-  if (!data.firebaseReady) return <p className={quiet}>Add Firebase configuration to use groups.</p>;
+  if (!data.firebaseReady)
+    return <p className={quiet}>Add Firebase configuration to use groups.</p>;
   if (!data.authLoading && !data.user) {
     return (
       <p className={quiet}>
-        <Link href={`/login?next=/groups/${groupId}/plans/${planId}`} className="font-semibold text-zinc-900 underline dark:text-zinc-100">
+        <Link
+          href={`/login?next=/groups/${groupId}/plans/${planId}`}
+          className="font-semibold text-zinc-900 underline dark:text-zinc-100"
+        >
           Sign in
         </Link>{" "}
         to see this plan.
@@ -98,16 +141,27 @@ export function PlanScreen({ groupId, planId }: { groupId: string; planId: strin
   if (plan === null || data.group === null) {
     return (
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">This plan isn’t here anymore</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          This plan isn’t here anymore
+        </h1>
         <p className="text-sm text-zinc-500">It may have been cancelled.</p>
-        <Link href={`/groups/${groupId}`} className="text-sm font-semibold underline">
+        <Link
+          href={`/groups/${groupId}`}
+          className="text-sm font-semibold underline"
+        >
           Back to the group
         </Link>
       </div>
     );
   }
   if (!view || !plan) {
-    return <div className="h-72 animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-900" aria-busy="true" aria-label="Loading" />;
+    return (
+      <div
+        className="h-72 animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-900"
+        aria-busy="true"
+        aria-label="Loading"
+      />
+    );
   }
 
   const run = async (write: () => Promise<boolean>) => {
@@ -189,11 +243,26 @@ function EditPlanSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   plan: SavedSharedPlan;
-  onSave: (patch: { time: string | null; where: string | null; note: string | null }) => Promise<boolean>;
+  onSave: (patch: {
+    time: string | null;
+    where: string | null;
+    note: string | null;
+  }) => Promise<boolean>;
 }) {
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} title="Edit plan" description="Everyone going sees the change.">
-      {open ? <EditPlanForm plan={plan} onSave={onSave} onDone={() => onOpenChange(false)} /> : null}
+    <BottomSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Edit plan"
+      description="Everyone going sees the change."
+    >
+      {open ? (
+        <EditPlanForm
+          plan={plan}
+          onSave={onSave}
+          onDone={() => onOpenChange(false)}
+        />
+      ) : null}
     </BottomSheet>
   );
 }
@@ -204,7 +273,11 @@ function EditPlanForm({
   onDone,
 }: {
   plan: SavedSharedPlan;
-  onSave: (patch: { time: string | null; where: string | null; note: string | null }) => Promise<boolean>;
+  onSave: (patch: {
+    time: string | null;
+    where: string | null;
+    note: string | null;
+  }) => Promise<boolean>;
   onDone: () => void;
 }) {
   const [time, setTime] = useState(plan.plan.time ?? "");
@@ -217,23 +290,44 @@ function EditPlanForm({
       onSubmit={(e) => {
         e.preventDefault();
         setBusy(true);
-        void onSave({ time: time || null, where: where || null, note: note || null })
-          .then((ok) => (ok ? onDone() : window.alert("Couldn’t save. Try again.")))
+        void onSave({
+          time: time || null,
+          where: where || null,
+          note: note || null,
+        })
+          .then((ok) =>
+            ok ? onDone() : window.alert("Couldn’t save. Try again."),
+          )
           .catch(() => window.alert("Couldn’t save. Try again."))
           .finally(() => setBusy(false));
       }}
     >
       <label className="flex flex-col gap-1.5 text-sm font-medium">
         Time (leave empty for anytime)
-        <input type="time" className={input} value={time} onChange={(e) => setTime(e.target.value)} />
+        <input
+          type="time"
+          className={input}
+          value={time}
+          onChange={(e) => setTime(e.target.value)}
+        />
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
         Where
-        <input className={input} value={where} maxLength={SHARED_PLAN_LIMITS.where} onChange={(e) => setWhere(e.target.value)} />
+        <input
+          className={input}
+          value={where}
+          maxLength={SHARED_PLAN_LIMITS.where}
+          onChange={(e) => setWhere(e.target.value)}
+        />
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-medium">
         Note
-        <input className={input} value={note} maxLength={SHARED_PLAN_LIMITS.note} onChange={(e) => setNote(e.target.value)} />
+        <input
+          className={input}
+          value={note}
+          maxLength={SHARED_PLAN_LIMITS.note}
+          onChange={(e) => setNote(e.target.value)}
+        />
       </label>
       <button type="submit" disabled={busy} className={primaryGreen}>
         {busy ? "Saving…" : "Save"}

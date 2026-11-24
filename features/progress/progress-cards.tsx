@@ -1,14 +1,24 @@
 import Link from "next/link";
 import type { MovementGoalStatus } from "@/lib/movement-insights";
-import type { Milestone, PersonalRecord, WeekGoalStatus } from "@/lib/progress-types";
+import type {
+  Milestone,
+  PersonalRecord,
+  WeekGoalStatus,
+} from "@/lib/progress-types";
 import { addDaysToDateKey } from "@/lib/calendar-views";
 import { formatLocalDateKey } from "@/lib/workout-date";
 import { cn } from "@/lib/utils";
 import type { HomeConsistency, HomeWeekDay } from "@/features/home/home-model";
-import { ConsistencyChart, WeekDays, WeekGoal } from "@/features/home/home-week";
+import {
+  ConsistencyChart,
+  WeekDays,
+  WeekGoal,
+} from "@/features/home/home-week";
 
-const card = "rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950";
-const label = "text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400";
+const card =
+  "rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950";
+const label =
+  "text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400";
 
 /**
  * Home's This week card (count, streak pill, nudge, Sun–Sat, last 16 weeks) plus the
@@ -28,7 +38,10 @@ export function ThisWeekCard({
   consistency: HomeConsistency;
 }) {
   return (
-    <section aria-labelledby="this-week-heading" className="flex flex-col gap-2">
+    <section
+      aria-labelledby="this-week-heading"
+      className="flex flex-col gap-2"
+    >
       <div className="flex items-center justify-between">
         <h2 id="this-week-heading" className={label}>
           This week
@@ -49,7 +62,9 @@ export function ThisWeekCard({
         />
         <WeekDays days={days} />
         <div className="flex items-center gap-2.5 border-t border-zinc-100 px-0.5 pt-3 text-[13px] dark:border-zinc-800">
-          <span className="flex-1 text-zinc-700 dark:text-zinc-300">Active days (workouts or activities)</span>
+          <span className="flex-1 text-zinc-700 dark:text-zinc-300">
+            Active days (workouts or activities)
+          </span>
           <span className="font-mono text-zinc-900 dark:text-zinc-100">
             {movement.completed} / {movement.target}
           </span>
@@ -61,18 +76,32 @@ export function ThisWeekCard({
 }
 
 /** Best set per main lift. A lift set in the last two weeks gets a "New PR" badge. */
-export function StrengthCard({ lifts, todayKey }: { lifts: PersonalRecord[]; todayKey: string }) {
+export function StrengthCard({
+  lifts,
+  todayKey,
+}: {
+  lifts: PersonalRecord[];
+  todayKey: string;
+}) {
   const recentKey = addDaysToDateKey(todayKey, -14);
   return (
-    <section aria-labelledby="strength-heading" className={cn(card, "flex flex-col gap-2.5")}>
+    <section
+      aria-labelledby="strength-heading"
+      className={cn(card, "flex flex-col gap-2.5")}
+    >
       <div className="flex items-baseline justify-between">
-        <h2 id="strength-heading" className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+        <h2
+          id="strength-heading"
+          className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50"
+        >
           Strength
         </h2>
         <span className="text-xs text-zinc-500">Best sets</span>
       </div>
       {lifts.length === 0 ? (
-        <p className="text-[13px] text-zinc-500">Log a few weighted sets and your best lifts show up here.</p>
+        <p className="text-[13px] text-zinc-500">
+          Log a few weighted sets and your best lifts show up here.
+        </p>
       ) : (
         <ul className="flex flex-col">
           {lifts.map((lift) => (
@@ -84,7 +113,9 @@ export function StrengthCard({ lifts, todayKey }: { lifts: PersonalRecord[]; tod
                 <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
                   {lift.exerciseName}
                 </span>
-                <span className="block text-xs text-zinc-500">{formatLocalDateKey(lift.dateKey)}</span>
+                <span className="block text-xs text-zinc-500">
+                  {formatLocalDateKey(lift.dateKey)}
+                </span>
               </span>
               {lift.dateKey >= recentKey ? (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
@@ -108,7 +139,10 @@ export function MilestonesRow({ milestones }: { milestones: Milestone[] }) {
   const next = milestones.find((m) => !m.achieved);
   if (earned.length === 0 && !next) return null;
   return (
-    <section aria-labelledby="milestones-heading" className="flex flex-col gap-2">
+    <section
+      aria-labelledby="milestones-heading"
+      className="flex flex-col gap-2"
+    >
       <h2 id="milestones-heading" className={label}>
         Milestones
       </h2>

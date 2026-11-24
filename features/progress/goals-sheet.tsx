@@ -11,7 +11,10 @@ import {
 } from "@/lib/progress-types";
 import { cn } from "@/lib/utils";
 
-export type GoalsPatch = Pick<ProgressSettingsDoc, "weeklyGoal" | "movementGoalDays" | "goalWeightLbs">;
+export type GoalsPatch = Pick<
+  ProgressSettingsDoc,
+  "weeklyGoal" | "movementGoalDays" | "goalWeightLbs"
+>;
 
 type GoalsSheetProps = {
   open: boolean;
@@ -32,7 +35,12 @@ function Choices<T extends number>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div
+      className="grid gap-1.5"
+      style={{
+        gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`,
+      }}
+    >
       {options.map((n) => (
         <button
           key={n}
@@ -54,17 +62,31 @@ function Choices<T extends number>({
 }
 
 /** Weekly workouts, active days and an optional goal weight, in one place. */
-export function GoalsSheet({ open, onOpenChange, settings, onSave }: GoalsSheetProps) {
-  const [weeklyGoal, setWeeklyGoal] = useState<WeeklyGoalTarget>(settings.weeklyGoal);
-  const [movementGoalDays, setMovementGoalDays] = useState<MovementGoalTarget>(settings.movementGoalDays);
-  const [goalWeight, setGoalWeight] = useState(settings.goalWeightLbs != null ? String(settings.goalWeightLbs) : "");
+export function GoalsSheet({
+  open,
+  onOpenChange,
+  settings,
+  onSave,
+}: GoalsSheetProps) {
+  const [weeklyGoal, setWeeklyGoal] = useState<WeeklyGoalTarget>(
+    settings.weeklyGoal,
+  );
+  const [movementGoalDays, setMovementGoalDays] = useState<MovementGoalTarget>(
+    settings.movementGoalDays,
+  );
+  const [goalWeight, setGoalWeight] = useState(
+    settings.goalWeightLbs != null ? String(settings.goalWeightLbs) : "",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
     const trimmed = goalWeight.trim();
     const weight = trimmed ? Number(trimmed) : null;
-    if (weight !== null && (!Number.isFinite(weight) || weight <= 0 || weight > 1000)) {
+    if (
+      weight !== null &&
+      (!Number.isFinite(weight) || weight <= 0 || weight > 1000)
+    ) {
       setError("Enter a goal weight in pounds, or leave it blank.");
       return;
     }
@@ -104,18 +126,38 @@ export function GoalsSheet({ open, onOpenChange, settings, onSave }: GoalsSheetP
     >
       <div className="flex flex-col gap-6 px-4 pt-1 pb-6">
         <fieldset className="flex flex-col gap-2">
-          <legend className="pb-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Workouts per week</legend>
-          <Choices options={WEEKLY_GOAL_OPTIONS} value={weeklyGoal} onChange={setWeeklyGoal} />
-          <p className="text-xs text-zinc-500">Your streak counts the weeks that hit this. Groups see it too.</p>
+          <legend className="pb-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+            Workouts per week
+          </legend>
+          <Choices
+            options={WEEKLY_GOAL_OPTIONS}
+            value={weeklyGoal}
+            onChange={setWeeklyGoal}
+          />
+          <p className="text-xs text-zinc-500">
+            Your streak counts the weeks that hit this. Groups see it too.
+          </p>
         </fieldset>
         <fieldset className="flex flex-col gap-2">
-          <legend className="pb-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">Active days per week</legend>
-          <Choices options={MOVEMENT_GOAL_OPTIONS} value={movementGoalDays} onChange={setMovementGoalDays} />
-          <p className="text-xs text-zinc-500">Walks, rides and sports count. Doesn’t change your workout goal.</p>
+          <legend className="pb-2 text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
+            Active days per week
+          </legend>
+          <Choices
+            options={MOVEMENT_GOAL_OPTIONS}
+            value={movementGoalDays}
+            onChange={setMovementGoalDays}
+          />
+          <p className="text-xs text-zinc-500">
+            Walks, rides and sports count. Doesn’t change your workout goal.
+          </p>
         </fieldset>
         <div className="flex flex-col gap-2">
-          <label htmlFor="goal-weight" className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
-            Goal weight <span className="font-normal text-zinc-500">(optional, lb)</span>
+          <label
+            htmlFor="goal-weight"
+            className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            Goal weight{" "}
+            <span className="font-normal text-zinc-500">(optional, lb)</span>
           </label>
           <input
             id="goal-weight"

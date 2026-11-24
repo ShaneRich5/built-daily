@@ -26,7 +26,10 @@ export default async function LoginPage({
           Sign in with email or create a new account.
         </p>
       </header>
-      <LoginForm redirectTo={redirectTo} initialMode={mode === "signup" ? "signup" : "signin"} />
+      <LoginForm
+        redirectTo={redirectTo}
+        initialMode={mode === "signup" ? "signup" : "signin"}
+      />
     </div>
   );
 }

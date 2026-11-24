@@ -41,8 +41,12 @@ export function parseAlternates(raw: unknown): AlternateExercise[] {
     if (!item || typeof item !== "object") continue;
     const o = item as Record<string, unknown>;
     const exerciseId = typeof o.exerciseId === "string" ? o.exerciseId : "";
-    const nameSnapshot = typeof o.nameSnapshot === "string" ? o.nameSnapshot.slice(0, 200) : "";
-    const metric = typeof o.metric === "string" && METRICS.has(o.metric) ? (o.metric as ExerciseMetric) : null;
+    const nameSnapshot =
+      typeof o.nameSnapshot === "string" ? o.nameSnapshot.slice(0, 200) : "";
+    const metric =
+      typeof o.metric === "string" && METRICS.has(o.metric)
+        ? (o.metric as ExerciseMetric)
+        : null;
     if (!exerciseId || !nameSnapshot || !metric) continue;
     if (out.some((alt) => alt.exerciseId === exerciseId)) continue;
     out.push({ exerciseId, nameSnapshot, metric });
@@ -68,8 +72,14 @@ export function lineGroupingToFirestore(
   return fields;
 }
 
-export function alternateFromExercise(exercise: CatalogExercise): AlternateExercise {
-  return { exerciseId: exercise.id, nameSnapshot: exercise.name, metric: exercise.metric };
+export function alternateFromExercise(
+  exercise: CatalogExercise,
+): AlternateExercise {
+  return {
+    exerciseId: exercise.id,
+    nameSnapshot: exercise.name,
+    metric: exercise.metric,
+  };
 }
 
 /** The catalog entry when there is one (it knows the muscles), else the snapshot. */

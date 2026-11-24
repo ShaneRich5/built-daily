@@ -1,11 +1,18 @@
 /** Pure helpers for building workout templates. */
-import { getCatalogExerciseById, type CatalogExercise } from "@/lib/exercise-catalog";
+import {
+  getCatalogExerciseById,
+  type CatalogExercise,
+} from "@/lib/exercise-catalog";
 import {
   alternateFromExercise,
   MAX_ALTERNATES,
   type LineSection,
 } from "@/lib/line-grouping";
-import { NOTE_LIMITS, type PlanLine, type WorkoutPlanDoc } from "@/lib/workout-types";
+import {
+  NOTE_LIMITS,
+  type PlanLine,
+  type WorkoutPlanDoc,
+} from "@/lib/workout-types";
 import { metricLabel } from "@/features/workout-session/session-model";
 
 export const MAX_TEMPLATE_LINES = 40;
@@ -19,7 +26,10 @@ function newLineId(): string {
 }
 
 /** A template line for a catalog (or custom) exercise, starting at 3 sets. */
-export function lineFromExercise(exercise: CatalogExercise, section: LineSection = "plan"): PlanLine {
+export function lineFromExercise(
+  exercise: CatalogExercise,
+  section: LineSection = "plan",
+): PlanLine {
   return {
     lineId: newLineId(),
     exerciseId: exercise.id,
@@ -44,7 +54,11 @@ export function orderBySection(lines: PlanLine[]): PlanLine[] {
 }
 
 /** Move a line to the other section; it lands at the end of that section. */
-export function setLineSection(lines: PlanLine[], lineId: string, section: LineSection): PlanLine[] {
+export function setLineSection(
+  lines: PlanLine[],
+  lineId: string,
+  section: LineSection,
+): PlanLine[] {
   const line = lines.find((l) => l.lineId === lineId);
   if (!line || sectionOf(line) === section) return lines;
   const moved: PlanLine = { ...line, section };
@@ -54,11 +68,17 @@ export function setLineSection(lines: PlanLine[], lineId: string, section: LineS
 }
 
 /** Swap a line with its neighbour in the same section. */
-export function moveLineInSection(lines: PlanLine[], lineId: string, delta: -1 | 1): PlanLine[] {
+export function moveLineInSection(
+  lines: PlanLine[],
+  lineId: string,
+  delta: -1 | 1,
+): PlanLine[] {
   const ordered = orderBySection(lines);
   const section = ordered.find((l) => l.lineId === lineId);
   if (!section) return lines;
-  const ids = ordered.filter((l) => sectionOf(l) === sectionOf(section)).map((l) => l.lineId);
+  const ids = ordered
+    .filter((l) => sectionOf(l) === sectionOf(section))
+    .map((l) => l.lineId);
   const at = ids.indexOf(lineId);
   const swapWith = ids[at + delta];
   if (!swapWith) return lines;
@@ -70,7 +90,10 @@ export function moveLineInSection(lines: PlanLine[], lineId: string, delta: -1 |
 }
 
 /** Can this exercise stand in for the line? Not itself, not twice, and only up to the limit. */
-export function canAddAlternate(line: PlanLine, exercise: CatalogExercise): boolean {
+export function canAddAlternate(
+  line: PlanLine,
+  exercise: CatalogExercise,
+): boolean {
   const alternates = line.alternates ?? [];
   return (
     exercise.id !== line.exerciseId &&
@@ -79,13 +102,21 @@ export function canAddAlternate(line: PlanLine, exercise: CatalogExercise): bool
   );
 }
 
-export function addAlternate(line: PlanLine, exercise: CatalogExercise): PlanLine {
+export function addAlternate(
+  line: PlanLine,
+  exercise: CatalogExercise,
+): PlanLine {
   if (!canAddAlternate(line, exercise)) return line;
-  return { ...line, alternates: [...(line.alternates ?? []), alternateFromExercise(exercise)] };
+  return {
+    ...line,
+    alternates: [...(line.alternates ?? []), alternateFromExercise(exercise)],
+  };
 }
 
 export function removeAlternate(line: PlanLine, exerciseId: string): PlanLine {
-  const alternates = (line.alternates ?? []).filter((alt) => alt.exerciseId !== exerciseId);
+  const alternates = (line.alternates ?? []).filter(
+    (alt) => alt.exerciseId !== exerciseId,
+  );
   const next: PlanLine = { ...line, alternates };
   if (alternates.length === 0) delete next.alternates;
   return next;
@@ -119,10 +150,14 @@ export function templateDoc(
     updatedAt: now,
     source: "custom",
     // No UI edits this yet; carry over whatever the template already had.
-    restPreferences: initial?.restPreferences ?? { autoRestTimer: false, defaultRestSec: 60 },
+    restPreferences: initial?.restPreferences ?? {
+      autoRestTimer: false,
+      defaultRestSec: 60,
+    },
     lines: orderBySection(lines).map((line) => ({
       ...line,
-      nameSnapshot: getCatalogExerciseById(line.exerciseId)?.name ?? line.nameSnapshot,
+      nameSnapshot:
+        getCatalogExerciseById(line.exerciseId)?.name ?? line.nameSnapshot,
       notes: line.notes?.trim() || null,
     })),
   };

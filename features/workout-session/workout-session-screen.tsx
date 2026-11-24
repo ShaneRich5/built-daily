@@ -19,7 +19,10 @@ import { ExerciseCard } from "@/features/workout-session/exercise-card";
 import { ExerciseDetailsSheet } from "@/features/workout-session/exercise-details-sheet";
 import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-sheet";
 import { FinishLeftoversSheet } from "@/features/workout-session/finish-leftovers-sheet";
-import { copyText, downloadTextFile } from "@/features/workout-session/journal-actions";
+import {
+  copyText,
+  downloadTextFile,
+} from "@/features/workout-session/journal-actions";
 import {
   buildLeftoverPlan,
   defaultLeftoverChoice,
@@ -28,7 +31,10 @@ import {
   type LeftoverPlanner,
   type NextPlannedDay,
 } from "@/features/workout-session/leftovers";
-import { AddMaybeButton, MaybeSection } from "@/features/workout-session/maybe-section";
+import {
+  AddMaybeButton,
+  MaybeSection,
+} from "@/features/workout-session/maybe-section";
 import { MoveExerciseSheet } from "@/features/workout-session/move-exercise-sheet";
 import { ReorderSheet } from "@/features/workout-session/reorder-sheet";
 import { SessionActionBar } from "@/features/workout-session/session-action-bar";
@@ -115,9 +121,15 @@ export function WorkoutSessionScreen({
   }>({ open: false, next: null, choices: {} });
 
   // Editing a finished workout: compare against what was loaded to show "Unsaved".
-  const snapshotKey = JSON.stringify({ ...session.buildSnapshot(), sessionStartedAtMs: 0 });
+  const snapshotKey = JSON.stringify({
+    ...session.buildSnapshot(),
+    sessionStartedAtMs: 0,
+  });
   const [loadedKey] = useState(snapshotKey);
-  const dirty = useMemo(() => snapshotKey !== loadedKey, [snapshotKey, loadedKey]);
+  const dirty = useMemo(
+    () => snapshotKey !== loadedKey,
+    [snapshotKey, loadedKey],
+  );
 
   const exercises = state.exercises;
   const planItems = exercises.filter((item) => item.section === "plan");
@@ -158,7 +170,10 @@ export function WorkoutSessionScreen({
     setPanel("details");
   };
 
-  const addExercises = (picked: CatalogExercise[], section: "plan" | "maybe" = "plan") => {
+  const addExercises = (
+    picked: CatalogExercise[],
+    section: "plan" | "maybe" = "plan",
+  ) => {
     dispatch({ type: "addExercises", exercises: picked, section });
     setPanel(null);
   };
@@ -201,15 +216,28 @@ export function WorkoutSessionScreen({
 
   const removeExercise = () => {
     if (!focusItem) return;
-    if (!window.confirm(`Remove ${focusItem.exercise.name} and all of its sets from this workout?`)) {
+    if (
+      !window.confirm(
+        `Remove ${focusItem.exercise.name} and all of its sets from this workout?`,
+      )
+    ) {
       return;
     }
     dispatch({ type: "removeExercise", lineId: focusItem.lineId });
     setPanel(null);
   };
 
-  const removeSet = (lineId: string, setIndex: number, name: string, set: SetRow | undefined) => {
-    if (set && !setRowIsBlank(set) && !window.confirm(`Remove set ${setIndex + 1} from ${name}?`)) {
+  const removeSet = (
+    lineId: string,
+    setIndex: number,
+    name: string,
+    set: SetRow | undefined,
+  ) => {
+    if (
+      set &&
+      !setRowIsBlank(set) &&
+      !window.confirm(`Remove set ${setIndex + 1} from ${name}?`)
+    ) {
       return;
     }
     dispatch({ type: "removeSet", lineId, setIndex });
@@ -219,11 +247,17 @@ export function WorkoutSessionScreen({
     if (!focusItem) return;
     if (
       focusItem.sets.some(setRowHasMeasurements) &&
-      !window.confirm(`Replace the sets you've logged for ${focusItem.exercise.name}?`)
+      !window.confirm(
+        `Replace the sets you've logged for ${focusItem.exercise.name}?`,
+      )
     ) {
       return;
     }
-    dispatch({ type: "replaceSets", lineId: focusItem.lineId, sets: rowsFromHistory(entry.line.sets) });
+    dispatch({
+      type: "replaceSets",
+      lineId: focusItem.lineId,
+      sets: rowsFromHistory(entry.line.sets),
+    });
   };
 
   const journal = () => {
@@ -271,14 +305,29 @@ export function WorkoutSessionScreen({
 
   const openLeftovers = (planner: LeftoverPlanner) => {
     const defaults = (hasNext: boolean) =>
-      Object.fromEntries(leftoverItems.map((item) => [item.lineId, defaultLeftoverChoice(item, hasNext)]));
+      Object.fromEntries(
+        leftoverItems.map((item) => [
+          item.lineId,
+          defaultLeftoverChoice(item, hasNext),
+        ]),
+      );
     const planId = data.planId;
-    setLeftovers({ open: true, next: planId ? "loading" : null, choices: defaults(false) });
+    setLeftovers({
+      open: true,
+      next: planId ? "loading" : null,
+      choices: defaults(false),
+    });
     if (!planId) return;
     void planner
       .findNext(planId)
       .catch(() => null)
-      .then((next) => setLeftovers((prev) => ({ ...prev, next, choices: defaults(next !== null) })));
+      .then((next) =>
+        setLeftovers((prev) => ({
+          ...prev,
+          next,
+          choices: defaults(next !== null),
+        })),
+      );
   };
 
   const finishWithLeftovers = async () => {
@@ -288,7 +337,14 @@ export function WorkoutSessionScreen({
       // Not awaited: offline, Firestore queues the planner writes and only resolves once
       // they reach the server. The workout itself must always save right away.
       void leftoverPlanner
-        .save(buildLeftoverPlan(leftoverItems, leftovers.choices, leftovers.next, title))
+        .save(
+          buildLeftoverPlan(
+            leftoverItems,
+            leftovers.choices,
+            leftovers.next,
+            title,
+          ),
+        )
         .catch(() => {});
       setLeftovers((prev) => ({ ...prev, open: false }));
       await saveFinished();
@@ -322,7 +378,10 @@ export function WorkoutSessionScreen({
             ? {
                 dirty,
                 onCancel: () => {
-                  if (!dirty || window.confirm("Discard your changes to this workout?")) {
+                  if (
+                    !dirty ||
+                    window.confirm("Discard your changes to this workout?")
+                  ) {
                     editing.onCancel();
                   }
                 },
@@ -331,7 +390,10 @@ export function WorkoutSessionScreen({
         }
       />
 
-      <section aria-labelledby="exercises-heading" className="flex flex-col gap-2">
+      <section
+        aria-labelledby="exercises-heading"
+        className="flex flex-col gap-2"
+      >
         <div className="flex min-h-8 items-center justify-between">
           <h2
             id="exercises-heading"
@@ -360,29 +422,53 @@ export function WorkoutSessionScreen({
         ) : (
           <ol className="flex flex-col gap-2">
             {planItems.map((item) => (
-              <li key={item.lineId} id={`exercise-${item.lineId}`} className="scroll-mt-4 scroll-mb-28">
+              <li
+                key={item.lineId}
+                id={`exercise-${item.lineId}`}
+                className="scroll-mt-4 scroll-mb-28"
+              >
                 <ExerciseCard
                   item={item}
                   open={state.openLineId === item.lineId}
                   lastTimeSets={history[item.exercise.id]?.[0]?.line.sets}
-                  hasNextExercise={nextUnfinishedAfter(exercises, item.lineId) !== null}
+                  hasNextExercise={
+                    nextUnfinishedAfter(exercises, item.lineId) !== null
+                  }
                   onToggleOpen={() =>
                     dispatch({
                       type: "openExercise",
-                      lineId: state.openLineId === item.lineId ? null : item.lineId,
+                      lineId:
+                        state.openLineId === item.lineId ? null : item.lineId,
                     })
                   }
                   onOpenDetails={() => openDetails(item.lineId)}
                   onUpdateSet={(setIndex, patch) =>
-                    dispatch({ type: "updateSet", lineId: item.lineId, setIndex, patch })
+                    dispatch({
+                      type: "updateSet",
+                      lineId: item.lineId,
+                      setIndex,
+                      patch,
+                    })
                   }
                   onToggleSetDone={(setIndex, suggestion) =>
-                    dispatch({ type: "toggleSetDone", lineId: item.lineId, setIndex, suggestion })
+                    dispatch({
+                      type: "toggleSetDone",
+                      lineId: item.lineId,
+                      setIndex,
+                      suggestion,
+                    })
                   }
-                  onAddSet={() => dispatch({ type: "addSet", lineId: item.lineId })}
-                  onCopyLastSet={() => dispatch({ type: "copyLastSet", lineId: item.lineId })}
+                  onAddSet={() =>
+                    dispatch({ type: "addSet", lineId: item.lineId })
+                  }
+                  onCopyLastSet={() =>
+                    dispatch({ type: "copyLastSet", lineId: item.lineId })
+                  }
                   onNextExercise={() =>
-                    dispatch({ type: "openNextExercise", afterLineId: item.lineId })
+                    dispatch({
+                      type: "openNextExercise",
+                      afterLineId: item.lineId,
+                    })
                   }
                 />
                 {state.openLineId !== item.lineId &&
@@ -411,11 +497,19 @@ export function WorkoutSessionScreen({
         <MaybeSection
           items={maybeItems}
           lastTimeById={Object.fromEntries(
-            maybeItems.map((item) => [item.exercise.id, history[item.exercise.id]?.[0]?.line.sets]),
+            maybeItems.map((item) => [
+              item.exercise.id,
+              history[item.exercise.id]?.[0]?.line.sets,
+            ]),
           )}
           canAdd={!atLimit}
           onDoIt={(lineId) =>
-            dispatch({ type: "setSection", lineId, section: "plan", open: true })
+            dispatch({
+              type: "setSection",
+              lineId,
+              section: "plan",
+              open: true,
+            })
           }
           onOpenDetails={openDetails}
           onAddMaybe={() => openSearch("addMaybe")}
@@ -431,7 +525,9 @@ export function WorkoutSessionScreen({
         journalCopied={journalCopied}
         onAddExercise={() => openSearch("add")}
         onFinish={() => void finish()}
-        finishLabel={editing ? (finishing ? "Saving…" : "Save changes") : undefined}
+        finishLabel={
+          editing ? (finishing ? "Saving…" : "Save changes") : undefined
+        }
         finishDisabled={finishing || (editing !== undefined && !dirty)}
         onOpenWorkoutDetails={() => setPanel("workout")}
         onReorder={() => setPanel("reorder")}
@@ -458,7 +554,9 @@ export function WorkoutSessionScreen({
         }
         suggested={session.suggestedForSearch}
         recent={session.recentExercises}
-        onAdd={(picked) => addExercises(picked, panel === "addMaybe" ? "maybe" : "plan")}
+        onAdd={(picked) =>
+          addExercises(picked, panel === "addMaybe" ? "maybe" : "plan")
+        }
         onReplace={(next) => focusItem && swapExercise(focusItem.lineId, next)}
       />
 
@@ -473,16 +571,34 @@ export function WorkoutSessionScreen({
           history={history[focusItem.exercise.id] ?? []}
           historyLoading={session.historyLoading}
           onUpdateSet={(setIndex, patch) =>
-            dispatch({ type: "updateSet", lineId: focusItem.lineId, setIndex, patch })
+            dispatch({
+              type: "updateSet",
+              lineId: focusItem.lineId,
+              setIndex,
+              patch,
+            })
           }
-          onAddSet={() => dispatch({ type: "addSet", lineId: focusItem.lineId })}
-          onCopyLastSet={() => dispatch({ type: "copyLastSet", lineId: focusItem.lineId })}
+          onAddSet={() =>
+            dispatch({ type: "addSet", lineId: focusItem.lineId })
+          }
+          onCopyLastSet={() =>
+            dispatch({ type: "copyLastSet", lineId: focusItem.lineId })
+          }
           onRemoveSet={(setIndex) =>
-            removeSet(focusItem.lineId, setIndex, focusItem.exercise.name, focusItem.sets[setIndex])
+            removeSet(
+              focusItem.lineId,
+              setIndex,
+              focusItem.exercise.name,
+              focusItem.sets[setIndex],
+            )
           }
           onUseHistory={applyHistory}
           onNoteChange={(note) =>
-            dispatch({ type: "setExerciseNote", lineId: focusItem.lineId, note })
+            dispatch({
+              type: "setExerciseNote",
+              lineId: focusItem.lineId,
+              note,
+            })
           }
           onSwapExercise={() => setPanel("swap")}
           onMoveExercise={() => setPanel("move")}
@@ -533,12 +649,18 @@ export function WorkoutSessionScreen({
           open={leftovers.open}
           onOpenChange={(open) => setLeftovers((prev) => ({ ...prev, open }))}
           workoutTitle={title}
-          doneSummary={doneSummary(exercises.length - leftoverItems.length, countDoneSets(exercises))}
+          doneSummary={doneSummary(
+            exercises.length - leftoverItems.length,
+            countDoneSets(exercises),
+          )}
           items={leftoverItems}
           next={leftovers.next}
           choices={leftovers.choices}
           onChoose={(lineId, choice) =>
-            setLeftovers((prev) => ({ ...prev, choices: { ...prev.choices, [lineId]: choice } }))
+            setLeftovers((prev) => ({
+              ...prev,
+              choices: { ...prev.choices, [lineId]: choice },
+            }))
           }
           finishing={finishing}
           onFinish={() => void finishWithLeftovers()}

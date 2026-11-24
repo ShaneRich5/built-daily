@@ -43,7 +43,11 @@ import {
   type SharedPlanDoc,
   type SharedPlanExercise,
 } from "@/lib/group-types";
-import { addScheduledWorkout, deleteEntriesForSharedPlan, findEntriesForSharedPlan } from "@/lib/planner-repository";
+import {
+  addScheduledWorkout,
+  deleteEntriesForSharedPlan,
+  findEntriesForSharedPlan,
+} from "@/lib/planner-repository";
 import { startOfWeekDateKey } from "@/lib/calendar-views";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 
@@ -70,7 +74,11 @@ export function subscribeGroupPlansInRange(
     return () => {};
   }
   return onSnapshot(
-    query(col, where("dateKey", ">=", startKey), where("dateKey", "<=", endKey)),
+    query(
+      col,
+      where("dateKey", ">=", startKey),
+      where("dateKey", "<=", endKey),
+    ),
     (snap) => {
       const out: SavedSharedPlan[] = [];
       for (const d of snap.docs) {
@@ -101,7 +109,9 @@ export function subscribeSharedPlan(
   return onSnapshot(
     doc(col, planId),
     (snap) => {
-      const plan = snap.exists() ? firestoreToSharedPlan(snap.data() as Record<string, unknown>) : null;
+      const plan = snap.exists()
+        ? firestoreToSharedPlan(snap.data() as Record<string, unknown>)
+        : null;
       onPlan(plan ? { id: snap.id, plan } : null);
     },
     () => onPlan(null),
@@ -158,7 +168,10 @@ export async function createSharedPlan(
       goingAt: { [user.uid]: now },
       createdAt: now,
     };
-    const ref = await addDoc(collection(db, "groups", groupId, "plans"), sharedPlanToFirestore(plan));
+    const ref = await addDoc(
+      collection(db, "groups", groupId, "plans"),
+      sharedPlanToFirestore(plan),
+    );
     first ??= { groupId, planId: ref.id };
   }
   if (!first) return null;
@@ -175,13 +188,18 @@ export async function createSharedPlan(
 }
 
 /** "I'm in": join the going list, then add it to your own planner (once). */
-export async function joinSharedPlan(groupId: string, planId: string): Promise<boolean> {
+export async function joinSharedPlan(
+  groupId: string,
+  planId: string,
+): Promise<boolean> {
   const db = getFirestoreDb();
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid) return false;
   const ref = doc(db, "groups", groupId, "plans", planId);
   const snap = await getDoc(ref);
-  const plan = snap.exists() ? firestoreToSharedPlan(snap.data() as Record<string, unknown>) : null;
+  const plan = snap.exists()
+    ? firestoreToSharedPlan(snap.data() as Record<string, unknown>)
+    : null;
   if (!plan) return false;
   if (!plan.going.includes(uid)) {
     if (plan.going.length >= SHARED_PLAN_LIMITS.going) return false;
@@ -205,7 +223,10 @@ export async function joinSharedPlan(groupId: string, planId: string): Promise<b
 }
 
 /** "Can't make it": off the going list and off your planner. */
-export async function leaveSharedPlan(groupId: string, planId: string): Promise<boolean> {
+export async function leaveSharedPlan(
+  groupId: string,
+  planId: string,
+): Promise<boolean> {
   const db = getFirestoreDb();
   const uid = getFirebaseAuth()?.currentUser?.uid;
   if (!db || !uid) return false;
@@ -218,7 +239,10 @@ export async function leaveSharedPlan(groupId: string, planId: string): Promise<
 }
 
 /** Creator only (rules check it). Other people's linked planner entries stay theirs. */
-export async function cancelSharedPlan(groupId: string, planId: string): Promise<boolean> {
+export async function cancelSharedPlan(
+  groupId: string,
+  planId: string,
+): Promise<boolean> {
   const db = getFirestoreDb();
   if (!db) return false;
   await deleteDoc(doc(db, "groups", groupId, "plans", planId));
@@ -245,26 +269,35 @@ export async function updateSharedPlanDetails(
 // ── Invite preview ──────────────────────────────────────────────────────────
 
 /** Anyone with the link can read this one doc (rules: get only, never list). */
-export async function getInvitePreview(codeRaw: string): Promise<InvitePreviewDoc | null> {
+export async function getInvitePreview(
+  codeRaw: string,
+): Promise<InvitePreviewDoc | null> {
   const db = getFirestoreDb();
   const code = normalizeInviteCode(codeRaw);
   if (!db || code.length < 6) return null;
   try {
     const snap = await getDoc(doc(db, "invitePreviews", code));
-    return snap.exists() ? firestoreToInvitePreview(snap.data() as Record<string, unknown>) : null;
+    return snap.exists()
+      ? firestoreToInvitePreview(snap.data() as Record<string, unknown>)
+      : null;
   } catch {
     return null;
   }
 }
 
-function previewPlan(plan: SharedPlanDoc, members: GroupMemberDoc[]): InvitePreviewPlan {
+function previewPlan(
+  plan: SharedPlanDoc,
+  members: GroupMemberDoc[],
+): InvitePreviewPlan {
   const names = new Map(members.map((m) => [m.uid, firstName(m.displayName)]));
   return {
     dateKey: plan.dateKey,
     time: plan.time,
     where: plan.where,
     label: plan.label,
-    goingFirstNames: plan.going.map((uid) => names.get(uid)).filter((n): n is string => Boolean(n)),
+    goingFirstNames: plan.going
+      .map((uid) => names.get(uid))
+      .filter((n): n is string => Boolean(n)),
   };
 }
 
@@ -280,7 +313,9 @@ export function buildInvitePreview(input: {
 }): InvitePreviewDoc {
   const weekStart = startOfWeekDateKey(input.todayKey);
   const workoutsThisWeek = input.members.reduce(
-    (sum, m) => sum + m.trainedDays.filter((d) => d >= weekStart && d <= input.todayKey).length,
+    (sum, m) =>
+      sum +
+      m.trainedDays.filter((d) => d >= weekStart && d <= input.todayKey).length,
     0,
   );
   // Keep plans already shared by link (still upcoming), then add the fresh ones.
@@ -288,7 +323,8 @@ export function buildInvitePreview(input: {
   for (const [id, p] of Object.entries(input.previous?.plans ?? {})) {
     if (p.dateKey >= input.todayKey) plans[id] = p;
   }
-  for (const { id, plan } of input.plans) plans[id] = previewPlan(plan, input.members);
+  for (const { id, plan } of input.plans)
+    plans[id] = previewPlan(plan, input.members);
   const ids = Object.keys(plans)
     .sort((a, b) => plans[a]!.dateKey.localeCompare(plans[b]!.dateKey))
     .slice(0, MAX_PREVIEW_PLANS);
@@ -297,7 +333,9 @@ export function buildInvitePreview(input: {
     groupName: input.group.name,
     kind: input.group.kind,
     invitedByName: firstName(input.inviterName),
-    memberFirstNames: input.members.map((m) => firstName(m.displayName)).slice(0, GROUP_LIMITS.maxMembers),
+    memberFirstNames: input.members
+      .map((m) => firstName(m.displayName))
+      .slice(0, GROUP_LIMITS.maxMembers),
     memberCount: input.group.memberCount,
     workoutsThisWeek,
     plans: Object.fromEntries(ids.map((id) => [id, plans[id]!])),
@@ -327,14 +365,20 @@ export async function refreshInvitePreview(input: {
       previous: previous?.groupId === input.groupId ? previous : null,
       todayKey: localDateKeyFromMs(Date.now()),
     });
-    await setDoc(doc(db, "invitePreviews", code), invitePreviewToFirestore(next));
+    await setDoc(
+      doc(db, "invitePreviews", code),
+      invitePreviewToFirestore(next),
+    );
   } catch {
     /* the landing falls back to a plain "You're invited" */
   }
 }
 
 /** Every plan together in a group from today on (for the invite sheet's plan picker). */
-export async function getUpcomingGroupPlans(groupId: string, todayKey: string): Promise<SavedSharedPlan[]> {
+export async function getUpcomingGroupPlans(
+  groupId: string,
+  todayKey: string,
+): Promise<SavedSharedPlan[]> {
   const col = plansCollection(groupId);
   if (!col) return [];
   const snap = await getDocs(query(col, where("dateKey", ">=", todayKey)));

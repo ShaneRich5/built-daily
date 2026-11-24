@@ -21,7 +21,10 @@ type MaybeSectionProps = {
   onAddMaybe: () => void;
 };
 
-function maybeSubtitle(item: SessionExercise, lastTime: SetLog[] | undefined): string {
+function maybeSubtitle(
+  item: SessionExercise,
+  lastTime: SetLog[] | undefined,
+): string {
   if (exerciseProgress(item.sets) !== "not_started") {
     return summarizeSetRows(item.sets, item.exercise.metric) || "Started";
   }
@@ -55,9 +58,13 @@ export function MaybeSection({
             className="text-xs font-semibold tracking-wide text-zinc-900 uppercase dark:text-zinc-100"
           >
             Maybe
-            <span className="ml-1.5 font-normal text-zinc-500 normal-case">{items.length}</span>
+            <span className="ml-1.5 font-normal text-zinc-500 normal-case">
+              {items.length}
+            </span>
           </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">If there&apos;s time. Skipping is fine.</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            If there&apos;s time. Skipping is fine.
+          </p>
         </div>
         <button
           type="button"
@@ -66,8 +73,13 @@ export function MaybeSection({
           aria-controls="maybe-list"
           className="inline-flex size-10 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-800"
         >
-          <ChevronDown className={cn("size-4 transition-transform", open && "rotate-180")} aria-hidden />
-          <span className="sr-only">{open ? "Hide maybes" : "Show maybes"}</span>
+          <ChevronDown
+            className={cn("size-4 transition-transform", open && "rotate-180")}
+            aria-hidden
+          />
+          <span className="sr-only">
+            {open ? "Hide maybes" : "Show maybes"}
+          </span>
         </button>
       </div>
 
@@ -93,7 +105,10 @@ export function MaybeSection({
                   onClick={() => onDoIt(item.lineId)}
                   className="inline-flex h-10 shrink-0 items-center rounded-lg bg-emerald-50 px-3 text-[13px] font-semibold text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:bg-emerald-950"
                 >
-                  Do it<span className="sr-only">: move {item.exercise.name} into the plan</span>
+                  Do it
+                  <span className="sr-only">
+                    : move {item.exercise.name} into the plan
+                  </span>
                 </button>
                 <button
                   type="button"
@@ -101,7 +116,9 @@ export function MaybeSection({
                   className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                 >
                   <SlidersHorizontal className="size-4" aria-hidden />
-                  <span className="sr-only">Details for {item.exercise.name}</span>
+                  <span className="sr-only">
+                    Details for {item.exercise.name}
+                  </span>
                 </button>
               </li>
             ))}
@@ -114,7 +131,13 @@ export function MaybeSection({
 }
 
 /** Also used on its own when there are no maybes yet. */
-export function AddMaybeButton({ onClick, quiet = false }: { onClick: () => void; quiet?: boolean }) {
+export function AddMaybeButton({
+  onClick,
+  quiet = false,
+}: {
+  onClick: () => void;
+  quiet?: boolean;
+}) {
   return (
     <button
       type="button"

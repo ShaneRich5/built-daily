@@ -13,13 +13,25 @@ export const primaryDark =
 export const outlineButton =
   "inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:hover:bg-zinc-900";
 
-export function SectionHeader({ title, aside, id }: { title: string; aside?: string; id?: string }) {
+export function SectionHeader({
+  title,
+  aside,
+  id,
+}: {
+  title: string;
+  aside?: string;
+  id?: string;
+}) {
   return (
     <div className="flex items-baseline justify-between">
       <h2 id={id} className={sectionLabel}>
         {title}
       </h2>
-      {aside ? <span className="text-xs text-zinc-500 dark:text-zinc-400">{aside}</span> : null}
+      {aside ? (
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+          {aside}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -44,7 +56,8 @@ export function Avatar({
         size === "sm" && "size-7 text-xs",
         size === "md" && "size-10 text-sm",
         size === "lg" && "size-12 text-base",
-        ring && "ring-2 ring-emerald-600 ring-offset-2 ring-offset-white dark:ring-emerald-500 dark:ring-offset-zinc-950",
+        ring &&
+          "ring-2 ring-emerald-600 ring-offset-2 ring-offset-white dark:ring-emerald-500 dark:ring-offset-zinc-950",
         className,
       )}
     >
@@ -53,13 +66,26 @@ export function Avatar({
   );
 }
 
-export function StackedAvatars({ names, max = 4, size = "sm" }: { names: string[]; max?: number; size?: "sm" | "md" }) {
+export function StackedAvatars({
+  names,
+  max = 4,
+  size = "sm",
+}: {
+  names: string[];
+  max?: number;
+  size?: "sm" | "md";
+}) {
   const shown = names.slice(0, max);
   const extra = names.length - shown.length;
   return (
     <span className="flex -space-x-2" aria-hidden>
       {shown.map((n, i) => (
-        <Avatar key={`${n}-${i}`} name={n} size={size} className="border-2 border-white dark:border-zinc-950" />
+        <Avatar
+          key={`${n}-${i}`}
+          name={n}
+          size={size}
+          className="border-2 border-white dark:border-zinc-950"
+        />
       ))}
       {extra > 0 ? (
         <span
@@ -120,13 +146,25 @@ export function DayTile({
     <span
       className={cn(
         "flex w-11 shrink-0 flex-col items-center justify-center rounded-lg py-1.5 leading-none",
-        tone === "plain" && "bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50",
-        tone === "dark" && "h-14 w-14 bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900",
-        tone === "green" && "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200",
+        tone === "plain" &&
+          "bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-50",
+        tone === "dark" &&
+          "h-14 w-14 bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900",
+        tone === "green" &&
+          "bg-emerald-50 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200",
       )}
     >
-      <span className="text-[11px] font-medium uppercase opacity-70">{weekday}</span>
-      <span className={cn("mt-1 font-semibold", tone === "dark" ? "text-xl" : "text-[17px]")}>{day}</span>
+      <span className="text-[11px] font-medium uppercase opacity-70">
+        {weekday}
+      </span>
+      <span
+        className={cn(
+          "mt-1 font-semibold",
+          tone === "dark" ? "text-xl" : "text-[17px]",
+        )}
+      >
+        {day}
+      </span>
     </span>
   );
 }
@@ -141,7 +179,13 @@ export function PrivacyNote({ children }: { children?: ReactNode }) {
 }
 
 /** One week cell: filled = trained, ring = planned, faint ring = nothing (never "missed"). */
-export function DayDot({ mark, label }: { mark: "trained" | "planned" | "none"; label?: string }) {
+export function DayDot({
+  mark,
+  label,
+}: {
+  mark: "trained" | "planned" | "none";
+  label?: string;
+}) {
   return (
     <span
       role={label ? "img" : undefined}
@@ -150,7 +194,8 @@ export function DayDot({ mark, label }: { mark: "trained" | "planned" | "none"; 
       className={cn(
         "inline-block size-4 rounded-full",
         mark === "trained" && "bg-emerald-600 dark:bg-emerald-500",
-        mark === "planned" && "border-2 border-emerald-600 dark:border-emerald-500",
+        mark === "planned" &&
+          "border-2 border-emerald-600 dark:border-emerald-500",
         mark === "none" && "border border-zinc-300 dark:border-zinc-700",
       )}
     />

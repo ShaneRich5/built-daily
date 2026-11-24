@@ -46,7 +46,10 @@ export function suggestNextExercises(
 ): CatalogExercise[] {
   const currentIds = new Set(current.map((exercise) => exercise.id));
   const latestId = current[current.length - 1]?.id;
-  const scores = new Map<string, { exercise: CatalogExercise; score: number; order: number }>();
+  const scores = new Map<
+    string,
+    { exercise: CatalogExercise; score: number; order: number }
+  >();
   let order = 0;
 
   const bump = (line: SessionLine, points: number) => {

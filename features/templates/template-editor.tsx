@@ -12,10 +12,18 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { CatalogExercise } from "@/lib/exercise-catalog";
 import { buildWorkoutHref } from "@/lib/planner-list-items";
-import { createWorkoutPlan, deleteWorkoutPlan, updateWorkoutPlan } from "@/lib/workout-plan-repository";
+import {
+  createWorkoutPlan,
+  deleteWorkoutPlan,
+  updateWorkoutPlan,
+} from "@/lib/workout-plan-repository";
 import { getRecentCompletedSessions } from "@/lib/workout-session-repository";
 import type { LineSection } from "@/lib/line-grouping";
-import { NOTE_LIMITS, type PlanLine, type WorkoutPlanDoc } from "@/lib/workout-types";
+import {
+  NOTE_LIMITS,
+  type PlanLine,
+  type WorkoutPlanDoc,
+} from "@/lib/workout-types";
 import { recentExercises } from "@/features/workout-session/exercise-suggestions";
 import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-sheet";
 import { TemplateLineRow } from "@/features/templates/template-line-row";
@@ -42,7 +50,8 @@ type TemplateEditorProps = {
 };
 
 /** What the search sheet is picking for: exercises for a section, or one alternate for a line. */
-type SearchTarget = { kind: "add"; section: LineSection } | { kind: "alternate"; lineId: string };
+type SearchTarget =
+  { kind: "add"; section: LineSection } | { kind: "alternate"; lineId: string };
 
 const sectionLabel = "text-xs font-medium tracking-wide uppercase";
 const addButton =
@@ -58,7 +67,9 @@ const iconButton =
 export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
   const router = useRouter();
   const [name, setName] = useState(initialPlan?.name ?? "");
-  const [lines, setLines] = useState<PlanLine[]>(() => orderBySection(initialPlan?.lines ?? []));
+  const [lines, setLines] = useState<PlanLine[]>(() =>
+    orderBySection(initialPlan?.lines ?? []),
+  );
   const [searchFor, setSearchFor] = useState<SearchTarget | null>(null);
   const [searchKey, setSearchKey] = useState(0);
   const [recent, setRecent] = useState<CatalogExercise[]>([]);
@@ -67,7 +78,10 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
 
   const savedKey = useMemo(
     () =>
-      JSON.stringify({ name: initialPlan?.name ?? "", lines: orderBySection(initialPlan?.lines ?? []) }),
+      JSON.stringify({
+        name: initialPlan?.name ?? "",
+        lines: orderBySection(initialPlan?.lines ?? []),
+      }),
     [initialPlan],
   );
   const dirty = JSON.stringify({ name, lines }) !== savedKey;
@@ -76,7 +90,9 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
   const atLimit = lines.length >= MAX_TEMPLATE_LINES;
   const canSave = name.trim().length > 0 && planLines.length > 0;
   const alternateLine =
-    searchFor?.kind === "alternate" ? lines.find((line) => line.lineId === searchFor.lineId) : undefined;
+    searchFor?.kind === "alternate"
+      ? lines.find((line) => line.lineId === searchFor.lineId)
+      : undefined;
 
   // "Recent" in the search sheet: exercises from your last workouts.
   useEffect(() => {
@@ -92,7 +108,11 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
   }, []);
 
   const updateLine = (lineId: string, patch: Partial<PlanLine>) =>
-    setLines((prev) => prev.map((line) => (line.lineId === lineId ? { ...line, ...patch } : line)));
+    setLines((prev) =>
+      prev.map((line) =>
+        line.lineId === lineId ? { ...line, ...patch } : line,
+      ),
+    );
 
   const openSearch = (target: SearchTarget) => {
     setSearchKey((k) => k + 1);
@@ -102,25 +122,33 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
   const addExercises = (picked: CatalogExercise[]) => {
     const section = searchFor?.kind === "add" ? searchFor.section : "plan";
     const added = picked.map((exercise) => lineFromExercise(exercise, section));
-    setLines((prev) => orderBySection([...prev, ...added]).slice(0, MAX_TEMPLATE_LINES));
+    setLines((prev) =>
+      orderBySection([...prev, ...added]).slice(0, MAX_TEMPLATE_LINES),
+    );
     setSearchFor(null);
     setError(null);
   };
 
   const pickAlternate = (exercise: CatalogExercise) => {
-    if (alternateLine) updateLine(alternateLine.lineId, addAlternate(alternateLine, exercise));
+    if (alternateLine)
+      updateLine(alternateLine.lineId, addAlternate(alternateLine, exercise));
     setSearchFor(null);
   };
 
   const removeLine = (line: PlanLine) => {
-    if (!window.confirm(`Remove ${line.nameSnapshot} from this template?`)) return;
+    if (!window.confirm(`Remove ${line.nameSnapshot} from this template?`))
+      return;
     setLines((prev) => prev.filter((l) => l.lineId !== line.lineId));
   };
 
   /** Saves and returns the template id (null when it couldn't save). */
   const save = async (): Promise<string | null> => {
     if (!canSave) {
-      setError(name.trim() ? "Add at least one exercise to the plan." : "Give this template a name.");
+      setError(
+        name.trim()
+          ? "Add at least one exercise to the plan."
+          : "Give this template a name.",
+      );
       return null;
     }
     setBusy(true);
@@ -151,12 +179,20 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
   const startNow = async () => {
     const id = dirty || !planId ? await save() : planId;
     if (!id) return;
-    const href = buildWorkoutHref(name, id, orderBySection(lines).map((line) => line.exerciseId));
+    const href = buildWorkoutHref(
+      name,
+      id,
+      orderBySection(lines).map((line) => line.exerciseId),
+    );
     if (href) router.push(href);
   };
 
   const deleteTemplate = async () => {
-    if (!planId || !window.confirm("Delete this template? This can’t be undone.")) return;
+    if (
+      !planId ||
+      !window.confirm("Delete this template? This can’t be undone.")
+    )
+      return;
     setBusy(true);
     try {
       if (!(await deleteWorkoutPlan(planId))) throw new Error("delete");
@@ -173,19 +209,35 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
       position={index + 1}
       isFirst={index === 0}
       isLast={index === sectionSize - 1}
-      onTargetSetsChange={(n) => updateLine(line.lineId, { targetSets: clampTargetSets(n) })}
+      onTargetSetsChange={(n) =>
+        updateLine(line.lineId, { targetSets: clampTargetSets(n) })
+      }
       onNoteChange={(notes) =>
         updateLine(line.lineId, {
           notes: notes.slice(0, NOTE_LIMITS.exerciseNote) || null,
         })
       }
-      onMove={(delta) => setLines((prev) => moveLineInSection(prev, line.lineId, delta))}
-      onToggleSection={() =>
-        setLines((prev) => setLineSection(prev, line.lineId, sectionOf(line) === "plan" ? "maybe" : "plan"))
+      onMove={(delta) =>
+        setLines((prev) => moveLineInSection(prev, line.lineId, delta))
       }
-      onAddAlternate={() => openSearch({ kind: "alternate", lineId: line.lineId })}
+      onToggleSection={() =>
+        setLines((prev) =>
+          setLineSection(
+            prev,
+            line.lineId,
+            sectionOf(line) === "plan" ? "maybe" : "plan",
+          ),
+        )
+      }
+      onAddAlternate={() =>
+        openSearch({ kind: "alternate", lineId: line.lineId })
+      }
       onRemoveAlternate={(exerciseId) =>
-        setLines((prev) => prev.map((l) => (l.lineId === line.lineId ? removeAlternate(l, exerciseId) : l)))
+        setLines((prev) =>
+          prev.map((l) =>
+            l.lineId === line.lineId ? removeAlternate(l, exerciseId) : l,
+          ),
+        )
       }
       onRemove={() => removeLine(line)}
     />
@@ -199,7 +251,8 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
           aria-label="Back to planner"
           className={`-ml-2.5 ${iconButton}`}
           onClick={(e) => {
-            if (dirty && !window.confirm("Leave without saving your changes?")) e.preventDefault();
+            if (dirty && !window.confirm("Leave without saving your changes?"))
+              e.preventDefault();
           }}
         >
           <ArrowLeft className="size-5" aria-hidden />
@@ -210,12 +263,22 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
         {planId ? (
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<button type="button" aria-label="Template options" className={`-mr-2.5 ${iconButton}`} />}
+              render={
+                <button
+                  type="button"
+                  aria-label="Template options"
+                  className={`-mr-2.5 ${iconButton}`}
+                />
+              }
             >
               <MoreHorizontal className="size-4" aria-hidden />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem variant="destructive" className="min-h-11 gap-2" onClick={() => void deleteTemplate()}>
+              <DropdownMenuItem
+                variant="destructive"
+                className="min-h-11 gap-2"
+                onClick={() => void deleteTemplate()}
+              >
                 <Trash2 className="size-4" aria-hidden />
                 Delete template
               </DropdownMenuItem>
@@ -245,24 +308,33 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
 
       {lines.length > 0 ? (
         <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
-          Move an exercise between Plan and Maybe from its menu. Alternates show as quick swaps in the
-          workout.
+          Move an exercise between Plan and Maybe from its menu. Alternates show
+          as quick swaps in the workout.
         </p>
       ) : null}
 
-      <section aria-labelledby="template-plan-heading" className="flex flex-col gap-2">
+      <section
+        aria-labelledby="template-plan-heading"
+        className="flex flex-col gap-2"
+      >
         <div className="flex items-baseline justify-between">
-          <h2 id="template-plan-heading" className={`${sectionLabel} text-zinc-900 dark:text-zinc-50`}>
+          <h2
+            id="template-plan-heading"
+            className={`${sectionLabel} text-zinc-900 dark:text-zinc-50`}
+          >
             Plan
           </h2>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            {planLines.length} {planLines.length === 1 ? "exercise" : "exercises"}
+            {planLines.length}{" "}
+            {planLines.length === 1 ? "exercise" : "exercises"}
           </p>
         </div>
         {planLines.length > 0 ? (
           <ol className="flex flex-col gap-2">
             {planLines.map((line, index) => (
-              <li key={line.lineId}>{renderRow(line, index, planLines.length)}</li>
+              <li key={line.lineId}>
+                {renderRow(line, index, planLines.length)}
+              </li>
             ))}
           </ol>
         ) : null}
@@ -274,7 +346,10 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
           className="flex flex-col gap-2 rounded-2xl border-[1.5px] border-dashed border-zinc-300 bg-zinc-100 p-3 dark:border-zinc-700 dark:bg-zinc-900/60"
         >
           <div>
-            <h2 id="template-maybe-heading" className={`${sectionLabel} text-zinc-900 dark:text-zinc-50`}>
+            <h2
+              id="template-maybe-heading"
+              className={`${sectionLabel} text-zinc-900 dark:text-zinc-50`}
+            >
               Maybe
             </h2>
             <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
@@ -283,7 +358,9 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
           </div>
           <ol className="flex flex-col gap-2">
             {maybeLines.map((line, index) => (
-              <li key={line.lineId}>{renderRow(line, index, maybeLines.length)}</li>
+              <li key={line.lineId}>
+                {renderRow(line, index, maybeLines.length)}
+              </li>
             ))}
           </ol>
         </section>
@@ -314,7 +391,10 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
 
       <div className="fixed inset-x-0 bottom-[var(--bottom-nav-height,0px)] z-40 border-t border-zinc-200 bg-zinc-50/95 px-3 pt-2 pb-3 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         {error ? (
-          <p role="alert" className="mx-auto mb-2 max-w-2xl text-center text-xs text-red-700 dark:text-red-400">
+          <p
+            role="alert"
+            className="mx-auto mb-2 max-w-2xl text-center text-xs text-red-700 dark:text-red-400"
+          >
             {error}
           </p>
         ) : null}
@@ -349,7 +429,11 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
             ? { kind: "alternate", forName: alternateLine.nameSnapshot }
             : {
                 kind: "add",
-                afterName: lastName(searchFor?.kind === "add" && searchFor.section === "maybe" ? maybeLines : planLines),
+                afterName: lastName(
+                  searchFor?.kind === "add" && searchFor.section === "maybe"
+                    ? maybeLines
+                    : planLines,
+                ),
                 room: MAX_TEMPLATE_LINES - lines.length,
               }
         }

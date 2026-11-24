@@ -44,11 +44,19 @@ type Story = StoryObj<typeof meta>;
 
 export const EmptyWithSuggestion: Story = {
   name: "Empty · shows last time greyed out",
-  args: { metric: "weight_reps", initial: row(), suggestion: row({ weight: "30", reps: "12" }) },
+  args: {
+    metric: "weight_reps",
+    initial: row(),
+    suggestion: row({ weight: "30", reps: "12" }),
+  },
 };
 
 export const Filled: Story = {
-  args: { metric: "weight_reps", initial: row({ weight: "135", reps: "8" }), suggestion: null },
+  args: {
+    metric: "weight_reps",
+    initial: row({ weight: "135", reps: "8" }),
+    suggestion: null,
+  },
 };
 
 export const Done: Story = {
@@ -60,5 +68,9 @@ export const Done: Story = {
 };
 
 export const Cardio: Story = {
-  args: { metric: "cardio", initial: row(), suggestion: row({ seconds: "1200", distanceMiles: "2" }) },
+  args: {
+    metric: "cardio",
+    initial: row(),
+    suggestion: row({ seconds: "1200", distanceMiles: "2" }),
+  },
 };

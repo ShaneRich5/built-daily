@@ -8,7 +8,10 @@ import { addDaysToDateKey } from "@/lib/calendar-views";
 import { subscribeScheduledWorkoutsInRange } from "@/lib/planner-repository";
 import type { ScheduledWorkoutEntry } from "@/lib/planner-types";
 import { subscribeProgressSettings } from "@/lib/progress-settings-repository";
-import { DEFAULT_PROGRESS_SETTINGS, type WeeklyGoalTarget } from "@/lib/progress-types";
+import {
+  DEFAULT_PROGRESS_SETTINGS,
+  type WeeklyGoalTarget,
+} from "@/lib/progress-types";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
   subscribeUserWorkoutPlans,
@@ -72,7 +75,8 @@ export function useHomeData() {
 
   useEffect(() => {
     if (!signedIn) return;
-    const patch = (next: Partial<RawHomeData>) => setRaw((prev) => ({ ...prev, ...next }));
+    const patch = (next: Partial<RawHomeData>) =>
+      setRaw((prev) => ({ ...prev, ...next }));
     // Before this week's Sunday too, so last week's misses can still be caught up.
     const rangeStart = addDaysToDateKey(todayKey, -MISSED_LOOKBACK_DAYS);
     const rangeEnd = addDaysToDateKey(todayKey, PLAN_LOOKAHEAD_DAYS);
@@ -85,9 +89,15 @@ export function useHomeData() {
         },
         { maxDocs: SESSION_HISTORY_DOCS },
       ),
-      subscribeRecentActivities((activities) => patch({ activities }), { maxDocs: ACTIVITY_HISTORY_DOCS }),
-      subscribeScheduledWorkoutsInRange(rangeStart, rangeEnd, (entries) => patch({ entries })),
-      subscribeProgressSettings((settings) => patch({ weeklyGoal: settings.weeklyGoal })),
+      subscribeRecentActivities((activities) => patch({ activities }), {
+        maxDocs: ACTIVITY_HISTORY_DOCS,
+      }),
+      subscribeScheduledWorkoutsInRange(rangeStart, rangeEnd, (entries) =>
+        patch({ entries }),
+      ),
+      subscribeProgressSettings((settings) =>
+        patch({ weeklyGoal: settings.weeklyGoal }),
+      ),
     ];
     return () => {
       for (const unsub of unsubs) unsub();
@@ -105,7 +115,13 @@ export function useHomeData() {
       week: buildHomeWeek(todayKey, sessions, activities, entries),
       recent: buildHomeRecent(sessions, activities),
       weekGoal: buildWeekGoal(sessions, weeklyGoal, todayKey),
-      consistency: buildHomeConsistency(todayKey, sessions, activities, entries, weeklyGoal),
+      consistency: buildHomeConsistency(
+        todayKey,
+        sessions,
+        activities,
+        entries,
+        weeklyGoal,
+      ),
       // A plan together on today's planner, for the "Training with someone today" card.
       together: pickTogetherToday(entries, todayKey),
       ...catchUp(entries, sessions, todayKey),
@@ -117,15 +133,28 @@ export function useHomeData() {
 
 function pickTogetherToday(entries: ScheduledWorkoutEntry[], todayKey: string) {
   const e = entries.find(
-    (x) => x.dateKey === todayKey && x.status === "planned" && x.sharedPlanId && x.groupId,
+    (x) =>
+      x.dateKey === todayKey &&
+      x.status === "planned" &&
+      x.sharedPlanId &&
+      x.groupId,
   );
   return e?.sharedPlanId && e.groupId
-    ? { groupId: e.groupId, planId: e.sharedPlanId, exerciseIds: e.exerciseIds, label: e.label }
+    ? {
+        groupId: e.groupId,
+        planId: e.sharedPlanId,
+        exerciseIds: e.exerciseIds,
+        label: e.label,
+      }
     : null;
 }
 
 /** The most recent planned workout that slid past, and what the move sheet needs. */
-function catchUp(entries: ScheduledWorkoutEntry[], sessions: SessionSummary[], todayKey: string) {
+function catchUp(
+  entries: ScheduledWorkoutEntry[],
+  sessions: SessionSummary[],
+  todayKey: string,
+) {
   const workoutDays = workoutDayKeys(sessions);
   const missed = entries
     .filter((e) => isMissed(e, todayKey, workoutDays))

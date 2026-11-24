@@ -5,9 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ActivityDetail } from "@/components/activity-detail";
 import { useAuth } from "@/components/auth-provider";
-import {
-  getActivity,
-} from "@/lib/activity-repository";
+import { getActivity } from "@/lib/activity-repository";
 import type { SavedActivity } from "@/lib/activity-types";
 
 function activityIdFromParams(
@@ -76,7 +74,9 @@ function ActivityDetailLoader({ activityId }: { activityId: string }) {
 
   if (loading || loaded === "loading") {
     return (
-      <p className="py-8 text-center text-sm text-zinc-500">Loading activity…</p>
+      <p className="py-8 text-center text-sm text-zinc-500">
+        Loading activity…
+      </p>
     );
   }
 

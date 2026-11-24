@@ -38,10 +38,16 @@ import {
   type SavedWorkoutSession,
   type SessionSummary,
 } from "@/lib/workout-session-repository";
-import { buildHomeConsistency, buildHomeWeek } from "@/features/home/home-model";
+import {
+  buildHomeConsistency,
+  buildHomeWeek,
+} from "@/features/home/home-model";
 
 /** The summary shape Home's This week builders take, from a full saved session. */
-function toSummary({ id, session }: SavedWorkoutSession): SessionSummary | null {
+function toSummary({
+  id,
+  session,
+}: SavedWorkoutSession): SessionSummary | null {
   if (session.status !== "completed") return null;
   return {
     id,
@@ -66,7 +72,9 @@ export function useProgressData() {
   const [sessions, setSessions] = useState<SavedWorkoutSession[] | null>(null);
   const [activities, setActivities] = useState<SavedActivity[] | null>(null);
   const [weights, setWeights] = useState<SavedBodyWeightEntry[]>([]);
-  const [settings, setSettings] = useState<ProgressSettingsDoc>(DEFAULT_PROGRESS_SETTINGS);
+  const [settings, setSettings] = useState<ProgressSettingsDoc>(
+    DEFAULT_PROGRESS_SETTINGS,
+  );
   /** This week's planner days, for the week circles and the chart's planned days. */
   const [entries, setEntries] = useState<ScheduledWorkoutEntry[]>([]);
 
@@ -93,9 +101,14 @@ export function useProgressData() {
     const activityByDay = activityByDayFromSaved(acts);
     const movementDays = movementDaysFromMaps(activity, activityByDay);
     const goalStreak = goalWeekStreak(activity, settings.weeklyGoal, todayKey);
-    const { recentPrs, bestByExercise, prDateKeys } = computePersonalRecords(rows);
-    const summaries = rows.map(toSummary).filter((s): s is SessionSummary => s !== null);
-    const firstPr = [...recentPrs].sort((a, b) => a.dateKey.localeCompare(b.dateKey))[0];
+    const { recentPrs, bestByExercise, prDateKeys } =
+      computePersonalRecords(rows);
+    const summaries = rows
+      .map(toSummary)
+      .filter((s): s is SessionSummary => s !== null);
+    const firstPr = [...recentPrs].sort((a, b) =>
+      a.dateKey.localeCompare(b.dateKey),
+    )[0];
     return {
       activity,
       activityByDay,
@@ -104,12 +117,22 @@ export function useProgressData() {
         acts,
       ),
       week: weekGoalStatus(activity, settings.weeklyGoal, todayKey),
-      movementWeek: movementGoalStatus(movementDays, settings.movementGoalDays, todayKey),
+      movementWeek: movementGoalStatus(
+        movementDays,
+        settings.movementGoalDays,
+        todayKey,
+      ),
       // Old design only (progress-redesign flag off).
       momentum: computeWeekMomentum(activity, settings.weeklyGoal, todayKey),
       goalStreak,
       weekDays: buildHomeWeek(todayKey, summaries, acts, entries),
-      consistency: buildHomeConsistency(todayKey, summaries, acts, entries, settings.weeklyGoal),
+      consistency: buildHomeConsistency(
+        todayKey,
+        summaries,
+        acts,
+        entries,
+        settings.weeklyGoal,
+      ),
       lifts: strongestLifts(bestByExercise),
       milestones: computeMilestones(
         rows,
@@ -119,7 +142,14 @@ export function useProgressData() {
         firstPr?.dateKey ?? null,
       ),
     };
-  }, [sessions, activities, entries, settings.weeklyGoal, settings.movementGoalDays, todayKey]);
+  }, [
+    sessions,
+    activities,
+    entries,
+    settings.weeklyGoal,
+    settings.movementGoalDays,
+    todayKey,
+  ]);
 
   return {
     signedIn,

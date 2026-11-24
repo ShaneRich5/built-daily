@@ -5,10 +5,21 @@ import { useState, type ReactNode } from "react";
 import { copyText } from "@/lib/copy-text";
 
 /** Small all-caps label above a card, as on Progress. */
-export function SettingsSection({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+export function SettingsSection({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: ReactNode;
+}) {
   return (
     <section aria-labelledby={id} className="flex flex-col gap-2">
-      <h2 id={id} className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+      <h2
+        id={id}
+        className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
+      >
         {title}
       </h2>
       <div className="flex flex-col rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
@@ -30,7 +41,15 @@ export const primaryButton =
  * A value to paste somewhere else (a link, a URL, a token) with its own Copy button.
  * `wrap` shows the whole value instead of truncating it, for tokens you must see in full.
  */
-export function CopyField({ label, value, wrap = false }: { label: string; value: string; wrap?: boolean }) {
+export function CopyField({
+  label,
+  value,
+  wrap = false,
+}: {
+  label: string;
+  value: string;
+  wrap?: boolean;
+}) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
 
   async function onCopy() {
@@ -54,8 +73,16 @@ export function CopyField({ label, value, wrap = false }: { label: string; value
           aria-label={`Copy ${label.toLowerCase()}`}
           className={secondaryButton}
         >
-          {state === "copied" ? <Check className="size-3.5" aria-hidden /> : <Copy className="size-3.5" aria-hidden />}
-          {state === "copied" ? "Copied" : state === "failed" ? "Try again" : "Copy"}
+          {state === "copied" ? (
+            <Check className="size-3.5" aria-hidden />
+          ) : (
+            <Copy className="size-3.5" aria-hidden />
+          )}
+          {state === "copied"
+            ? "Copied"
+            : state === "failed"
+              ? "Try again"
+              : "Copy"}
         </button>
       </div>
     </div>

@@ -4,12 +4,19 @@
  * the planner writes live behind `LeftoverPlanner`.
  */
 import { dateFromLocalDateKey } from "@/lib/workout-date";
-import { exerciseProgress, type SessionExercise } from "@/features/workout-session/session-model";
+import {
+  exerciseProgress,
+  type SessionExercise,
+} from "@/features/workout-session/session-model";
 
 export type LeftoverChoice = "next" | "later" | "drop";
 
 /** The next open planned day for the template this workout came from. */
-export type NextPlannedDay = { entryId: string; label: string; dateKey: string };
+export type NextPlannedDay = {
+  entryId: string;
+  label: string;
+  dateKey: string;
+};
 
 /** What Finish writes to the planner. */
 export type LeftoverPlan = {
@@ -28,12 +35,19 @@ export type LeftoverPlanner = {
 };
 
 /** Exercises with nothing logged, plan and maybe alike, in workout order. */
-export function untouchedExercises(exercises: SessionExercise[]): SessionExercise[] {
-  return exercises.filter((item) => exerciseProgress(item.sets) === "not_started");
+export function untouchedExercises(
+  exercises: SessionExercise[],
+): SessionExercise[] {
+  return exercises.filter(
+    (item) => exerciseProgress(item.sets) === "not_started",
+  );
 }
 
 /** Maybes default to Drop (never missed). Plan exercises carry over: next time if there is one. */
-export function defaultLeftoverChoice(item: SessionExercise, hasNext: boolean): LeftoverChoice {
+export function defaultLeftoverChoice(
+  item: SessionExercise,
+  hasNext: boolean,
+): LeftoverChoice {
   if (item.section === "maybe") return "drop";
   return hasNext ? "next" : "later";
 }
@@ -45,7 +59,9 @@ export function buildLeftoverPlan(
   workoutTitle: string,
 ): LeftoverPlan {
   const idsFor = (choice: LeftoverChoice) =>
-    items.filter((item) => choices[item.lineId] === choice).map((item) => item.exercise.id);
+    items
+      .filter((item) => choices[item.lineId] === choice)
+      .map((item) => item.exercise.id);
   return {
     next,
     nextIds: next ? idsFor("next") : [],
@@ -58,7 +74,11 @@ export function buildLeftoverPlan(
 export function plannedDayLabel(dateKey: string): string {
   const date = dateFromLocalDateKey(dateKey);
   if (!date) return dateKey;
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(date);
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(date);
 }
 
 /** The line under the choices, naming where each option sends things. */

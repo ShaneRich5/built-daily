@@ -15,8 +15,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { BottomSheet, BottomSheetClose } from "@/components/ui/bottom-sheet";
-import { muscleTargetSummary, targetingForExercise } from "@/lib/exercise-muscle";
-import { formatLocalDateKey, formatWorkoutHeaderDate } from "@/lib/workout-date";
+import {
+  muscleTargetSummary,
+  targetingForExercise,
+} from "@/lib/exercise-muscle";
+import {
+  formatLocalDateKey,
+  formatWorkoutHeaderDate,
+} from "@/lib/workout-date";
 import type { ExerciseHistoryEntry } from "@/lib/workout-session-repository";
 import { cn } from "@/lib/utils";
 import {
@@ -126,13 +132,19 @@ export function ExerciseDetailsSheet({
 
       <div className="flex flex-col gap-6 px-4 pt-4 pb-6">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{exercise.name}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {exercise.name}
+          </h2>
           <p className="mt-1 text-[13px] text-zinc-500 dark:text-zinc-400">
             {muscles ? `${muscles} · ` : ""}
             {metricLabel(exercise.metric)}
           </p>
           <div className="mt-3.5 grid grid-cols-4 gap-2">
-            <button type="button" className={actionTile} onClick={onSwapExercise}>
+            <button
+              type="button"
+              className={actionTile}
+              onClick={onSwapExercise}
+            >
               <ArrowLeftRight className="size-[18px]" aria-hidden />
               Swap
             </button>
@@ -145,7 +157,11 @@ export function ExerciseDetailsSheet({
               <ArrowUpDown className="size-[18px]" aria-hidden />
               Move…
             </button>
-            <button type="button" className={actionTile} onClick={onToggleSection}>
+            <button
+              type="button"
+              className={actionTile}
+              onClick={onToggleSection}
+            >
               {item.section === "maybe" ? (
                 <CircleDot className="size-[18px]" aria-hidden />
               ) : (
@@ -174,7 +190,8 @@ export function ExerciseDetailsSheet({
           {sets.map((set, setIndex) => {
             const setNumber = setIndex + 1;
             const suggestion = suggestionForSet(sets, setIndex, lastTimeSets);
-            const noteVisible = notesOpen.has(setIndex) || set.note.trim() !== "";
+            const noteVisible =
+              notesOpen.has(setIndex) || set.note.trim() !== "";
             return (
               <div
                 key={setIndex}
@@ -184,12 +201,18 @@ export function ExerciseDetailsSheet({
                   <span
                     className={cn(
                       "inline-flex w-6 shrink-0 justify-center font-mono text-xs",
-                      set.done ? "text-emerald-700 dark:text-emerald-400" : "text-zinc-500",
+                      set.done
+                        ? "text-emerald-700 dark:text-emerald-400"
+                        : "text-zinc-500",
                     )}
                   >
                     {set.done ? (
                       <>
-                        <Check className="size-3.5" strokeWidth={3} aria-hidden />
+                        <Check
+                          className="size-3.5"
+                          strokeWidth={3}
+                          aria-hidden
+                        />
                         <span className="sr-only">Set {setNumber}, done</span>
                       </>
                     ) : (
@@ -209,7 +232,12 @@ export function ExerciseDetailsSheet({
                   ))}
                   <button
                     type="button"
-                    className={cn(iconButton, set.note.trim() ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400")}
+                    className={cn(
+                      iconButton,
+                      set.note.trim()
+                        ? "text-zinc-900 dark:text-zinc-100"
+                        : "text-zinc-400",
+                    )}
                     aria-label={`Add a note to set ${setNumber}`}
                     aria-expanded={noteVisible}
                     onClick={() => toggleNote(setIndex)}
@@ -229,7 +257,10 @@ export function ExerciseDetailsSheet({
                 {extraFields.length > 0 ? (
                   <div className="grid grid-cols-3 gap-1.5 pl-7">
                     {extraFields.map((spec) => (
-                      <label key={spec.id} className="flex flex-col gap-1 text-[11px] font-medium text-zinc-500 uppercase">
+                      <label
+                        key={spec.id}
+                        className="flex flex-col gap-1 text-[11px] font-medium text-zinc-500 uppercase"
+                      >
                         {spec.label}
                         <SetFieldInput
                           spec={spec}
@@ -245,7 +276,10 @@ export function ExerciseDetailsSheet({
 
                 {noteVisible ? (
                   <div className="pl-7">
-                    <label htmlFor={`set-note-${lineId}-${setIndex}`} className="sr-only">
+                    <label
+                      htmlFor={`set-note-${lineId}-${setIndex}`}
+                      className="sr-only"
+                    >
                       Note for set {setNumber}
                     </label>
                     <input
@@ -253,7 +287,9 @@ export function ExerciseDetailsSheet({
                       type="text"
                       value={set.note}
                       maxLength={NOTE_MAX.set}
-                      onChange={(e) => onUpdateSet(setIndex, { note: e.target.value })}
+                      onChange={(e) =>
+                        onUpdateSet(setIndex, { note: e.target.value })
+                      }
                       placeholder="One-off detail for this set…"
                       className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-base text-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-zinc-900/10 sm:text-sm dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50"
                     />
@@ -282,7 +318,10 @@ export function ExerciseDetailsSheet({
           </div>
         </section>
 
-        <section aria-labelledby="details-history" className="flex flex-col gap-1">
+        <section
+          aria-labelledby="details-history"
+          className="flex flex-col gap-1"
+        >
           <h3
             id="details-history"
             className="text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400"
@@ -290,10 +329,13 @@ export function ExerciseDetailsSheet({
             Previous sessions
           </h3>
           {historyLoading ? (
-            <p className="py-2 text-sm text-zinc-500">Checking previous workouts…</p>
+            <p className="py-2 text-sm text-zinc-500">
+              Checking previous workouts…
+            </p>
           ) : history.length === 0 ? (
             <p className="py-2 text-sm text-zinc-500">
-              No previous sessions yet. Next time, your sets from today show up here.
+              No previous sessions yet. Next time, your sets from today show up
+              here.
             </p>
           ) : (
             <ul>
@@ -303,7 +345,9 @@ export function ExerciseDetailsSheet({
                   className="flex min-h-14 items-center gap-3 border-b border-zinc-100 py-1 dark:border-zinc-800"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">{historyDate(entry)}</span>
+                    <span className="block text-sm font-medium">
+                      {historyDate(entry)}
+                    </span>
                     <span className="block truncate font-mono text-xs text-zinc-600 dark:text-zinc-400">
                       {summarizeSetLogs(entry.line.sets) || "No sets recorded"}
                     </span>
@@ -343,4 +387,3 @@ export function ExerciseDetailsSheet({
     </BottomSheet>
   );
 }
-

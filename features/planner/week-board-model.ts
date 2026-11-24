@@ -5,10 +5,17 @@
  */
 import type { SavedActivity } from "@/lib/activity-types";
 import { getActivityTypeById } from "@/lib/activity-catalog";
-import { addDaysToDateKey, endOfWeekDateKey, startOfWeekDateKey } from "@/lib/calendar-views";
+import {
+  addDaysToDateKey,
+  endOfWeekDateKey,
+  startOfWeekDateKey,
+} from "@/lib/calendar-views";
 import { buildWorkoutHref } from "@/lib/planner-list-items";
 import type { ScheduledWorkoutMove } from "@/lib/planner-repository";
-import type { ScheduledWorkoutEntry, UnscheduledWorkoutEntry } from "@/lib/planner-types";
+import type {
+  ScheduledWorkoutEntry,
+  UnscheduledWorkoutEntry,
+} from "@/lib/planner-types";
 import { dateFromLocalDateKey, localDateKeyFromMs } from "@/lib/workout-date";
 import type { SessionSummary } from "@/lib/workout-session-repository";
 
@@ -66,13 +73,19 @@ function plural(n: number, word: string): string {
 export function shortDay(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
   if (!d) return dateKey;
-  return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(d);
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(d);
 }
 
 /** "Tue" */
 function weekdayShort(dateKey: string): string {
   const d = dateFromLocalDateKey(dateKey);
-  return d ? new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d) : dateKey;
+  return d
+    ? new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d)
+    : dateKey;
 }
 
 /** Whole days from `a` to `b` (positive when `b` is later). */
@@ -85,12 +98,16 @@ export function daysBetween(a: string, b: string): number {
 
 /** The day a finished workout belongs to: its workout date, else when it ended. */
 function sessionDay(s: SessionSummary): string {
-  return s.workoutDate ?? localDateKeyFromMs((s.endedAt ?? s.startedAt).getTime());
+  return (
+    s.workoutDate ?? localDateKeyFromMs((s.endedAt ?? s.startedAt).getTime())
+  );
 }
 
 /** Days with at least one finished workout. */
 export function workoutDayKeys(sessions: SessionSummary[]): Set<string> {
-  return new Set(sessions.filter((s) => s.status === "completed").map(sessionDay));
+  return new Set(
+    sessions.filter((s) => s.status === "completed").map(sessionDay),
+  );
 }
 
 /** A planned entry as a movable card. */
@@ -167,13 +184,19 @@ export function buildWeekBoard({
     const done: BoardDone[] = [
       ...sessions
         .filter((s) => s.status === "completed" && sessionDay(s) === dateKey)
-        .map((s) => ({ id: s.id, kind: "workout" as const, title: s.title, href: `/sessions/${s.id}` })),
+        .map((s) => ({
+          id: s.id,
+          kind: "workout" as const,
+          title: s.title,
+          href: `/sessions/${s.id}`,
+        })),
       ...activities
         .filter((a) => a.activity.activityDate === dateKey)
         .map(({ id, activity }) => ({
           id,
           kind: "activity" as const,
-          title: getActivityTypeById(activity.activityTypeId)?.name ?? "Activity",
+          title:
+            getActivityTypeById(activity.activityTypeId)?.name ?? "Activity",
           href: `/activities/${id}`,
         })),
     ];
@@ -189,15 +212,23 @@ export function buildWeekBoard({
     };
   });
 
-  const doneCount = days.reduce((n, d) => n + d.done.filter((x) => x.kind === "workout").length, 0);
-  const plannedCount = days.reduce(
-    (n, d) => n + d.cards.filter((c) => !c.slid && c.exerciseIds.length > 0).length,
+  const doneCount = days.reduce(
+    (n, d) => n + d.done.filter((x) => x.kind === "workout").length,
     0,
   );
-  const fmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
+  const plannedCount = days.reduce(
+    (n, d) =>
+      n + d.cards.filter((c) => !c.slid && c.exerciseIds.length > 0).length,
+    0,
+  );
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  });
   const startDate = dateFromLocalDateKey(start);
   const endDate = dateFromLocalDateKey(end);
-  const sameMonth = startDate && endDate && startDate.getMonth() === endDate.getMonth();
+  const sameMonth =
+    startDate && endDate && startDate.getMonth() === endDate.getMonth();
   const title =
     startDate && endDate
       ? `${fmt.format(startDate)} – ${sameMonth ? endDate.getDate() : fmt.format(endDate)}`
@@ -214,7 +245,11 @@ export function buildWeekBoard({
 }
 
 /** What dropping the picked card on this day would do, or null if it can't go there. */
-export function targetFor(day: BoardDay, picked: BoardCard, todayKey: string): BoardTarget | null {
+export function targetFor(
+  day: BoardDay,
+  picked: BoardCard,
+  todayKey: string,
+): BoardTarget | null {
   if (day.isPast || picked.dateKey === day.dateKey) return null;
   if (day.cards.length === 0) return "Move";
   // Swapping would push the other workout into the past, so a missed card just joins the day.
@@ -223,12 +258,19 @@ export function targetFor(day: BoardDay, picked: BoardCard, todayKey: string): B
 }
 
 /** The writes for dropping `picked` on `day`. */
-export function movesForDrop(day: BoardDay, picked: BoardCard, todayKey: string): ScheduledWorkoutMove[] {
+export function movesForDrop(
+  day: BoardDay,
+  picked: BoardCard,
+  todayKey: string,
+): ScheduledWorkoutMove[] {
   const target = targetFor(day, picked, todayKey);
   if (!target) return [];
-  const moves: ScheduledWorkoutMove[] = [{ id: picked.id, dateKey: day.dateKey }];
+  const moves: ScheduledWorkoutMove[] = [
+    { id: picked.id, dateKey: day.dateKey },
+  ];
   if (target === "Swap") {
-    for (const card of day.cards) moves.push({ id: card.id, dateKey: picked.dateKey });
+    for (const card of day.cards)
+      moves.push({ id: card.id, dateKey: picked.dateKey });
   }
   return moves;
 }
@@ -257,13 +299,22 @@ export function pushBackPlan(
   const from = card.dateKey;
   const shift = from < todayKey ? daysBetween(from, todayKey) : 1;
   const weekEnd = endOfWeekDateKey(from);
-  const others = movable.filter((e) => e.id !== card.id && e.dateKey >= from && e.dateKey <= weekEnd);
-  const affected = [{ id: card.id, label: card.title, dateKey: from }, ...others].sort((a, b) =>
-    a.dateKey.localeCompare(b.dateKey),
+  const others = movable.filter(
+    (e) => e.id !== card.id && e.dateKey >= from && e.dateKey <= weekEnd,
   );
-  const moves = affected.map((e) => ({ id: e.id, dateKey: addDaysToDateKey(e.dateKey, shift) }));
+  const affected = [
+    { id: card.id, label: card.title, dateKey: from },
+    ...others,
+  ].sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+  const moves = affected.map((e) => ({
+    id: e.id,
+    dateKey: addDaysToDateKey(e.dateKey, shift),
+  }));
   const summary = affected
-    .map((e) => `${e.label} → ${relativeWeekday(addDaysToDateKey(e.dateKey, shift), todayKey)}`)
+    .map(
+      (e) =>
+        `${e.label} → ${relativeWeekday(addDaysToDateKey(e.dateKey, shift), todayKey)}`,
+    )
     .join(", ");
   return { moves, summary };
 }

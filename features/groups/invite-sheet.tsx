@@ -5,8 +5,17 @@ import { useState } from "react";
 import { BottomSheet, BottomSheetClose } from "@/components/ui/bottom-sheet";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { DayTile, primaryGreen, sectionLabel } from "@/features/groups/group-ui";
-import { copyText, inviteUrl, shareLink, spacedCode } from "@/features/groups/share";
+import {
+  DayTile,
+  primaryGreen,
+  sectionLabel,
+} from "@/features/groups/group-ui";
+import {
+  copyText,
+  inviteUrl,
+  shareLink,
+  spacedCode,
+} from "@/features/groups/share";
 
 export type InvitePlanOption = {
   id: string;
@@ -39,7 +48,12 @@ export type InviteSheetProps = {
  */
 export function InviteSheet(props: InviteSheetProps) {
   return (
-    <BottomSheet open={props.open} onOpenChange={props.onOpenChange} title={`Invite to ${props.groupName}`} hideHeader>
+    <BottomSheet
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+      title={`Invite to ${props.groupName}`}
+      hideHeader
+    >
       {props.open ? <InviteBody {...props} /> : null}
     </BottomSheet>
   );
@@ -57,7 +71,9 @@ function InviteBody({
   onReset,
 }: InviteSheetProps) {
   const [withPlan, setWithPlan] = useState(Boolean(initialPlanId));
-  const [planId, setPlanId] = useState<string | null>(initialPlanId ?? plans[0]?.id ?? null);
+  const [planId, setPlanId] = useState<string | null>(
+    initialPlanId ?? plans[0]?.id ?? null,
+  );
   const [choosing, setChoosing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
@@ -77,14 +93,24 @@ function InviteBody({
   const onShare = async () => {
     const result = await shareLink({
       title: "Built Daily",
-      text: withPlan && plan ? `Join me for ${plan.label} on Built Daily` : `Join ${groupName} on Built Daily`,
+      text:
+        withPlan && plan
+          ? `Join me for ${plan.label} on Built Daily`
+          : `Join ${groupName} on Built Daily`,
       url,
     });
-    setShareNote(result === "copied" ? "Link copied. Paste it anywhere." : result === "failed" ? "Couldn’t share. Copy the link above." : null);
+    setShareNote(
+      result === "copied"
+        ? "Link copied. Paste it anywhere."
+        : result === "failed"
+          ? "Couldn’t share. Copy the link above."
+          : null,
+    );
   };
 
   const onResetClick = async () => {
-    if (!window.confirm("Reset the link? The old link and code stop working.")) return;
+    if (!window.confirm("Reset the link? The old link and code stop working."))
+      return;
     setResetting(true);
     try {
       await onReset();
@@ -97,7 +123,9 @@ function InviteBody({
     <div className="flex flex-col gap-4 px-4 pt-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Invite to {groupName}</h2>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Invite to {groupName}
+          </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {memberCount} of {maxMembers} spots taken
           </p>
@@ -141,7 +169,11 @@ function InviteBody({
           onClick={() => void onCopy()}
           className="inline-flex h-11 items-center gap-1.5 rounded-lg border border-zinc-200 px-3.5 text-sm font-medium dark:border-zinc-700"
         >
-          {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
+          {copied ? (
+            <Check className="size-4" aria-hidden />
+          ) : (
+            <Copy className="size-4" aria-hidden />
+          )}
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
@@ -149,7 +181,9 @@ function InviteBody({
       {plans.length > 0 ? (
         <div className="rounded-xl border border-zinc-200 p-3.5 dark:border-zinc-800">
           <label className="flex min-h-11 items-center justify-between gap-3">
-            <span className="text-[15px] font-medium">Also invite them to a plan</span>
+            <span className="text-[15px] font-medium">
+              Also invite them to a plan
+            </span>
             <Switch checked={withPlan} onCheckedChange={setWithPlan} />
           </label>
           {withPlan && plan ? (
@@ -171,8 +205,12 @@ function InviteBody({
                       >
                         <DayTile weekday={p.weekday} day={p.dayOfMonth} />
                         <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium">{p.label}</span>
-                          <span className="block truncate text-xs text-zinc-500">{p.meta}</span>
+                          <span className="block truncate text-sm font-medium">
+                            {p.label}
+                          </span>
+                          <span className="block truncate text-xs text-zinc-500">
+                            {p.meta}
+                          </span>
                         </span>
                       </button>
                     </li>
@@ -180,10 +218,18 @@ function InviteBody({
                 </ul>
               ) : (
                 <div className="mt-2 flex items-center gap-3">
-                  <DayTile weekday={plan.weekday} day={plan.dayOfMonth} tone="green" />
+                  <DayTile
+                    weekday={plan.weekday}
+                    day={plan.dayOfMonth}
+                    tone="green"
+                  />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold">{plan.label}</span>
-                    <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{plan.meta}</span>
+                    <span className="block truncate text-sm font-semibold">
+                      {plan.label}
+                    </span>
+                    <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                      {plan.meta}
+                    </span>
                   </span>
                   {plans.length > 1 ? (
                     <button
@@ -204,11 +250,19 @@ function InviteBody({
         </div>
       ) : null}
 
-      <button type="button" onClick={() => void onShare()} className={primaryGreen}>
+      <button
+        type="button"
+        onClick={() => void onShare()}
+        className={primaryGreen}
+      >
         <Share2 className="size-[18px]" aria-hidden />
         Share invite
       </button>
-      {shareNote ? <p className="text-center text-sm text-zinc-600 dark:text-zinc-300">{shareNote}</p> : null}
+      {shareNote ? (
+        <p className="text-center text-sm text-zinc-600 dark:text-zinc-300">
+          {shareNote}
+        </p>
+      ) : null}
 
       <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
         Anyone with the link can join until you reset it.

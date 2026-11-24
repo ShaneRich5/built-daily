@@ -65,7 +65,11 @@ type SetDoneButtonProps = {
   onToggle: () => void;
 };
 
-export function SetDoneButton({ done, setNumber, onToggle }: SetDoneButtonProps) {
+export function SetDoneButton({
+  done,
+  setNumber,
+  onToggle,
+}: SetDoneButtonProps) {
   return (
     <button
       type="button"
@@ -112,7 +116,9 @@ export function QuickSetRow({
       className="grid items-center gap-2"
       style={{ gridTemplateColumns: setGridColumns(fields.length) }}
     >
-      <span className="font-mono text-xs text-zinc-500 tabular-nums">{setNumber}</span>
+      <span className="font-mono text-xs text-zinc-500 tabular-nums">
+        {setNumber}
+      </span>
       {fields.map((spec) => (
         <SetFieldInput
           key={spec.id}
@@ -123,7 +129,11 @@ export function QuickSetRow({
           onChange={onChange}
         />
       ))}
-      <SetDoneButton done={set.done} setNumber={setNumber} onToggle={onToggleDone} />
+      <SetDoneButton
+        done={set.done}
+        setNumber={setNumber}
+        onToggle={onToggleDone}
+      />
     </div>
   );
 }

@@ -7,7 +7,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Avatar, card, DayTile, outlineButton, primaryGreen, sectionLabel } from "@/features/groups/group-ui";
+import {
+  Avatar,
+  card,
+  DayTile,
+  outlineButton,
+  primaryGreen,
+  sectionLabel,
+} from "@/features/groups/group-ui";
 
 export type PlanViewProps = {
   groupName: string;
@@ -52,7 +59,9 @@ export function PlanView(props: PlanViewProps) {
           <ChevronLeft className="size-4" aria-hidden />
           Back
         </Link>
-        <span className="truncate text-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">{props.groupName}</span>
+        <span className="truncate text-center text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+          {props.groupName}
+        </span>
         <span className="flex justify-end">
           {props.isCreator ? (
             <DropdownMenu>
@@ -68,10 +77,17 @@ export function PlanView(props: PlanViewProps) {
                 <MoreHorizontal className="size-5" aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={6} className="w-48">
-                <DropdownMenuItem className="min-h-11" onClick={props.onEditPlan}>
+                <DropdownMenuItem
+                  className="min-h-11"
+                  onClick={props.onEditPlan}
+                >
                   Edit time, place or note
                 </DropdownMenuItem>
-                <DropdownMenuItem variant="destructive" className="min-h-11" onClick={props.onCancelPlan}>
+                <DropdownMenuItem
+                  variant="destructive"
+                  className="min-h-11"
+                  onClick={props.onCancelPlan}
+                >
                   Cancel plan
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -83,15 +99,22 @@ export function PlanView(props: PlanViewProps) {
       <header className="flex items-center gap-3.5">
         <DayTile weekday={props.weekday} day={props.dayOfMonth} tone="dark" />
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">{props.label}</h1>
-          <p className="truncate text-sm text-zinc-600 dark:text-zinc-300">{props.meta}</p>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">Planned by {props.plannedBy}</p>
+          <h1 className="truncate text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {props.label}
+          </h1>
+          <p className="truncate text-sm text-zinc-600 dark:text-zinc-300">
+            {props.meta}
+          </p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Planned by {props.plannedBy}
+          </p>
         </div>
       </header>
 
       {props.note ? (
         <p className="rounded-2xl rounded-tl-sm bg-zinc-100 px-3.5 py-2.5 text-sm text-zinc-800 dark:bg-zinc-900 dark:text-zinc-200">
-          <span className="font-semibold">{props.note.author}:</span> {props.note.text}
+          <span className="font-semibold">{props.note.author}:</span>{" "}
+          {props.note.text}
         </p>
       ) : null}
 
@@ -99,13 +122,17 @@ export function PlanView(props: PlanViewProps) {
         <h2 id="going-heading" className={sectionLabel}>
           Going · {props.going.length}
         </h2>
-        <ul className={cn(card, "divide-y divide-zinc-100 dark:divide-zinc-800")}>
+        <ul
+          className={cn(card, "divide-y divide-zinc-100 dark:divide-zinc-800")}
+        >
           {props.going.map((g) => (
             <li key={g.uid} className="flex items-center gap-3 px-3.5 py-2.5">
               <Avatar name={g.name} size="sm" />
               <span className="min-w-0">
                 <span className="block text-[15px] font-medium">{g.name}</span>
-                <span className="block text-xs text-zinc-500 dark:text-zinc-400">{g.detail}</span>
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                  {g.detail}
+                </span>
               </span>
             </li>
           ))}
@@ -117,25 +144,49 @@ export function PlanView(props: PlanViewProps) {
         >
           Invite a friend to this
         </button>
-        {props.notYet ? <p className="text-[13px] text-zinc-500 dark:text-zinc-400">{props.notYet}</p> : null}
+        {props.notYet ? (
+          <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+            {props.notYet}
+          </p>
+        ) : null}
       </section>
 
       {props.exercises.length > 0 ? (
-        <section aria-labelledby="workout-heading" className="flex flex-col gap-2">
+        <section
+          aria-labelledby="workout-heading"
+          className="flex flex-col gap-2"
+        >
           <h2 id="workout-heading" className={sectionLabel}>
             The workout
           </h2>
-          <ol className={cn(card, "divide-y divide-zinc-100 dark:divide-zinc-800")}>
+          <ol
+            className={cn(
+              card,
+              "divide-y divide-zinc-100 dark:divide-zinc-800",
+            )}
+          >
             {props.exercises.map((e, i) => (
-              <li key={`${e.name}-${i}`} className="flex items-center gap-3 px-3.5 py-2.5">
-                <span className="w-5 text-right font-mono text-xs text-zinc-400">{i + 1}</span>
-                <span className="min-w-0 flex-1 truncate text-[15px]">{e.name}</span>
-                {e.sets ? <span className="text-xs text-zinc-500 dark:text-zinc-400">{e.sets} sets</span> : null}
+              <li
+                key={`${e.name}-${i}`}
+                className="flex items-center gap-3 px-3.5 py-2.5"
+              >
+                <span className="w-5 text-right font-mono text-xs text-zinc-400">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[15px]">
+                  {e.name}
+                </span>
+                {e.sets ? (
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {e.sets} sets
+                  </span>
+                ) : null}
               </li>
             ))}
           </ol>
           <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
-            You’ll log your own sets. Starting it on {props.weekday} copies these exercises into your workout.
+            You’ll log your own sets. Starting it on {props.weekday} copies
+            these exercises into your workout.
           </p>
         </section>
       ) : null}
@@ -145,16 +196,29 @@ export function PlanView(props: PlanViewProps) {
           <div className="mx-auto flex max-w-2xl flex-col gap-1.5">
             <div className="flex gap-2">
               {props.isGoing ? (
-                <button type="button" disabled={props.busy} onClick={props.onCantMake} className={cn(outlineButton, "h-12 flex-1")}>
+                <button
+                  type="button"
+                  disabled={props.busy}
+                  onClick={props.onCantMake}
+                  className={cn(outlineButton, "h-12 flex-1")}
+                >
                   Can’t make it
                 </button>
               ) : null}
               {startNow && props.startHref ? (
-                <Link href={props.startHref} className={cn(primaryGreen, "flex-[2]")}>
+                <Link
+                  href={props.startHref}
+                  className={cn(primaryGreen, "flex-[2]")}
+                >
                   Start
                 </Link>
               ) : props.isGoing ? null : (
-                <button type="button" disabled={props.busy} onClick={props.onImIn} className={cn(primaryGreen, "flex-[2]")}>
+                <button
+                  type="button"
+                  disabled={props.busy}
+                  onClick={props.onImIn}
+                  className={cn(primaryGreen, "flex-[2]")}
+                >
                   {props.busy ? "Saving…" : "I’m in"}
                 </button>
               )}

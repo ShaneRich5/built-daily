@@ -27,14 +27,20 @@ async function requireUid(request: Request): Promise<string | Response> {
   const header = request.headers.get("authorization") ?? "";
   const idToken = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
   if (!idToken) {
-    return Response.json({ error: "Missing Authorization header" }, { status: 401 });
+    return Response.json(
+      { error: "Missing Authorization header" },
+      { status: 401 },
+    );
   }
 
   try {
     const decoded = await getAdminAuth().verifyIdToken(idToken);
     return decoded.uid;
   } catch {
-    return Response.json({ error: "Invalid or expired session" }, { status: 401 });
+    return Response.json(
+      { error: "Invalid or expired session" },
+      { status: 401 },
+    );
   }
 }
 
@@ -73,7 +79,10 @@ export async function POST(request: Request) {
     client = await getOAuthClient(clientId);
   } catch (err) {
     console.error("OAuth client lookup failed:", err);
-    return Response.json({ error: "Could not verify the app" }, { status: 500 });
+    return Response.json(
+      { error: "Could not verify the app" },
+      { status: 500 },
+    );
   }
   if (!client) {
     return Response.json({ error: "Unknown client_id" }, { status: 400 });

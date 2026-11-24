@@ -21,9 +21,9 @@ const firebaseConfig = {
 export function isFirebaseConfigured(): boolean {
   return Boolean(
     firebaseConfig.apiKey &&
-      firebaseConfig.authDomain &&
-      firebaseConfig.projectId &&
-      firebaseConfig.appId,
+    firebaseConfig.authDomain &&
+    firebaseConfig.projectId &&
+    firebaseConfig.appId,
   );
 }
 
@@ -63,7 +63,9 @@ export function getFirestoreDb(): Firestore | null {
   if (!db) {
     try {
       db = initializeFirestore(a, {
-        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
       });
     } catch {
       // Already initialized (e.g. after a hot reload): use that instance.

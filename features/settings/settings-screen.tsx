@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useAuth } from "@/components/auth-provider";
-import { SettingsNotice, SettingsView } from "@/features/settings/settings-view";
+import {
+  SettingsNotice,
+  SettingsView,
+} from "@/features/settings/settings-view";
 import { useMcpTokens } from "@/features/settings/use-mcp-tokens";
 import { usePublicProfile } from "@/features/settings/use-public-profile";
 
@@ -13,7 +16,11 @@ export function SettingsScreen() {
   const tokens = useMcpTokens();
 
   if (!firebaseReady) {
-    return <SettingsNotice>Add Firebase configuration to manage settings.</SettingsNotice>;
+    return (
+      <SettingsNotice>
+        Add Firebase configuration to manage settings.
+      </SettingsNotice>
+    );
   }
   if (loading) {
     return <SettingsNotice>Loading your account…</SettingsNotice>;

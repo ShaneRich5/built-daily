@@ -15,7 +15,10 @@ type LoginFormProps = {
   initialMode?: Mode;
 };
 
-export function LoginForm({ redirectTo = "/", initialMode = "signin" }: LoginFormProps) {
+export function LoginForm({
+  redirectTo = "/",
+  initialMode = "signin",
+}: LoginFormProps) {
   const router = useRouter();
   const { signIn, signUp, signInWithGoogle, firebaseReady } = useAuth();
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -73,8 +76,15 @@ export function LoginForm({ redirectTo = "/", initialMode = "signin" }: LoginFor
       <div className="rounded-xl border border-dashed border-zinc-200 bg-zinc-50/80 p-6 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-400">
         <p>Firebase is not configured.</p>
         <p className="mt-2 text-xs text-zinc-500">
-          Set <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">NEXT_PUBLIC_FIREBASE_*</code>{" "}
-          in <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">.env.local</code>.
+          Set{" "}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">
+            NEXT_PUBLIC_FIREBASE_*
+          </code>{" "}
+          in{" "}
+          <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-800">
+            .env.local
+          </code>
+          .
         </p>
         <Link
           href="/"
@@ -183,9 +193,7 @@ export function LoginForm({ redirectTo = "/", initialMode = "signin" }: LoginFor
             className="h-12 w-full rounded-xl border border-zinc-200 bg-white px-3 text-zinc-900 outline-none ring-zinc-900/10 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-50 dark:ring-white/10"
           />
           {mode === "signup" && (
-            <p className="mt-1 text-xs text-zinc-500">
-              At least 6 characters.
-            </p>
+            <p className="mt-1 text-xs text-zinc-500">At least 6 characters.</p>
           )}
         </div>
 
@@ -212,7 +220,10 @@ export function LoginForm({ redirectTo = "/", initialMode = "signin" }: LoginFor
       </form>
 
       <p className="text-center text-sm text-zinc-500">
-        <Link href="/" className="font-medium text-zinc-800 underline-offset-2 hover:underline dark:text-zinc-200">
+        <Link
+          href="/"
+          className="font-medium text-zinc-800 underline-offset-2 hover:underline dark:text-zinc-200"
+        >
           Back to home
         </Link>
       </p>

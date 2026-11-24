@@ -6,8 +6,10 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 /** "3 workouts and 1 activity", "1 workout", "2 activities". */
 export function selectionLabel(workouts: number, activities: number): string {
   const parts: string[] = [];
-  if (workouts > 0) parts.push(`${workouts} workout${workouts === 1 ? "" : "s"}`);
-  if (activities > 0) parts.push(`${activities} activit${activities === 1 ? "y" : "ies"}`);
+  if (workouts > 0)
+    parts.push(`${workouts} workout${workouts === 1 ? "" : "s"}`);
+  if (activities > 0)
+    parts.push(`${activities} activit${activities === 1 ? "y" : "ies"}`);
   return parts.join(" and ") || "nothing";
 }
 

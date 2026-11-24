@@ -42,7 +42,9 @@ function asOptionalFinite(v: unknown): number | null {
   return v;
 }
 
-export function activityDocToFirestore(doc: ActivityDoc): Record<string, unknown> {
+export function activityDocToFirestore(
+  doc: ActivityDoc,
+): Record<string, unknown> {
   return {
     activityTypeId: doc.activityTypeId,
     activityDate: doc.activityDate,
@@ -80,8 +82,7 @@ export function firestoreToActivityDoc(
       : typeof data.activityTime === "string"
         ? data.activityTime
         : null;
-  const activityTime =
-    timeRaw && isValidWorkoutTime(timeRaw) ? timeRaw : null;
+  const activityTime = timeRaw && isValidWorkoutTime(timeRaw) ? timeRaw : null;
 
   const durationRaw = asOptionalFinite(data.durationMin);
   const durationMin =
@@ -97,8 +98,7 @@ export function firestoreToActivityDoc(
 
   const visibility: ActivityVisibility =
     data.visibility === "private" ? "private" : "private";
-  const source: ActivitySource =
-    data.source === "manual" ? "manual" : "manual";
+  const source: ActivitySource = data.source === "manual" ? "manual" : "manual";
 
   const createdAt = asTimestamp(data.createdAt);
   const updatedAt = asTimestamp(data.updatedAt) ?? createdAt;
@@ -127,8 +127,7 @@ export function buildActivityDoc(input: LogActivityInput): ActivityDoc | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.activityDate)) return null;
 
   const timeRaw = input.activityTime?.trim() || null;
-  const activityTime =
-    timeRaw && isValidWorkoutTime(timeRaw) ? timeRaw : null;
+  const activityTime = timeRaw && isValidWorkoutTime(timeRaw) ? timeRaw : null;
 
   let durationMin: number | null = null;
   if (input.durationMin != null && Number.isFinite(input.durationMin)) {
@@ -146,7 +145,8 @@ export function buildActivityDoc(input: LogActivityInput): ActivityDoc | null {
     if (n > 0 && n <= 500) distanceMiles = n;
   }
 
-  const locationName = input.locationName?.trim().slice(0, ACTIVITY_LOCATION_LIMIT) || null;
+  const locationName =
+    input.locationName?.trim().slice(0, ACTIVITY_LOCATION_LIMIT) || null;
   const notes = input.notes?.trim().slice(0, ACTIVITY_NOTE_LIMIT) || null;
   const now = new Date();
 

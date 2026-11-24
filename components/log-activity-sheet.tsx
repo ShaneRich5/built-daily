@@ -7,10 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  ACTIVITY_CATALOG,
-  getActivityTypeById,
-} from "@/lib/activity-catalog";
+import { ACTIVITY_CATALOG, getActivityTypeById } from "@/lib/activity-catalog";
 import {
   logActivity,
   subscribeRecentActivities,
@@ -350,7 +347,9 @@ export function LogActivitySheet({
               </div>
 
               {error ? (
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {error}
+                </p>
               ) : null}
 
               <Button type="submit" className="h-11 w-full" disabled={saving}>

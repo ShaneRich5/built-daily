@@ -67,7 +67,10 @@ export function useMcpTokens() {
   }
 
   const loaded = Boolean(user) && loadedFor === user?.uid;
-  const serverUrl = typeof window !== "undefined" ? `${window.location.origin}/api/mcp` : "/api/mcp";
+  const serverUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/api/mcp`
+      : "/api/mcp";
 
   return {
     loaded,

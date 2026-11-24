@@ -45,7 +45,9 @@ async function readParams(
   request: Request,
 ): Promise<Record<string, string> | null> {
   try {
-    if ((request.headers.get("content-type") ?? "").includes("application/json")) {
+    if (
+      (request.headers.get("content-type") ?? "").includes("application/json")
+    ) {
       const body = (await request.json()) as Record<string, unknown>;
       const params: Record<string, string> = {};
       for (const [key, value] of Object.entries(body)) {
@@ -95,25 +97,35 @@ async function issueTokens(uid: string, clientId: string): Promise<Response> {
 async function handleAuthorizationCode(
   params: Record<string, string>,
 ): Promise<Response> {
-  const { code = "", code_verifier = "", client_id = "", redirect_uri = "" } =
-    params;
+  const {
+    code = "",
+    code_verifier = "",
+    client_id = "",
+    redirect_uri = "",
+  } = params;
   if (!code || !code_verifier) {
-    return oauthError(
-      "invalid_request",
-      "code and code_verifier are required",
-    );
+    return oauthError("invalid_request", "code and code_verifier are required");
   }
 
   const grant = await redeemAuthCode(code);
   if (!grant) {
-    return oauthError("invalid_grant", "Authorization code is invalid or expired");
+    return oauthError(
+      "invalid_grant",
+      "Authorization code is invalid or expired",
+    );
   }
   if (client_id !== grant.clientId) {
-    return oauthError("invalid_grant", "Authorization code was issued to another client");
+    return oauthError(
+      "invalid_grant",
+      "Authorization code was issued to another client",
+    );
   }
   // RFC 6749 §4.1.3: the redirect_uri must match the one in the /authorize request.
   if (redirect_uri !== grant.redirectUri) {
-    return oauthError("invalid_grant", "redirect_uri does not match the authorization request");
+    return oauthError(
+      "invalid_grant",
+      "redirect_uri does not match the authorization request",
+    );
   }
   if (!verifyPkce(code_verifier, grant.codeChallenge)) {
     return oauthError("invalid_grant", "PKCE verification failed");
@@ -132,10 +144,16 @@ async function handleRefreshToken(
 
   const owner = await consumeRefreshToken(refresh_token);
   if (!owner) {
-    return oauthError("invalid_grant", "Refresh token is invalid or already used");
+    return oauthError(
+      "invalid_grant",
+      "Refresh token is invalid or already used",
+    );
   }
   if (client_id && client_id !== owner.clientId) {
-    return oauthError("invalid_grant", "Refresh token was issued to another client");
+    return oauthError(
+      "invalid_grant",
+      "Refresh token was issued to another client",
+    );
   }
 
   return issueTokens(owner.uid, owner.clientId);

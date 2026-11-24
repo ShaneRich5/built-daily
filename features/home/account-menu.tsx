@@ -47,20 +47,33 @@ export function AccountMenu({ email, onSignOut }: AccountMenuProps) {
             <DropdownMenuSeparator />
           </>
         ) : null}
-        <DropdownMenuItem className="min-h-11 gap-2" render={<Link href="/catalog" />}>
+        <DropdownMenuItem
+          className="min-h-11 gap-2"
+          render={<Link href="/catalog" />}
+        >
           <BookOpen className="size-4" aria-hidden />
           Exercise catalog
         </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11 gap-2" render={<Link href="/history" />}>
+        <DropdownMenuItem
+          className="min-h-11 gap-2"
+          render={<Link href="/history" />}
+        >
           <History className="size-4" aria-hidden />
           History &amp; export
         </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11 gap-2" render={<Link href="/settings" />}>
+        <DropdownMenuItem
+          className="min-h-11 gap-2"
+          render={<Link href="/settings" />}
+        >
           <Settings className="size-4" aria-hidden />
           Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" className="min-h-11 gap-2" onClick={onSignOut}>
+        <DropdownMenuItem
+          variant="destructive"
+          className="min-h-11 gap-2"
+          onClick={onSignOut}
+        >
           <LogOut className="size-4" aria-hidden />
           Sign out
         </DropdownMenuItem>

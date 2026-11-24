@@ -6,9 +6,17 @@ import { cn } from "@/lib/utils";
 import { SHARED_PLAN_LIMITS, type SharedPlanExercise } from "@/lib/group-types";
 import type { NewSharedPlanInput } from "@/lib/group-plan-repository";
 import { nextSevenDays } from "@/features/groups/groups-model";
-import { outlineButton, primaryGreen, sectionLabel } from "@/features/groups/group-ui";
+import {
+  outlineButton,
+  primaryGreen,
+  sectionLabel,
+} from "@/features/groups/group-ui";
 
-export type PlanTemplateOption = { id: string; name: string; exercises: SharedPlanExercise[] };
+export type PlanTemplateOption = {
+  id: string;
+  name: string;
+  exercises: SharedPlanExercise[];
+};
 
 const TIME_CHIPS = [
   { id: "any", label: "Anytime", time: null },
@@ -68,7 +76,9 @@ function PlanTogetherForm({
   onSubmit,
 }: PlanTogetherSheetProps) {
   const days = nextSevenDays(todayKey);
-  const [templateId, setTemplateId] = useState<string>(templates[0]?.id ?? OTHER);
+  const [templateId, setTemplateId] = useState<string>(
+    templates[0]?.id ?? OTHER,
+  );
   const [otherName, setOtherName] = useState("");
   const [dateKey, setDateKey] = useState(days[0]!.dateKey);
   const [timeChip, setTimeChip] = useState<TimeChipId>("any");
@@ -83,7 +93,9 @@ function PlanTogetherForm({
   const label = (template ? template.name : otherName).trim();
   const day = days.find((d) => d.dateKey === dateKey)!;
   const time =
-    timeChip === "custom" ? customTime || null : (TIME_CHIPS.find((c) => c.id === timeChip)?.time ?? null);
+    timeChip === "custom"
+      ? customTime || null
+      : (TIME_CHIPS.find((c) => c.id === timeChip)?.time ?? null);
   const canSubmit = label.length > 0 && groupIds.length > 0 && !busy;
 
   const submit = async () => {
@@ -101,7 +113,10 @@ function PlanTogetherForm({
         exercises: template?.exercises ?? [],
       });
       if (ok) onOpenChange(false);
-      else setError("Couldn’t save the plan. Check your connection and try again.");
+      else
+        setError(
+          "Couldn’t save the plan. Check your connection and try again.",
+        );
     } catch {
       setError("Couldn’t save the plan. Check your connection and try again.");
     } finally {
@@ -179,7 +194,9 @@ function PlanTogetherForm({
                 <span
                   className={cn(
                     "text-[11px] font-semibold",
-                    on ? "text-emerald-300 dark:text-emerald-700" : "text-emerald-700 dark:text-emerald-400",
+                    on
+                      ? "text-emerald-300 dark:text-emerald-700"
+                      : "text-emerald-700 dark:text-emerald-400",
                     count === 0 && "invisible",
                   )}
                   aria-hidden
@@ -190,7 +207,9 @@ function PlanTogetherForm({
             );
           })}
         </div>
-        <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">Number = crew already training</p>
+        <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+          Number = crew already training
+        </p>
       </fieldset>
 
       <fieldset className="flex flex-col gap-2">
@@ -248,14 +267,19 @@ function PlanTogetherForm({
           <legend className={cn(sectionLabel, "mb-2")}>Share with</legend>
           <div className="flex flex-col gap-1">
             {groups.map((g) => (
-              <label key={g.id} className="flex min-h-11 items-center gap-3 text-[15px]">
+              <label
+                key={g.id}
+                className="flex min-h-11 items-center gap-3 text-[15px]"
+              >
                 <input
                   type="checkbox"
                   className="size-5 accent-emerald-700"
                   checked={groupIds.includes(g.id)}
                   onChange={(e) =>
                     setGroupIds((prev) =>
-                      e.target.checked ? [...prev, g.id] : prev.filter((id) => id !== g.id),
+                      e.target.checked
+                        ? [...prev, g.id]
+                        : prev.filter((id) => id !== g.id),
                     )
                   }
                 />
@@ -266,13 +290,23 @@ function PlanTogetherForm({
         </fieldset>
       ) : null}
 
-      {error ? <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">{error}</p>
+      ) : null}
 
       <div className="flex gap-2">
-        <button type="button" className={cn(outlineButton, "h-12 flex-1")} onClick={() => onOpenChange(false)}>
+        <button
+          type="button"
+          className={cn(outlineButton, "h-12 flex-1")}
+          onClick={() => onOpenChange(false)}
+        >
           Cancel
         </button>
-        <button type="submit" disabled={!canSubmit} className={cn(primaryGreen, "flex-[2]")}>
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className={cn(primaryGreen, "flex-[2]")}
+        >
           {busy ? "Saving…" : `Plan ${label || "it"} · ${day.short}`}
         </button>
       </div>

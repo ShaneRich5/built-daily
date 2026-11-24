@@ -15,8 +15,8 @@ const MIN_MOBILE_FONT_PX = 16;
 
 async function expectAtLeastMobileFontSize(locator: Locator) {
   await expect(locator).toBeVisible();
-  const fontSizePx = await locator.evaluate(
-    (el) => parseFloat(getComputedStyle(el).fontSize),
+  const fontSizePx = await locator.evaluate((el) =>
+    parseFloat(getComputedStyle(el).fontSize),
   );
   expect(fontSizePx).toBeGreaterThanOrEqual(MIN_MOBILE_FONT_PX);
 }
@@ -25,10 +25,7 @@ async function signIn(page: Page) {
   await page.goto("/login");
   await page.getByRole("textbox", { name: "Email" }).fill(EMAIL!);
   await page.getByRole("textbox", { name: "Password" }).fill(PASSWORD!);
-  await page
-    .locator("form")
-    .getByRole("button", { name: "Sign in" })
-    .click();
+  await page.locator("form").getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL("/");
 }
 
@@ -66,7 +63,9 @@ test.describe("mobile input zoom (issue #38)", () => {
     await expectAtLeastMobileFontSize(
       page.getByRole("searchbox", { name: "Search exercises" }),
     );
-    await page.getByRole("searchbox", { name: "Search exercises" }).fill("back squat");
+    await page
+      .getByRole("searchbox", { name: "Search exercises" })
+      .fill("back squat");
     await page.getByRole("button", { name: /^Barbell back squat/ }).click();
     await page.getByRole("button", { name: "Add 1 exercise" }).click();
 

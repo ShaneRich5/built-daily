@@ -10,8 +10,14 @@ const nextConfig: NextConfig = {
       {
         source: "/sw.js",
         headers: [
-          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
-          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          {
+            key: "Cache-Control",
+            value: "no-cache, no-store, must-revalidate",
+          },
+          {
+            key: "Content-Type",
+            value: "application/javascript; charset=utf-8",
+          },
         ],
       },
     ];
@@ -27,7 +33,10 @@ const nextConfig: NextConfig = {
     // missing. Turbopack skips it; webpack warns. Silence only that warning.
     config.ignoreWarnings = [
       ...(config.ignoreWarnings ?? []),
-      { module: /@vercel[\\/]flags-core/, message: /@vercel\/flags-definitions/ },
+      {
+        module: /@vercel[\\/]flags-core/,
+        message: /@vercel\/flags-definitions/,
+      },
     ];
     return config;
   },

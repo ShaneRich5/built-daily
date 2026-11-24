@@ -27,8 +27,7 @@ export type OAuthClient = {
  * caller.
  */
 export type RegisterClientResult =
-  | { ok: true; client: OAuthClient }
-  | { ok: false; error: string };
+  { ok: true; client: OAuthClient } | { ok: false; error: string };
 
 /**
  * Registered redirect targets must be exact HTTPS URLs. `http://` is allowed

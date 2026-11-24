@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import type { ScheduledWorkoutMove } from "@/lib/planner-repository";
-import type { ScheduledWorkoutEntry, UnscheduledWorkoutEntry } from "@/lib/planner-types";
+import type {
+  ScheduledWorkoutEntry,
+  UnscheduledWorkoutEntry,
+} from "@/lib/planner-types";
 import type { SessionSummary } from "@/lib/workout-session-repository";
 import { MoveSheet } from "@/features/planner/move-sheet";
 import { WeekBoard } from "@/features/planner/week-board";
@@ -17,7 +20,12 @@ import {
 /** Wednesday, so the board shows a done day, a missed day and days ahead. */
 const TODAY = "2026-11-11";
 
-function planned(id: string, dateKey: string, label: string, exercises: number): ScheduledWorkoutEntry {
+function planned(
+  id: string,
+  dateKey: string,
+  label: string,
+  exercises: number,
+): ScheduledWorkoutEntry {
   return {
     id,
     dateKey,
@@ -30,7 +38,11 @@ function planned(id: string, dateKey: string, label: string, exercises: number):
   };
 }
 
-function unscheduled(id: string, label: string, exercises: number): UnscheduledWorkoutEntry {
+function unscheduled(
+  id: string,
+  label: string,
+  exercises: number,
+): UnscheduledWorkoutEntry {
   return { ...planned(id, TODAY, label, exercises), dateKey: null };
 }
 
@@ -70,9 +82,16 @@ type DemoProps = {
 };
 
 /** The board with local state: tap a handle, tap a day, or tap a card for the move sheet. */
-function BoardDemo({ entries: initial, sessions, pickedId, sheetFor }: DemoProps) {
+function BoardDemo({
+  entries: initial,
+  sessions,
+  pickedId,
+  sheetFor,
+}: DemoProps) {
   const [entries, setEntries] = useState(initial);
-  const dated = entries.filter((e): e is ScheduledWorkoutEntry => e.dateKey !== null);
+  const dated = entries.filter(
+    (e): e is ScheduledWorkoutEntry => e.dateKey !== null,
+  );
   const tray = entries
     .filter((e): e is UnscheduledWorkoutEntry => e.dateKey === null)
     .map((e) => toBoardCard(e, TODAY));
@@ -85,13 +104,19 @@ function BoardDemo({ entries: initial, sessions, pickedId, sheetFor }: DemoProps
     weeklyGoal: 3,
   });
   const cards = [...board.days.flatMap((d) => d.cards), ...tray];
-  const [picked, setPicked] = useState<BoardCard | null>(cards.find((c) => c.id === pickedId) ?? null);
-  const [sheetCard, setSheetCard] = useState<BoardCard | null>(cards.find((c) => c.id === sheetFor) ?? null);
+  const [picked, setPicked] = useState<BoardCard | null>(
+    cards.find((c) => c.id === pickedId) ?? null,
+  );
+  const [sheetCard, setSheetCard] = useState<BoardCard | null>(
+    cards.find((c) => c.id === sheetFor) ?? null,
+  );
   const apply = (moves: ScheduledWorkoutMove[]) =>
     setEntries((prev) =>
       prev.map((e) => {
         const move = moves.find((m) => m.id === e.id);
-        return move ? ({ ...e, dateKey: move.dateKey } as (typeof prev)[number]) : e;
+        return move
+          ? ({ ...e, dateKey: move.dateKey } as (typeof prev)[number])
+          : e;
       }),
     );
   return (

@@ -14,15 +14,30 @@ const summary: SavedSessionSummary = {
   ],
   muscles: "Chest · shoulders · arms",
   exercises: [
-    { lineId: "a", name: "Barbell bench press", sets: ["135 lb × 8", "145 lb × 6", "145 lb × 6"], note: null },
+    {
+      lineId: "a",
+      name: "Barbell bench press",
+      sets: ["135 lb × 8", "145 lb × 6", "145 lb × 6"],
+      note: null,
+    },
     {
       lineId: "b",
       name: "Dumbbell incline press",
       sets: ["50 lb × 10", "50 lb × 9", "50 lb × 8"],
       note: "Shoulder fine at this angle.",
     },
-    { lineId: "c", name: "Cable chest fly", sets: ["30 lb × 12", "30 lb × 12", "30 lb × 12", "35 lb × 10"], note: null },
-    { lineId: "d", name: "Cable triceps pushdown", sets: ["50 lb × 12", "50 lb × 12", "55 lb × 10", "55 lb × 9"], note: null },
+    {
+      lineId: "c",
+      name: "Cable chest fly",
+      sets: ["30 lb × 12", "30 lb × 12", "30 lb × 12", "35 lb × 10"],
+      note: null,
+    },
+    {
+      lineId: "d",
+      name: "Cable triceps pushdown",
+      sets: ["50 lb × 12", "50 lb × 12", "55 lb × 10", "55 lb × 9"],
+      note: null,
+    },
   ],
 };
 
@@ -66,7 +81,16 @@ export const OlderWorkoutWithDuration: Story = {
 export const NoDetails: Story = {
   name: "Logged without details",
   args: {
-    summary: { ...summary, note: null, muscles: null, exercises: [], stats: [{ label: "Exercises", value: "0" }, { label: "Sets", value: "0" }] },
+    summary: {
+      ...summary,
+      note: null,
+      muscles: null,
+      exercises: [],
+      stats: [
+        { label: "Exercises", value: "0" },
+        { label: "Sets", value: "0" },
+      ],
+    },
   },
 };
 

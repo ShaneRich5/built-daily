@@ -9,9 +9,18 @@ export const metadata = {
   title: "Group",
 };
 
-export default async function GroupPage({ params, searchParams }: GroupPageProps) {
+export default async function GroupPage({
+  params,
+  searchParams,
+}: GroupPageProps) {
   const { groupId } = await params;
   const { invite } = await searchParams;
   // `key` so a fresh `?invite=1` (right after creating) opens the invite sheet.
-  return <GroupScreen key={invite ?? ""} groupId={groupId} openInvite={invite === "1"} />;
+  return (
+    <GroupScreen
+      key={invite ?? ""}
+      groupId={groupId}
+      openInvite={invite === "1"}
+    />
+  );
 }

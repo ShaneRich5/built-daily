@@ -30,4 +30,6 @@ export type ScheduledWorkoutEntry = ScheduledWorkoutDoc & { id: string };
  * Stored as a scheduledWorkouts doc with `dateKey: null`, so date-range
  * queries never return it.
  */
-export type UnscheduledWorkoutEntry = Omit<ScheduledWorkoutEntry, "dateKey"> & { dateKey: null };
+export type UnscheduledWorkoutEntry = Omit<ScheduledWorkoutEntry, "dateKey"> & {
+  dateKey: null;
+};
