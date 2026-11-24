@@ -2,6 +2,10 @@ import Link from "next/link";
 import { ArrowLeft, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
 import {
+  CalendarFeedCard,
+  type CalendarFeedCardProps,
+} from "@/features/settings/calendar-feed-card";
+import {
   ConnectClaudeCard,
   type ConnectClaudeCardProps,
 } from "@/features/settings/connect-claude-card";
@@ -84,14 +88,16 @@ export type SettingsViewProps = {
   email: string | null;
   onSignOut: () => void;
   profile: PublicProfileCardProps;
+  calendar: CalendarFeedCardProps;
   connect: ConnectClaudeCardProps;
 };
 
-/** Account, installing the app (when the browser can), sharing, then the Claude connector. */
+/** Account, installing the app (when the browser can), sharing, the calendar feed, then the Claude connector. */
 export function SettingsView({
   email,
   onSignOut,
   profile,
+  calendar,
   connect,
 }: SettingsViewProps) {
   return (
@@ -100,6 +106,7 @@ export function SettingsView({
       <AccountCard email={email} onSignOut={onSignOut} />
       <InstallAppCard />
       <PublicProfileCard {...profile} />
+      <CalendarFeedCard {...calendar} />
       <ConnectClaudeCard {...connect} />
     </div>
   );

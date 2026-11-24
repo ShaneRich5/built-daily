@@ -6,6 +6,7 @@ import {
   SettingsNotice,
   SettingsView,
 } from "@/features/settings/settings-view";
+import { useCalendarFeed } from "@/features/settings/use-calendar-feed";
 import { useMcpTokens } from "@/features/settings/use-mcp-tokens";
 import { usePublicProfile } from "@/features/settings/use-public-profile";
 
@@ -14,6 +15,7 @@ export function SettingsScreen() {
   const { user, loading, firebaseReady, signOutUser } = useAuth();
   const profile = usePublicProfile();
   const tokens = useMcpTokens();
+  const calendar = useCalendarFeed();
 
   if (!firebaseReady) {
     return (
@@ -51,6 +53,13 @@ export function SettingsScreen() {
         shareUrl: profile.shareUrl,
         sharePath: profile.sharePath,
         onToggle: (next) => void profile.toggle(next),
+      }}
+      calendar={{
+        loaded: calendar.loaded,
+        url: calendar.url,
+        busy: calendar.busy,
+        error: calendar.error,
+        onCreate: () => void calendar.create(),
       }}
       connect={{
         loaded: tokens.loaded,

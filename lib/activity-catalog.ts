@@ -17,10 +17,16 @@ export type ActivityCatalogEntry = {
     | "person-standing"
     | "music"
     | "dog"
+    | "timer"
     | "activity";
   supportsDistance: boolean;
   /** Hint for future social / pickup features. */
   isSocial: boolean;
+  /**
+   * Hidden from the picker for new logs. Kept in the catalog so past logs
+   * still show their name/icon and can be edited.
+   */
+  retired?: boolean;
 };
 
 export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
@@ -32,11 +38,19 @@ export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
     isSocial: false,
   },
   {
+    id: "run",
+    name: "Run",
+    icon: "timer",
+    supportsDistance: true,
+    isSocial: false,
+  },
+  {
     id: "dog-walk",
     name: "Dog walk",
     icon: "dog",
     supportsDistance: true,
     isSocial: false,
+    retired: true,
   },
   {
     id: "bike",
@@ -100,6 +114,7 @@ export const ACTIVITY_CATALOG: ActivityCatalogEntry[] = [
     icon: "person-standing",
     supportsDistance: false,
     isSocial: false,
+    retired: true,
   },
   {
     id: "other",
@@ -116,6 +131,16 @@ export function getActivityTypeById(
   id: string,
 ): ActivityCatalogEntry | undefined {
   return BY_ID.get(id);
+}
+
+/**
+ * Types offered in the picker: everything not retired, plus `currentId`
+ * so editing an old log of a retired type still shows it selected.
+ */
+export function pickableActivityTypes(
+  currentId?: string,
+): ActivityCatalogEntry[] {
+  return ACTIVITY_CATALOG.filter((a) => !a.retired || a.id === currentId);
 }
 
 export function activityTypeName(id: string): string {

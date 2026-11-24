@@ -11,6 +11,7 @@ import {
 import { AccountMenu } from "@/features/home/account-menu";
 import { MoveSheet } from "@/features/planner/move-sheet";
 import { HomeHeader, HomeView } from "@/features/home/home-view";
+import { StepChallengeSection } from "@/features/step-challenge/step-challenge-section";
 import { useHomeData } from "@/features/home/use-home-data";
 import { useTogetherToday } from "@/features/home/use-together-today";
 
@@ -94,6 +95,7 @@ export function HomeScreen() {
           />
         }
         onLogActivity={() => setLogOpen(true)}
+        challenge={<StepChallengeSection todayKey={home.todayKey} />}
         catchUp={
           missed
             ? {

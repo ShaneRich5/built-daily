@@ -32,6 +32,8 @@ export type HomeViewProps = {
   week: HomeWeekDay[];
   recent: HomeRecentItem[];
   onLogActivity: () => void;
+  /** The step challenge card (or its quiet start entry), under the week. */
+  challenge?: ReactNode;
   /** Today's plan together, if any (G9). */
   together?: HomeTogether | null;
   /** A planned workout that slid past, with ways to fit it back in. */
@@ -112,6 +114,7 @@ export function HomeView(props: HomeViewProps) {
             goal={props.weekGoal}
             consistency={props.consistency}
           />
+          {props.challenge}
           <HomeRecent items={props.recent} />
         </>
       ) : (

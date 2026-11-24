@@ -9,6 +9,7 @@ import {
   updateWorkoutSession,
 } from "./firestore";
 import { addSetsToSession } from "./add-sets";
+import { logDailyMetric } from "./daily-metrics";
 
 const readOnly = {
   readOnlyHint: true,
@@ -375,6 +376,41 @@ export function createBuiltDailyServer(uid: string): McpServer {
           );
         }
         return textResult(result.session);
+      } catch (err) {
+        return errorResult(err instanceof Error ? err.message : String(err));
+      }
+    },
+  );
+
+  server.registerTool(
+    "log_daily_metric",
+    {
+      title: "Log daily metric",
+      description:
+        'Record a daily total for one day, e.g. "I walked 9k steps today". Saves the number as coming from ' +
+        "the assistant and leaves any other source's number alone. If the user typed a number for that day " +
+        "in the app, theirs still wins; the result says which value the app shows. Send the day's total, " +
+        "not an amount to add.",
+      inputSchema: z.object({
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .describe("The user's local calendar day, YYYY-MM-DD."),
+        metric: z
+          .enum(["steps"])
+          .describe('Which metric. Only "steps" for now.'),
+        value: z
+          .number()
+          .min(0)
+          .max(100000)
+          .describe("The day's total, e.g. 9000 steps."),
+      }),
+      annotations: { ...write, idempotentHint: true },
+    },
+    async (input) => {
+      try {
+        const result = await logDailyMetric(uid, input);
+        return result.ok ? textResult(result) : errorResult(result.error);
       } catch (err) {
         return errorResult(err instanceof Error ? err.message : String(err));
       }

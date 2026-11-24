@@ -12,6 +12,8 @@ This document describes the domain and Firestore shapes used in the app.
 | Activities             | [`lib/activity-types.ts`](../lib/activity-types.ts)             | [`lib/activity-mapper.ts`](../lib/activity-mapper.ts), [`lib/activity-repository.ts`](../lib/activity-repository.ts)                                                                                                                                                   |
 | Progress + body weight | [`lib/progress-types.ts`](../lib/progress-types.ts)             | [`lib/progress-mapper.ts`](../lib/progress-mapper.ts), [`lib/progress-settings-repository.ts`](../lib/progress-settings-repository.ts)                                                                                                                                 |
 | Groups                 | [`lib/group-types.ts`](../lib/group-types.ts)                   | [`lib/group-mapper.ts`](../lib/group-mapper.ts), [`lib/group-repository.ts`](../lib/group-repository.ts)                                                                                                                                                               |
+| Daily metrics          | [`lib/daily-metric-types.ts`](../lib/daily-metric-types.ts)     | [`lib/daily-metric-mapper.ts`](../lib/daily-metric-mapper.ts), [`lib/daily-metric-repository.ts`](../lib/daily-metric-repository.ts), [`lib/daily-metric-admin.ts`](../lib/daily-metric-admin.ts)                                                                      |
+| Challenges             | [`lib/challenge-types.ts`](../lib/challenge-types.ts)           | [`lib/challenge-mapper.ts`](../lib/challenge-mapper.ts), [`lib/challenge-repository.ts`](../lib/challenge-repository.ts)                                                                                                                                               |
 | Public profiles        | [`lib/public-profile-types.ts`](../lib/public-profile-types.ts) | [`lib/public-profile-mapper.ts`](../lib/public-profile-mapper.ts), [`lib/public-profile-repository.ts`](../lib/public-profile-repository.ts)                                                                                                                           |
 
 Client catalogs (not Firestore collections): [`lib/exercise-catalog.ts`](../lib/exercise-catalog.ts), [`lib/activity-catalog.ts`](../lib/activity-catalog.ts), [`lib/starter-templates.ts`](../lib/starter-templates.ts).
@@ -34,6 +36,8 @@ All mutable **personal** user data lives under:
 | `users/{userId}/groupMemberships/{groupId}`  | Reverse index of accountability groups the user belongs to                                                                             |
 | `users/{userId}/settings/progress`           | Weekly workout goal, movement-days goal, optional goal body weight                                                                     |
 | `users/{userId}/bodyWeight/{entryId}`        | Scale check-ins (`dateKey`, `weightLbs`)                                                                                               |
+| `users/{userId}/dailyMetrics/{YYYY-MM-DD}`   | One doc per local day: every daily health metric (steps today), each source's number plus the resolved value                           |
+| `users/{userId}/challenges/{challengeId}`    | Personal step challenges: a rule and a Sunday–Saturday range; progress is derived                                                      |
 
 **Accountability groups** use top-level collections (membership-aware rules):
 
@@ -52,6 +56,12 @@ All mutable **personal** user data lives under:
 | ---------------------- | ------------------------------------------------------------- |
 | `publicProfiles/{uid}` | Display name + light consistency when `profilePublic` is true |
 
+**Server-only** (Admin SDK; no client rules, so default deny):
+
+| Path                  | Purpose                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `calendarFeeds/{uid}` | The user's secret planner calendar feed token (see [Planner calendar feed](#planner-calendar-feed)) |
+
 `users/{userId}` holds a profile document created on first sign-in (see below); everything else about a user lives in its subcollections.
 
 Security rules: see [`firestore.rules`](../firestore.rules).
@@ -66,6 +76,8 @@ flowchart LR
     memberships[groupMemberships]
     settings[settings_progress]
     bodyWeight[bodyWeight]
+    dailyMetrics[dailyMetrics]
+    challenges[challenges]
   end
   subgraph groupsPath [groups]
     groupDoc[group]
@@ -76,6 +88,7 @@ flowchart LR
   sessions -->|autosave or finish| sessionDoc[session doc]
   scheduled -->|addDoc planner row| plannerRow[dateKey + label + planId + exerciseIds]
   activities -->|log / update| activityDoc[activity doc]
+  challenges -.->|progress derived from| dailyMetrics
   memberships --> groupDoc
   inviteCodes --> groupDoc
   groupDoc --> members
@@ -236,6 +249,15 @@ Types: [`lib/planner-types.ts`](../lib/planner-types.ts). Owners may create, upd
 
 `ScheduledWorkoutEntry` is the same shape plus Firestore `id`. Updates go through `updateScheduledWorkout`, which always writes `status` and `sessionId` together so the pair stays consistent.
 
+### Planner calendar feed
+
+Settings → Calendar gives each user a secret `.ics` link that Google Calendar, Apple Calendar and Outlook can subscribe to. It is a one-way, read-only view of the planner: the app never writes to anyone's calendar.
+
+- **Token:** `calendarFeeds/{uid}` = `{ token, createdAt, lastFetchedAt }`, written only by [`lib/calendar-feed-admin.ts`](../lib/calendar-feed-admin.ts) via `GET`/`POST /api/calendar-feed`. The token (`bd_cal_…`) is stored as-is, not hashed like `mcpTokens`, because Settings must be able to show the link again; it only exposes planned days and workout names. `POST` replaces it, so "Get a new link" revokes the old one immediately.
+- **Feed:** `GET /api/calendar/{token}.ics` (no sign-in; the token is the credential). It reads `scheduledWorkouts` with `dateKey` from 60 days ago onward, with no upper bound, so far-future plans show up. Unscheduled entries (`dateKey: null`) and `skipped` entries are left out; `completed` ones get a ✓ prefix.
+- **Events:** built by [`lib/calendar-feed-ics.ts`](../lib/calendar-feed-ics.ts) as all-day, free (`TRANSP:TRANSPARENT`) events with `UID` `{entryId}@built-daily`, so moving a day updates the same event instead of duplicating it. The description links to the start-workout URL (or `/planner` for note-only entries).
+- **Refresh:** calendar apps poll on their own schedule. Google Calendar typically refreshes subscribed calendars every several hours to a day and ignores `REFRESH-INTERVAL`. Push sync through calendar provider APIs is a separate, later piece of work.
+
 ---
 
 ## Activities
@@ -261,6 +283,65 @@ Recreational / unstructured movement, distinct from gym sessions. Types: [`lib/a
 | `updatedAt`      | `Date` / `Timestamp` |                                                      |
 
 `SavedActivity` is `{ id, activity }`. Create input is `LogActivityInput` (type, date, optional time / duration / distance / location / notes).
+
+---
+
+## Daily metrics
+
+Design record: [`docs/STEP_CHALLENGE.md`](STEP_CHALLENGE.md). Types: [`lib/daily-metric-types.ts`](../lib/daily-metric-types.ts). Resolve rule: [`lib/daily-metric-resolve.ts`](../lib/daily-metric-resolve.ts).
+
+### `DailyMetricsDoc` (`users/{userId}/dailyMetrics/{YYYY-MM-DD}`)
+
+One doc per **local calendar day** holds every daily metric. The doc id is the same `YYYY-MM-DD` key as `dateKey`. Daily totals only: no intraday samples, no locations.
+
+| Field       | Type                 | Notes                                                     |
+| ----------- | -------------------- | --------------------------------------------------------- |
+| `dateKey`   | `string`             | Same as the doc id                                        |
+| `metrics`   | `map`                | One `DailyMetricEntry` per metric key. Only `steps` today |
+| `updatedAt` | `Date` / `Timestamp` |                                                           |
+
+### `DailyMetricEntry` (`metrics.<metric>`)
+
+| Field          | Type                        | Notes                                                                           |
+| -------------- | --------------------------- | ------------------------------------------------------------------------------- |
+| `value`        | `number \| null`            | **Resolved** value, the only number consumers read. Null when no source has one |
+| `resolvedFrom` | `DailyMetricSource \| null` | Which source `value` came from                                                  |
+| `sources`      | `map`                       | `{ [source]: { value, updatedAt } }`. Every source's number is kept             |
+
+Sources: `manual` (typed in the app), `apple_health`, `health_connect`, `shortcut`, `mcp`. Steps are whole numbers from 0 to 100,000.
+
+**Resolve rule** (one pure function shared by the app, `POST /api/health/daily` and the MCP server): a manual value wins; otherwise the highest synced value. Sources are never summed. Removing the manual value falls back to the sync. Readers re-resolve on read, so a stale `value` can't disagree with the rule.
+
+**Who writes what**: the app writes only `sources.manual` (enforced by rules). Synced sources come in through the Admin SDK: `POST /api/health/daily` (batch, personal access token) and the `log_daily_metric` MCP tool (as `mcp`).
+
+---
+
+## Challenges
+
+Types: [`lib/challenge-types.ts`](../lib/challenge-types.ts). Progress: [`lib/challenge-evaluate.ts`](../lib/challenge-evaluate.ts).
+
+### `ChallengeDoc` (`users/{userId}/challenges/{challengeId}`)
+
+| Field         | Type                 | Notes                                                                              |
+| ------------- | -------------------- | ---------------------------------------------------------------------------------- |
+| `metric`      | `"steps"`            | Any "sum, more is better" daily metric works with every rule                       |
+| `rule`        | `ChallengeRule`      | See below                                                                          |
+| `startDate`   | `string`             | Sunday, `YYYY-MM-DD`                                                               |
+| `endDate`     | `string`             | Saturday, `YYYY-MM-DD`                                                             |
+| `groupId`     | `null`               | Reserved for group challenges (phase 2); rules require null for now                |
+| `completedAt` | `Date \| null`       | Set by the app the first time the challenge is done. Cleared when the rule changes |
+| `createdAt`   | `Date` / `Timestamp` |                                                                                    |
+| `updatedAt`   | `Date` / `Timestamp` |                                                                                    |
+
+`ChallengeRule` is one of:
+
+| `kind`               | Fields                                       | Done when                                |
+| -------------------- | -------------------------------------------- | ---------------------------------------- |
+| `days_hit` (default) | `dailyTarget` 1,000–50,000, `daysNeeded` 1–7 | That many days at or above `dailyTarget` |
+| `total`              | `target` 5,000–500,000                       | Sum over the range reaches `target`      |
+| `streak` (opt-in)    | `dailyTarget` 1,000–50,000, `length` 2–7     | `length` days in a row at `dailyTarget`  |
+
+Progress is **derived** from `dailyMetrics` for the date range and never stored (apart from `completedAt`). After creation only `rule`, `completedAt` and `updatedAt` may change.
 
 ---
 
@@ -538,6 +619,8 @@ These are rebuilt from sessions, activities, and settings — they are not Fires
 - **Recent activities**: `users/{uid}/activities` order by `activityDate` desc.
 - **Activities by type** (suggestions): `activityTypeId` == id, order by `activityDate` desc.
 - **Body weight**: `users/{uid}/bodyWeight` order by `dateKey` asc.
+- **Daily metrics** (challenge weeks): `users/{uid}/dailyMetrics` where `dateKey` between two keys (single-field range, no composite needed).
+- **Challenges on Home**: `users/{uid}/challenges` where `endDate >=` a few days ago (single-field range).
 
 Composite indexes: [`firestore.indexes.json`](../firestore.indexes.json)
 
@@ -572,6 +655,17 @@ Composite indexes: [`firestore.indexes.json`](../firestore.indexes.json)
 | [`lib/group-repository.ts`](../lib/group-repository.ts)                         | Group CRUD, join/leave, show-up signals, buddy → group                             |
 | [`lib/group-plan-repository.ts`](../lib/group-plan-repository.ts)               | Plans together (create, I'm in, can't make it, cancel) + invite previews           |
 | [`lib/group-plan-sync.ts`](../lib/group-plan-sync.ts)                           | Copies your next 7 days of plans onto your member docs                             |
+| [`lib/daily-metric-types.ts`](../lib/daily-metric-types.ts)                     | Metric list (unit, bounds), sources, `DailyMetricsDoc`                             |
+| [`lib/daily-metric-resolve.ts`](../lib/daily-metric-resolve.ts)                 | Pure resolve rule, shared by app, API and MCP                                      |
+| [`lib/daily-metric-mapper.ts`](../lib/daily-metric-mapper.ts)                   | Daily metrics Firestore mapping (client + Admin SDK)                               |
+| [`lib/daily-metric-repository.ts`](../lib/daily-metric-repository.ts)           | Subscribe to a date range; set / clear the manual value                            |
+| [`lib/daily-metric-input.ts`](../lib/daily-metric-input.ts)                     | Validation for synced input (API + MCP)                                            |
+| [`lib/daily-metric-admin.ts`](../lib/daily-metric-admin.ts)                     | Admin-SDK writer for synced sources                                                |
+| [`app/api/health/daily/route.ts`](../app/api/health/daily/route.ts)             | `POST /api/health/daily` ingest endpoint                                           |
+| [`lib/challenge-types.ts`](../lib/challenge-types.ts)                           | `ChallengeDoc`, rule kinds, presets, limits                                        |
+| [`lib/challenge-evaluate.ts`](../lib/challenge-evaluate.ts)                     | Pure progress per rule kind + status line                                          |
+| [`lib/challenge-mapper.ts`](../lib/challenge-mapper.ts)                         | Challenge Firestore mapping                                                        |
+| [`lib/challenge-repository.ts`](../lib/challenge-repository.ts)                 | Subscribe, start, change rule, mark completed                                      |
 | [`lib/public-profile-types.ts`](../lib/public-profile-types.ts)                 | Opt-in public profile                                                              |
 | [`lib/public-profile-mapper.ts`](../lib/public-profile-mapper.ts)               | Public profile Firestore mapping                                                   |
 | [`lib/public-profile-repository.ts`](../lib/public-profile-repository.ts)       | Public profile read / write / consistency sync                                     |
@@ -754,6 +848,30 @@ Table activities {
   }
 
   Note: 'users/{userId}/activities/{activityId}'
+}
+
+Table daily_metrics {
+  dateKey string [pk, note: 'YYYY-MM-DD, also the doc id']
+  userId string [pk]
+  metrics map [not null, note: 'metrics.steps = { value, resolvedFrom, sources: { manual | apple_health | health_connect | shortcut | mcp: { value, updatedAt } } }']
+  updatedAt timestamp [not null]
+
+  Note: 'users/{userId}/dailyMetrics/{dateKey}. value = manual if present, else the highest synced source'
+}
+
+Table challenges {
+  challengeId string [pk]
+  userId string [not null]
+  metric string [not null, note: 'steps']
+  rule map [not null, note: 'days_hit | total | streak']
+  startDate string [not null, note: 'Sunday, YYYY-MM-DD']
+  endDate string [not null, note: 'Saturday, YYYY-MM-DD']
+  groupId string [note: 'reserved, always null for now']
+  completedAt timestamp
+  createdAt timestamp [not null]
+  updatedAt timestamp [not null]
+
+  Note: 'users/{userId}/challenges/{challengeId}. Progress derived from daily_metrics in [startDate, endDate]'
 }
 
 Table progress_settings {
