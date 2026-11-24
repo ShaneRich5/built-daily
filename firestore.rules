@@ -210,6 +210,96 @@ service cloud.firestore {
         && validWeeklyGoal(d.weeklyGoal);
     }
 
+    // ── Daily metrics + challenges (docs/STEP_CHALLENGE.md) ──────────────
+
+    /** One source's daily total. Bounds match DAILY_METRICS.steps. */
+    function validStepsSourceValue(s) {
+      return s is map
+        && s.keys().hasOnly(['value', 'updatedAt'])
+        && s.value is number && s.value >= 0 && s.value <= 100000
+        && s.updatedAt is timestamp;
+    }
+
+    function optionalStepsSource(sources, key) {
+      return !(key in sources) || validStepsSourceValue(sources[key]);
+    }
+
+    /**
+     * `metrics.steps`: every source's number plus the resolved one. A manual
+     * value always wins, and `value` must equal the source it claims to be
+     * resolved from (lib/daily-metric-resolve.ts).
+     */
+    function validStepsEntry(e) {
+      return e is map
+        && e.keys().hasOnly(['value', 'resolvedFrom', 'sources'])
+        && e.sources is map
+        && e.sources.keys().hasOnly(['manual', 'apple_health', 'health_connect', 'shortcut', 'mcp'])
+        && optionalStepsSource(e.sources, 'manual')
+        && optionalStepsSource(e.sources, 'apple_health')
+        && optionalStepsSource(e.sources, 'health_connect')
+        && optionalStepsSource(e.sources, 'shortcut')
+        && optionalStepsSource(e.sources, 'mcp')
+        && (!('manual' in e.sources) || e.resolvedFrom == 'manual')
+        && (
+          (e.resolvedFrom == null && e.value == null && e.sources.size() == 0)
+          || (e.resolvedFrom in e.sources && e.value == e.sources[e.resolvedFrom].value)
+        );
+    }
+
+    function validDailyMetricsWrite(dateKey) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['dateKey', 'metrics', 'updatedAt'])
+        && d.dateKey == dateKey
+        && d.dateKey is string
+        && validDateKey(d.dateKey)
+        && d.metrics is map
+        && d.metrics.keys().hasOnly(['steps'])
+        && (!('steps' in d.metrics) || validStepsEntry(d.metrics.steps))
+        && d.updatedAt is timestamp;
+    }
+
+    function stepsSources(d) {
+      return d.get('metrics', {}).get('steps', {}).get('sources', {});
+    }
+
+    function validChallengeRule(r) {
+      return r is map && (
+        (r.kind == 'days_hit'
+          && r.keys().hasOnly(['kind', 'dailyTarget', 'daysNeeded'])
+          && isIntLike(r.dailyTarget) && r.dailyTarget >= 1000 && r.dailyTarget <= 50000
+          && isIntLike(r.daysNeeded) && r.daysNeeded >= 1 && r.daysNeeded <= 7)
+        || (r.kind == 'total'
+          && r.keys().hasOnly(['kind', 'target'])
+          && isIntLike(r.target) && r.target >= 5000 && r.target <= 500000)
+        || (r.kind == 'streak'
+          && r.keys().hasOnly(['kind', 'dailyTarget', 'length'])
+          && isIntLike(r.dailyTarget) && r.dailyTarget >= 1000 && r.dailyTarget <= 50000
+          && isIntLike(r.length) && r.length >= 2 && r.length <= 7)
+      );
+    }
+
+    /** Personal challenges only for now: `groupId` is reserved and must be null. */
+    function validChallengeFields() {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+            'metric', 'rule', 'startDate', 'endDate', 'groupId',
+            'completedAt', 'createdAt', 'updatedAt'
+          ])
+        && d.keys().hasAll([
+            'metric', 'rule', 'startDate', 'endDate', 'groupId',
+            'completedAt', 'createdAt', 'updatedAt'
+          ])
+        && d.metric == 'steps'
+        && validChallengeRule(d.rule)
+        && d.startDate is string && validDateKey(d.startDate)
+        && d.endDate is string && validDateKey(d.endDate)
+        && d.endDate >= d.startDate
+        && d.groupId == null
+        && (d.completedAt == null || d.completedAt is timestamp)
+        && d.createdAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId);
       allow create, update: if isOwner(userId) && validUserProfileWrite();
@@ -346,6 +436,33 @@ service cloud.firestore {
           && request.resource.data.createdAt is timestamp
           && request.resource.data.updatedAt is timestamp;
         allow update, delete: if isOwner(userId);
+      }
+
+      // One doc per local day (`YYYY-MM-DD`). The app may only write the
+      // manual source; synced sources arrive through the Admin SDK
+      // (POST /api/health/daily, MCP), which bypasses these rules.
+      match /dailyMetrics/{dateKey} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && validDailyMetricsWrite(dateKey)
+          && stepsSources(request.resource.data).keys().hasOnly(['manual']);
+        allow update: if isOwner(userId)
+          && validDailyMetricsWrite(dateKey)
+          && stepsSources(request.resource.data).diff(stepsSources(resource.data))
+            .affectedKeys().hasOnly(['manual']);
+        allow delete: if isOwner(userId);
+      }
+
+      // A rule + date range; progress is derived from dailyMetrics. After
+      // creation only the rule, completedAt and updatedAt may change.
+      match /challenges/{challengeId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && validChallengeFields();
+        allow update: if isOwner(userId)
+          && validChallengeFields()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['rule', 'completedAt', 'updatedAt']);
+        allow delete: if isOwner(userId);
       }
     }
 
