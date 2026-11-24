@@ -36,21 +36,21 @@ jobs:
           import os
           import re
           import subprocess
-          
+
           REPO = os.environ["GH_REPO"]
           REQUIRED = json.loads(os.environ["REQUIRED_CHECKS"])
           BOT = "dependabot[bot]"
-          
+
           def gh(*args):
               return subprocess.check_output(["gh", *args], text=True)
-          
+
           def api(path):
               return json.loads(gh("api", path))
-          
+
           def pages(path):
               batches = json.loads(gh("api", "--paginate", "--slurp", path))
               return [item for batch in batches for item in batch]
-          
+
           def eligible_commit(commit):
               if commit.get("author", {}).get("login") != BOT:
                   return False
@@ -66,7 +66,7 @@ jobs:
                   update in {"version-update:semver-minor", "version-update:semver-patch"}
                   for update in updates
               )
-          
+
           for candidate in pages(f"repos/{REPO}/pulls?state=open&base=main&per_page=100"):
               number = candidate["number"]
               if candidate["user"]["login"] != BOT or candidate["draft"]:
