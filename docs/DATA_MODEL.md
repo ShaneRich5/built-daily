@@ -52,6 +52,12 @@ All mutable **personal** user data lives under:
 |------|---------|
 | `publicProfiles/{uid}` | Display name + light consistency when `profilePublic` is true |
 
+**Server-only** (Admin SDK; no client rules, so default deny):
+
+| Path | Purpose |
+|------|---------|
+| `calendarFeeds/{uid}` | The user's secret planner calendar feed token (see [Planner calendar feed](#planner-calendar-feed)) |
+
 `users/{userId}` holds a profile document created on first sign-in (see below); everything else about a user lives in its subcollections.
 
 Security rules: see [`firestore.rules`](../firestore.rules).
@@ -235,6 +241,15 @@ Types: [`lib/planner-types.ts`](../lib/planner-types.ts). Owners may create, upd
 | `groupId` | `string \| null` (optional) | The group that plan lives in (always set together with `sharedPlanId`) |
 
 `ScheduledWorkoutEntry` is the same shape plus Firestore `id`. Updates go through `updateScheduledWorkout`, which always writes `status` and `sessionId` together so the pair stays consistent.
+
+### Planner calendar feed
+
+Settings → Calendar gives each user a secret `.ics` link that Google Calendar, Apple Calendar and Outlook can subscribe to. It is a one-way, read-only view of the planner: the app never writes to anyone's calendar.
+
+- **Token:** `calendarFeeds/{uid}` = `{ token, createdAt, lastFetchedAt }`, written only by [`lib/calendar-feed-admin.ts`](../lib/calendar-feed-admin.ts) via `GET`/`POST /api/calendar-feed`. The token (`bd_cal_…`) is stored as-is, not hashed like `mcpTokens`, because Settings must be able to show the link again; it only exposes planned days and workout names. `POST` replaces it, so "Get a new link" revokes the old one immediately.
+- **Feed:** `GET /api/calendar/{token}.ics` (no sign-in; the token is the credential). It reads `scheduledWorkouts` with `dateKey` from 60 days ago onward, with no upper bound, so far-future plans show up. Unscheduled entries (`dateKey: null`) and `skipped` entries are left out; `completed` ones get a ✓ prefix.
+- **Events:** built by [`lib/calendar-feed-ics.ts`](../lib/calendar-feed-ics.ts) as all-day, free (`TRANSP:TRANSPARENT`) events with `UID` `{entryId}@built-daily`, so moving a day updates the same event instead of duplicating it. The description links to the start-workout URL (or `/planner` for note-only entries).
+- **Refresh:** calendar apps poll on their own schedule. Google Calendar typically refreshes subscribed calendars every several hours to a day and ignores `REFRESH-INTERVAL`. Push sync through calendar provider APIs is a separate, later piece of work.
 
 ---
 

@@ -10,13 +10,22 @@ const TOKENS: McpTokenSummary[] = [
   { id: "t2", label: "Claude Desktop", createdAt: "2026-09-14T12:00:00Z", lastUsedAt: null },
 ];
 
-type Seed = { isPublic: boolean; tokens: McpTokenSummary[]; newToken?: string | null; loaded?: boolean };
+const FEED_URL = `${ORIGIN}/api/calendar/bd_cal_Vb3nQ8sLx2Tk9Rw4Hy7cJm1pZf6aDe5u.ics`;
+
+type Seed = {
+  isPublic: boolean;
+  tokens: McpTokenSummary[];
+  newToken?: string | null;
+  loaded?: boolean;
+  calendarUrl?: string | null;
+};
 
 /** The view with in-memory state, so the switch, generate and revoke all respond. */
-function Interactive({ isPublic, tokens, newToken = null, loaded = true }: Seed) {
+function Interactive({ isPublic, tokens, newToken = null, loaded = true, calendarUrl = null }: Seed) {
   const [pub, setPub] = useState(isPublic);
   const [list, setList] = useState(tokens);
   const [fresh, setFresh] = useState<string | null>(newToken);
+  const [feedUrl, setFeedUrl] = useState<string | null>(calendarUrl);
   return (
     <SettingsView
       email="sam@example.com"
@@ -29,6 +38,13 @@ function Interactive({ isPublic, tokens, newToken = null, loaded = true }: Seed)
         shareUrl: `${ORIGIN}/u/sam123`,
         sharePath: "/u/sam123",
         onToggle: setPub,
+      }}
+      calendar={{
+        loaded,
+        url: feedUrl,
+        busy: false,
+        error: null,
+        onCreate: () => setFeedUrl(`${ORIGIN}/api/calendar/bd_cal_${Date.now().toString(36)}Kp4wXs9Lq2Nv7Rt3.ics`),
       }}
       connect={{
         loaded,
@@ -59,8 +75,8 @@ type Story = StoryObj<typeof meta>;
 /** First visit: profile private, no tokens yet. */
 export const FirstVisit: Story = { args: { isPublic: false, tokens: [] } };
 
-/** Profile shared and two tokens in use. */
-export const PublicWithTokens: Story = { args: { isPublic: true, tokens: TOKENS } };
+/** Profile shared, a calendar link made, and two tokens in use. */
+export const PublicWithTokens: Story = { args: { isPublic: true, tokens: TOKENS, calendarUrl: FEED_URL } };
 
 /** Right after Generate: the token is shown once, in full. */
 export const NewToken: Story = {
