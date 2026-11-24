@@ -1,0 +1,103 @@
+# Uses only trusted workflow code and GitHub API data; never checks out PR code.
+name: Merge tested Dependabot updates
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+concurrency:
+  group: dependabot-merge
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Merge verified patch and minor updates after all checks pass
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          REQUIRED_CHECKS: '["Format, lint, types, unit tests","E2E smoke","Base branch is main"]'
+        shell: python
+        run: |
+          import json
+          import os
+          import re
+          import subprocess
+          
+          REPO = os.environ["GH_REPO"]
+          REQUIRED = json.loads(os.environ["REQUIRED_CHECKS"])
+          BOT = "dependabot[bot]"
+          
+          def gh(*args):
+              return subprocess.check_output(["gh", *args], text=True)
+          
+          def api(path):
+              return json.loads(gh("api", path))
+          
+          def pages(path):
+              batches = json.loads(gh("api", "--paginate", "--slurp", path))
+              return [item for batch in batches for item in batch]
+          
+          def eligible_commit(commit):
+              if commit.get("author", {}).get("login") != BOT:
+                  return False
+              if not commit["commit"]["verification"]["verified"]:
+                  return False
+              message = commit["commit"]["message"]
+              blocks = re.findall(r"(?m)^---\nupdated-dependencies:\n(.*?)^\.\.\.\s*$", message, re.S)
+              if len(blocks) != 1:
+                  return False
+              dependencies = re.findall(r"(?m)^- dependency-name: .+$", blocks[0])
+              updates = re.findall(r"(?m)^  update-type: (.+)$", blocks[0])
+              return bool(dependencies) and len(dependencies) == len(updates) and all(
+                  update in {"version-update:semver-minor", "version-update:semver-patch"}
+                  for update in updates
+              )
+          
+          for candidate in pages(f"repos/{REPO}/pulls?state=open&base=main&per_page=100"):
+              number = candidate["number"]
+              if candidate["user"]["login"] != BOT or candidate["draft"]:
+                  continue
+              pr = api(f"repos/{REPO}/pulls/{number}")
+              sha = pr["head"]["sha"]
+              if pr["head"]["repo"]["full_name"] != REPO:
+                  continue
+              commits = pages(f"repos/{REPO}/pulls/{number}/commits?per_page=100")
+              if not commits or not all(eligible_commit(commit) for commit in commits):
+                  print(f"PR #{number}: major, unclassified, or unverified change; manual review.")
+                  continue
+              # Read checks from the PR's current revision; never rely on the triggering run alone.
+              try:
+                  check_output = gh("pr", "checks", str(number), "--repo", REPO,
+                                    "--json", "name,state,bucket")
+              except subprocess.CalledProcessError as error:
+                  # gh exits nonzero for pending or failed checks, while still returning JSON.
+                  check_output = error.output
+              checks = json.loads(check_output)
+              passed = {check["name"] for check in checks if check["state"] == "SUCCESS"}
+              if not set(REQUIRED).issubset(passed) or any(check["bucket"] != "pass" for check in checks):
+                  print(f"PR #{number}: waiting for every check to pass.")
+                  continue
+              current = api(f"repos/{REPO}/pulls/{number}")
+              if current["state"] != "open" or current["draft"] or current["head"]["sha"] != sha:
+                  continue
+              if current["base"]["ref"] != "main" or current["user"]["login"] != BOT:
+                  continue
+              # A concurrent push causes GitHub to reject this merge instead of merging untested code.
+              result = subprocess.run(["gh", "pr", "merge", str(number), "--repo", REPO,
+                                       "--squash", "--match-head-commit", sha], check=False)
+              if result.returncode:
+                  raise SystemExit(result.returncode)
