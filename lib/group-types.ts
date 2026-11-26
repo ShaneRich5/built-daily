@@ -76,6 +76,12 @@ export type GroupMemberDoc = {
   lastWorkoutLabel: string | null;
   /** The member's next 7 days of planner entries (day + label only). */
   upcomingPlans: MemberUpcomingPlan[];
+  /**
+   * Opt-in, per group: when true the member also keeps a copy of this week's
+   * and last week's workouts at `groups/{id}/sharedWorkouts/{uid}` (exercises
+   * and sets, never notes). Missing reads as false.
+   */
+  sharesWorkouts: boolean;
 };
 
 export type InviteCodeDoc = {

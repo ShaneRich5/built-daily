@@ -41,14 +41,15 @@ All mutable **personal** user data lives under:
 
 **Accountability groups** use top-level collections (membership-aware rules):
 
-| Path                                | Purpose                                                                                   |
-| ----------------------------------- | ----------------------------------------------------------------------------------------- |
-| `groups/{groupId}`                  | Group metadata + invite code (`kind`: group or buddy)                                     |
-| `groups/{groupId}/members/{uid}`    | Roster + shared “showed up” signals, days trained, next 7 days of plans                   |
-| `groups/{groupId}/plans/{planId}`   | Plans together: a day, optional time / where / note, template exercise names, who’s going |
-| `groups/{groupId}/cheers/{cheerId}` | One-tap cheers                                                                            |
-| `inviteCodes/{code}`                | Join lookup by shareable code (signed in, get only)                                       |
-| `invitePreviews/{code}`             | What a signed-out visitor with the link may see (get only)                                |
+| Path                                    | Purpose                                                                                     |
+| --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `groups/{groupId}`                      | Group metadata + invite code (`kind`: group or buddy)                                       |
+| `groups/{groupId}/members/{uid}`        | Roster + shared “showed up” signals, days trained, next 7 days of plans                     |
+| `groups/{groupId}/plans/{planId}`       | Plans together: a day, optional time / where / note, template exercise names, who’s going   |
+| `groups/{groupId}/cheers/{cheerId}`     | One-tap cheers                                                                              |
+| `groups/{groupId}/sharedWorkouts/{uid}` | Opt-in, per group: a member's workouts from this week and last (exercises + sets, no notes) |
+| `inviteCodes/{code}`                    | Join lookup by shareable code (signed in, get only)                                         |
+| `invitePreviews/{code}`                 | What a signed-out visitor with the link may see (get only)                                  |
 
 **Opt-in public profiles** (separate from private `users/{uid}/…`):
 
@@ -93,6 +94,7 @@ flowchart LR
   inviteCodes --> groupDoc
   groupDoc --> members
   groupDoc --> groupPlans[plans together]
+  sessions -.->|opt-in, per group| sharedWorkouts[sharedWorkouts]
   groupPlans -.->|I'm in| plannerRow
   inviteCodes -.-> invitePreviews[invitePreviews]
   sessions -.->|opt-in sync| publicProfiles
@@ -377,7 +379,9 @@ Single document id `progress`. Defaults if missing: weekly goal **3**, movement 
 
 Types: [`lib/group-types.ts`](../lib/group-types.ts). Limits: name 100, display name 80, invite code 8 chars (rules allow up to 12), max 12 members, max 20 groups per user.
 
-Groups are a shared week, not a feed. Members see the **days** you train and plan, the **workout name**, and your **weekly goal** and how close you are. Never sets, weights, notes or body weight. Nobody reads another user's private planner: each member's next 7 days of plans (day + label only) are copied onto their member doc, like `weeklyGoal`.
+Groups are a shared week, not a feed. Members see the **days** you train and plan, the **workout name**, and your **weekly goal** and how close you are. Sets and weights only if you opt in for that group ([Shared workouts](#sharedworkoutsdoc-groupsgroupidsharedworkoutsuid)); never notes or body weight. Nobody reads another user's private planner: each member's next 7 days of plans (day + label only) are copied onto their member doc, like `weeklyGoal`.
+
+The group page's **Today** card (#48) reads only member docs: others who trained today (with `lastWorkoutLabel`), then others whose `upcomingPlans` include today (“Leg day planned”). People with nothing today aren't listed.
 
 A **gym buddy** is just a group with `kind: "buddy"` and `maxMembers: 2` (friendlier copy: “You & Alex”). The owner can “turn it into a group”, which sets `kind: "group"`, `maxMembers: 12`.
 
@@ -408,8 +412,9 @@ A **gym buddy** is just a group with `kind: "buddy"` and `maxMembers: 2` (friend
 | `trainedDays`        | `string[]` (optional, ≤ 14)             | `YYYY-MM-DD` days with a workout or activity, this week + last week. Days only                                                          |
 | `lastWorkoutLabel`   | `string \| null` (optional, ≤ 80)       | Name of the latest workout / activity (“Push day”, “Run”) for “Maya: Push day”                                                          |
 | `upcomingPlans`      | `{ dateKey, label }[]` (optional, ≤ 14) | The member's next 7 days of open planner entries. Day + label only                                                                      |
+| `sharesWorkouts`     | `boolean` (optional)                    | Opted in to sharing workouts with this group. Missing reads as false. Only the member can change it                                     |
 
-`trainedDays` and `lastWorkoutLabel` are written with the other signals by `bumpGroupWorkoutSignals` (web app). The MCP server's admin sync (`syncWorkoutSignalsForUser`) writes `trainedDays` too, but not `lastWorkoutLabel` yet, so a workout logged only through MCP shows its day but not its name until the next in-app sync.
+`trainedDays` and `lastWorkoutLabel` are written with the other signals by `bumpGroupWorkoutSignals` (web app) and by the MCP server's admin sync (`syncWorkoutSignalsForUser`).
 
 **Keeping `upcomingPlans` fresh** (no Cloud Function): [`lib/group-plan-sync.ts`](../lib/group-plan-sync.ts) `syncUpcomingPlansToGroups` re-reads the next 7 days of `scheduledWorkouts` and writes them to every membership. It runs after every planner write in `lib/planner-repository.ts` (add / update / move / delete / copy last week), and, throttled to once per 10 minutes, when the user opens Home or Groups so the window rolls forward as days pass. If someone doesn't open the app for a week their row shows stale plans; the UI only shows planned days from today on, so old ones simply disappear.
 
@@ -479,6 +484,22 @@ The only group data a signed-out visitor can read, by exact code (`get` only, ne
 | `updatedAt`        | `Timestamp`                                                     |                                                           |
 
 `inviteCodes/{code}` itself stays signed-in only, now `get` only (it was `read`, which also allowed listing every code).
+
+### `SharedWorkoutsDoc` (`groups/{groupId}/sharedWorkouts/{uid}`)
+
+Opt-in, per group. Types and the pure builder: [`lib/shared-workouts.ts`](../lib/shared-workouts.ts); client reads/writes: [`lib/shared-workout-repository.ts`](../lib/shared-workout-repository.ts). Viewed by tapping a member's name (week grid or Today card), never as a feed.
+
+| Field         | Type              | Notes                                                      |
+| ------------- | ----------------- | ---------------------------------------------------------- |
+| `uid`         | `string`          | Same as doc id                                             |
+| `workouts`    | `SharedWorkout[]` | This week + last week, newest first, ≤ 21                  |
+| `updatedAtMs` | `number`          | Epoch ms (numbers, so client and Admin SDK write the same) |
+
+Each `SharedWorkout`: `id` (session id or `activity-{id}`), `kind` (`workout` \| `activity`), `dateKey`, `title`, `durationMin`, `distanceMiles` (activities), `atMs`, and `exercises: { name, metric, sets }[]` (≤ 30, ≤ 20 sets each). A set keeps only its numbers (weight in lb, reps, durations, pace, incline, resistance, distance). **Workout notes, exercise notes and set notes are dropped**, and so are sets left unchecked (`done: false`).
+
+**Lifecycle.** Turning sharing on sets `sharesWorkouts: true` on the member doc, then writes the doc. It's rebuilt from source whenever signals sync (`bumpGroupWorkoutSignals`, and `syncWorkoutSignalsForUser` for MCP), so edits and deletes heal. Turning it off deletes the doc, then clears the flag. Leaving deletes your copy; deleting the group deletes every member's copy (best-effort, before the member rows go).
+
+Rules: members read; only the member writes their own, only while their member doc has `sharesWorkouts == true`, with keys `uid`, `workouts` (≤ 21), `updatedAtMs`; the member or the group owner may delete. Nested shape isn't checked by rules: the member writes their own data, and the builder drops notes.
 
 ---
 

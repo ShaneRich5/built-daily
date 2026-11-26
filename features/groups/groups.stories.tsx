@@ -11,7 +11,8 @@ import {
   groupSummary,
   nextPlannedLabel,
   nextSevenDays,
-  trainedTodayDetail,
+  buildTodayRows,
+  sharedWorkoutsByWeek,
   trainedTodayOthers,
 } from "@/features/groups/groups-model";
 import { GroupView } from "@/features/groups/group-view";
@@ -23,10 +24,15 @@ import { NewGroupSheet } from "@/features/groups/new-group-sheet";
 import { PlanTogetherSheet } from "@/features/groups/plan-together-sheet";
 import { PlanView } from "@/features/groups/plan-view";
 import {
+  MemberWorkoutsSheet,
+  ShareWorkoutsSheet,
+} from "@/features/groups/workout-sharing-sheets";
+import {
   buddyPair,
   crew,
   crewPlans,
   ME,
+  mayaWorkouts,
   templates,
   TODAY,
 } from "@/features/groups/story-fixtures";
@@ -113,20 +119,23 @@ const groupProps = {
   subtitle: "6 members · Nov 8 – 14",
   days: buildWeekDays(TODAY),
   rows: week,
-  trainedToday: {
-    names: "Maya and Priya",
-    detail: trainedTodayDetail(crew, others, TODAY),
+  today: {
+    rows: buildTodayRows(crew, week, TODAY),
+    canCheer: others.length > 0,
     cheered: false,
   },
   planRows: crewPlans.map((p) => buildGroupPlanRow(p, crew, ME)),
   busyPlanId: null,
   cheerBusy: false,
   isOwner: true,
+  sharingWorkouts: false,
   buddy: null,
   onInvite: noop,
   onPlan: noop,
   onImIn: noop,
   onCheer: noop,
+  onOpenMember: noop,
+  onSharingSettings: noop,
   onLeave: noop,
   onDelete: noop,
   onConvertToGroup: noop,
@@ -154,6 +163,50 @@ const buddyNext = buildGroupPlanRow(
   ME,
 );
 
+export const G2MemberWorkouts: Story = {
+  name: "G2 · Maya’s shared workouts",
+  render: () => (
+    <MemberWorkoutsSheet
+      open
+      onOpenChange={noop}
+      name="Maya"
+      isMe={false}
+      weeks={sharedWorkoutsByWeek(mayaWorkouts, TODAY)}
+      notSharing={false}
+    />
+  ),
+};
+
+export const G2ShareWorkouts: Story = {
+  name: "G2 · Workout sharing (off)",
+  render: () => (
+    <ShareWorkoutsSheet
+      open
+      onOpenChange={noop}
+      audience="Morning Crew"
+      sharing={false}
+      busy={false}
+      error={null}
+      onChange={noop}
+    />
+  ),
+};
+
+export const G2ShareWorkoutsOn: Story = {
+  name: "G2 · Workout sharing (on)",
+  render: () => (
+    <ShareWorkoutsSheet
+      open
+      onOpenChange={noop}
+      audience="Alex"
+      sharing
+      busy={false}
+      error={null}
+      onChange={noop}
+    />
+  ),
+};
+
 export const G8Buddy: Story = {
   name: "G8 · Gym buddy",
   render: () => (
@@ -162,7 +215,8 @@ export const G8Buddy: Story = {
       title="You & Alex"
       subtitle=""
       rows={buddyWeek}
-      trainedToday={null}
+      today={null}
+      sharingWorkouts
       planRows={[buddyNext]}
       buddy={{
         otherName: "Alex",
@@ -184,7 +238,7 @@ export const G8BuddyWaiting: Story = {
       {...groupProps}
       title="You & Alex"
       rows={buddyWeek.slice(0, 1)}
-      trainedToday={null}
+      today={null}
       planRows={[]}
       buddy={{
         otherName: "Alex",

@@ -1,4 +1,10 @@
-import { ChevronLeft, Heart, MoreHorizontal, UserPlus } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  MoreHorizontal,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -10,6 +16,7 @@ import { cn } from "@/lib/utils";
 import {
   Avatar,
   card,
+  DayDot,
   DayTile,
   outlineButton,
   primaryDark,
@@ -19,16 +26,17 @@ import {
 import type {
   MemberWeek,
   PlanRow,
+  TodayRow,
   WeekDay,
 } from "@/features/groups/groups-model";
 import { PlanRowItem } from "@/features/groups/groups-view";
 import { WeekGrid, WeekLegend } from "@/features/groups/week-grid";
 
-export type TrainedTodayCard = {
-  /** "Maya and Priya" */
-  names: string;
-  /** "Maya: Push day · Priya: Run" */
-  detail: string;
+export type TodayCard = {
+  /** Others who trained today first, then others with something planned. */
+  rows: TodayRow[];
+  /** Someone else trained today, so there's someone to cheer. */
+  canCheer: boolean;
   cheered: boolean;
 };
 
@@ -50,17 +58,22 @@ export type GroupViewProps = {
   subtitle: string;
   days: WeekDay[];
   rows: MemberWeek[];
-  trainedToday: TrainedTodayCard | null;
+  today: TodayCard | null;
   planRows: PlanRow[];
   busyPlanId: string | null;
   cheerBusy: boolean;
   isOwner: boolean;
+  /** Whether I share my workouts with this group. */
+  sharingWorkouts: boolean;
   /** Present for a gym buddy (a group of two). */
   buddy: BuddyDetails | null;
   onInvite: () => void;
   onPlan: () => void;
   onImIn: (row: PlanRow) => void;
   onCheer: () => void;
+  /** Open someone's shared workouts (only offered for members who share). */
+  onOpenMember: (uid: string) => void;
+  onSharingSettings: () => void;
   onLeave: () => void;
   onDelete: () => void;
   onConvertToGroup: () => void;
@@ -68,11 +81,13 @@ export type GroupViewProps = {
 
 function GroupMenu({
   isOwner,
+  onSharingSettings,
   onLeave,
   onDelete,
   label,
 }: {
   isOwner: boolean;
+  onSharingSettings: () => void;
   onLeave: () => void;
   onDelete: () => void;
   label: string;
@@ -91,6 +106,9 @@ function GroupMenu({
         <MoreHorizontal className="size-5" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={6} className="w-52">
+        <DropdownMenuItem className="min-h-11" onClick={onSharingSettings}>
+          Workout sharing
+        </DropdownMenuItem>
         <DropdownMenuItem className="min-h-11" onClick={onLeave}>
           Leave
         </DropdownMenuItem>
@@ -129,6 +147,7 @@ export function GroupView(props: GroupViewProps) {
         <BackLink />
         <GroupMenu
           isOwner={props.isOwner}
+          onSharingSettings={props.onSharingSettings}
           onLeave={props.onLeave}
           onDelete={props.onDelete}
           label={props.title}
@@ -160,15 +179,20 @@ export function GroupView(props: GroupViewProps) {
         <h2 id="week-heading" className="text-[15px] font-semibold">
           This week
         </h2>
-        <WeekGrid days={props.days} rows={props.rows} />
+        <WeekGrid
+          days={props.days}
+          rows={props.rows}
+          onOpenMember={props.onOpenMember}
+        />
         <WeekLegend />
       </section>
 
-      {props.trainedToday ? (
-        <TrainedToday
-          card={props.trainedToday}
+      {props.today ? (
+        <Today
+          card={props.today}
           busy={props.cheerBusy}
           onCheer={props.onCheer}
+          onOpenMember={props.onOpenMember}
         />
       ) : null}
 
@@ -213,43 +237,128 @@ export function GroupView(props: GroupViewProps) {
         </button>
       </section>
 
-      <PrivacyNote />
+      <SharingFooter
+        sharing={props.sharingWorkouts}
+        onChange={props.onSharingSettings}
+      />
     </div>
   );
 }
 
-function TrainedToday({
-  card: c,
+function CheerButton({
+  cheered,
   busy,
   onCheer,
 }: {
-  card: TrainedTodayCard;
+  cheered: boolean;
   busy: boolean;
   onCheer: () => void;
 }) {
   return (
-    <section className={cn(card, "flex items-center gap-3 p-3.5")}>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-semibold text-zinc-900 dark:text-zinc-50">
-          {c.names} trained today
-        </span>
-        <span className="block truncate text-[13px] text-zinc-500 dark:text-zinc-400">
-          {c.detail}
-        </span>
-      </span>
+    <button
+      type="button"
+      disabled={busy || cheered}
+      onClick={onCheer}
+      className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-emerald-50 px-3.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-70 dark:bg-emerald-950/40 dark:text-emerald-300"
+    >
+      <Heart className={cn("size-4", cheered && "fill-current")} aria-hidden />
+      {cheered ? "Cheered" : "Cheer"}
+    </button>
+  );
+}
+
+/**
+ * Who trained today and who has something planned (#48). Rows for people who
+ * share their workouts open them; everyone else is just a line.
+ */
+function Today({
+  card: c,
+  busy,
+  onCheer,
+  onOpenMember,
+}: {
+  card: TodayCard;
+  busy: boolean;
+  onCheer: () => void;
+  onOpenMember: (uid: string) => void;
+}) {
+  return (
+    <section
+      aria-labelledby="today-heading"
+      className={cn(card, "flex flex-col gap-1 p-3.5")}
+    >
+      <div className="flex min-h-11 items-center justify-between gap-3">
+        <h2 id="today-heading" className="text-[15px] font-semibold">
+          Today
+        </h2>
+        {c.canCheer ? (
+          <CheerButton cheered={c.cheered} busy={busy} onCheer={onCheer} />
+        ) : null}
+      </div>
+      <ul className="-mx-1.5 flex flex-col">
+        {c.rows.map((r) => {
+          const content = (
+            <>
+              <DayDot mark={r.status} />
+              <span className="font-medium text-zinc-900 dark:text-zinc-50">
+                {r.name}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-zinc-500 dark:text-zinc-400">
+                {r.detail}
+              </span>
+            </>
+          );
+          return (
+            <li key={r.uid}>
+              {r.sharesWorkouts ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenMember(r.uid)}
+                  aria-label={`${r.name}: ${r.detail}. See ${r.name}’s workouts`}
+                  className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-1.5 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                >
+                  {content}
+                  <ChevronRight
+                    className="size-4 shrink-0 text-zinc-400"
+                    aria-hidden
+                  />
+                </button>
+              ) : (
+                <span className="flex min-h-11 items-center gap-2.5 px-1.5 text-sm">
+                  {content}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/** The privacy line, plus the way in to opt-in workout sharing. */
+function SharingFooter({
+  sharing,
+  onChange,
+}: {
+  sharing: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <PrivacyNote>
+        {sharing
+          ? "You share this week’s and last week’s workouts here: exercises, sets and weights. Your notes and body weight stay yours."
+          : undefined}
+      </PrivacyNote>
       <button
         type="button"
-        disabled={busy || c.cheered}
-        onClick={onCheer}
-        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-emerald-50 px-3.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 disabled:opacity-70 dark:bg-emerald-950/40 dark:text-emerald-300"
+        onClick={onChange}
+        className="inline-flex min-h-11 items-center px-2 text-xs font-medium text-zinc-800 underline underline-offset-2 dark:text-zinc-200"
       >
-        <Heart
-          className={cn("size-4", c.cheered && "fill-current")}
-          aria-hidden
-        />
-        {c.cheered ? "Cheered" : "Cheer"}
+        {sharing ? "Change workout sharing" : "Share my workouts too"}
       </button>
-    </section>
+    </div>
   );
 }
 
@@ -262,6 +371,7 @@ function BuddyView(props: GroupViewProps & { buddy: BuddyDetails }) {
         <BackLink />
         <GroupMenu
           isOwner={props.isOwner}
+          onSharingSettings={props.onSharingSettings}
           onLeave={props.onLeave}
           onDelete={props.onDelete}
           label={props.title}
@@ -329,6 +439,7 @@ function BuddyView(props: GroupViewProps & { buddy: BuddyDetails }) {
           rows={props.rows}
           togetherDays={buddy.togetherDays}
           showCounts={false}
+          onOpenMember={props.onOpenMember}
         />
         <div className="flex flex-col gap-1 border-t border-zinc-100 pt-2 text-[13px] dark:border-zinc-800">
           {props.rows.map((r) => (
@@ -361,11 +472,12 @@ function BuddyView(props: GroupViewProps & { buddy: BuddyDetails }) {
         </div>
       ) : null}
 
-      {props.trainedToday ? (
-        <TrainedToday
-          card={props.trainedToday}
+      {props.today ? (
+        <Today
+          card={props.today}
           busy={props.cheerBusy}
           onCheer={props.onCheer}
+          onOpenMember={props.onOpenMember}
         />
       ) : null}
 
@@ -414,7 +526,7 @@ function BuddyView(props: GroupViewProps & { buddy: BuddyDetails }) {
           {!alone ? (
             <button
               type="button"
-              disabled={props.cheerBusy || props.trainedToday?.cheered}
+              disabled={props.cheerBusy || props.today?.cheered}
               onClick={props.onCheer}
               className={cn(outlineButton, "h-12 flex-1")}
             >
@@ -439,7 +551,10 @@ function BuddyView(props: GroupViewProps & { buddy: BuddyDetails }) {
           "Ask whoever started it to turn it into a group."
         )}
       </p>
-      <PrivacyNote />
+      <SharingFooter
+        sharing={props.sharingWorkouts}
+        onChange={props.onSharingSettings}
+      />
     </div>
   );
 }

@@ -196,7 +196,8 @@ function NewGroupForm({
           </li>
           <li className="flex gap-2">
             <X className="mt-0.5 size-4 shrink-0 text-zinc-400" aria-hidden />
-            Never your sets, weights, notes or body weight
+            Your sets and weights only if you turn on sharing. Never your notes
+            or body weight
           </li>
         </ul>
       </div>
