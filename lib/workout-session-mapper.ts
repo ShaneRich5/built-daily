@@ -1,5 +1,6 @@
 import { Timestamp } from "firebase/firestore";
 import type { CatalogExercise, ExerciseMetric } from "@/lib/exercise-catalog";
+import { remapRetiredExercise } from "@/lib/exercise-catalog";
 import {
   lineGroupingToFirestore,
   parseAlternates,
@@ -397,9 +398,10 @@ function parseSessionLine(raw: unknown): SessionLine | null {
   if (!raw || typeof raw !== "object") return null;
   const o = raw as Record<string, unknown>;
   const lineId = typeof o.lineId === "string" ? o.lineId : "";
-  const exerciseId = typeof o.exerciseId === "string" ? o.exerciseId : "";
-  const nameSnapshot =
-    typeof o.nameSnapshot === "string" ? o.nameSnapshot.slice(0, 200) : "";
+  const { exerciseId, nameSnapshot } = remapRetiredExercise(
+    typeof o.exerciseId === "string" ? o.exerciseId : "",
+    typeof o.nameSnapshot === "string" ? o.nameSnapshot.slice(0, 200) : "",
+  );
   const metric = asMetric(o.metric);
   if (!lineId || !exerciseId || !nameSnapshot || !metric) return null;
   if (!Array.isArray(o.sets)) return null;

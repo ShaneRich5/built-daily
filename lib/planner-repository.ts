@@ -21,6 +21,7 @@ import type {
   ScheduledWorkoutStatus,
   UnscheduledWorkoutEntry,
 } from "@/lib/planner-types";
+import { canonicalExerciseId } from "@/lib/exercise-catalog";
 import { NOTE_LIMITS } from "@/lib/workout-types";
 import {
   removeSelfFromSharedPlan,
@@ -61,8 +62,9 @@ function parseEntryFields(
   if (typeof label !== "string" || label.length === 0) return null;
   if (planId != null && typeof planId !== "string") return null;
   if (!Array.isArray(exerciseIds)) return null;
-  const ids = exerciseIds.filter((x): x is string => typeof x === "string");
-  if (ids.length !== exerciseIds.length) return null;
+  const stored = exerciseIds.filter((x): x is string => typeof x === "string");
+  if (stored.length !== exerciseIds.length) return null;
+  const ids = [...new Set(stored.map(canonicalExerciseId))];
   const created =
     createdAt instanceof Timestamp ? createdAt.toDate() : new Date(0);
   const status = asStatus(raw.status);
