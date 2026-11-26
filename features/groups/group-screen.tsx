@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { joinSharedPlan } from "@/lib/group-plan-repository";
+import { setWorkoutSharing } from "@/lib/shared-workout-repository";
 import {
   convertBuddyToGroup,
   deleteAccountabilityGroup,
@@ -15,22 +16,23 @@ import {
   buildBuddySummary,
   buildGroupPlanRow,
   buildGroupWeek,
+  buildTodayRows,
   buildWeekDays,
   groupDisplayName,
-  joinNames,
   nextPlannedLabel,
   pluralMembers,
-  trainedTodayDetail,
   trainedTodayOthers,
   weekRangeLabel,
   type PlanRow,
 } from "@/features/groups/groups-model";
 import {
   ConnectedInviteSheet,
+  ConnectedMemberWorkoutsSheet,
   ConnectedPlanSheet,
 } from "@/features/groups/group-sheets";
 import { GroupView, type BuddyDetails } from "@/features/groups/group-view";
 import { useGroupData } from "@/features/groups/use-group-data";
+import { ShareWorkoutsSheet } from "@/features/groups/workout-sharing-sheets";
 
 const quiet =
   "rounded-xl border border-dashed border-zinc-200 px-4 py-5 text-sm text-zinc-500 dark:border-zinc-800";
@@ -50,6 +52,15 @@ export function GroupScreen({
   const [planOpen, setPlanOpen] = useState(false);
   const [busyPlanId, setBusyPlanId] = useState<string | null>(null);
   const [cheerBusy, setCheerBusy] = useState(false);
+  const [openMember, setOpenMember] = useState<{
+    uid: string;
+    name: string;
+    isMe: boolean;
+  } | null>(null);
+  const [memberOpen, setMemberOpen] = useState(false);
+  const [sharingOpen, setSharingOpen] = useState(false);
+  const [sharingBusy, setSharingBusy] = useState(false);
+  const [sharingError, setSharingError] = useState<string | null>(null);
 
   const members = useMemo(() => data.members ?? [], [data.members]);
   const view = useMemo(() => {
@@ -81,22 +92,28 @@ export function GroupScreen({
         ),
       };
     }
+    // A buddy can always be cheered; a group cheers whoever trained today.
+    const cheerTargets = buddy ? rows.filter((r) => !r.isMe) : others;
+    const todayRows = buildTodayRows(members, rows, data.todayKey);
     return {
       group,
       title,
       subtitle: `${pluralMembers(members.length)} · ${weekRangeLabel(data.todayKey)}`,
       days,
       rows,
-      others,
+      cheerTargets,
       cheeredByMe,
-      trainedToday:
-        others.length > 0
+      today:
+        todayRows.length > 0
           ? {
-              names: joinNames(others.map((o) => o.name)),
-              detail: trainedTodayDetail(members, others, data.todayKey),
-              cheered: others.every((o) => cheeredByMe.has(o.uid)),
+              rows: todayRows,
+              canCheer: others.length > 0,
+              cheered:
+                cheerTargets.length > 0 &&
+                cheerTargets.every((t) => cheeredByMe.has(t.uid)),
             }
           : null,
+      sharingWorkouts: rows.find((r) => r.isMe)?.sharesWorkouts ?? false,
       planRows,
       buddy,
     };
@@ -168,12 +185,10 @@ export function GroupScreen({
   };
 
   const cheer = async () => {
-    // A buddy can always cheer the other person; a group cheers whoever trained today.
-    const targets = view.buddy ? view.rows.filter((r) => !r.isMe) : view.others;
     setCheerBusy(true);
     try {
       await Promise.all(
-        targets
+        view.cheerTargets
           .filter((t) => !view.cheeredByMe.has(t.uid))
           .map((t) => toggleGroupCheer(groupId, t.uid, data.todayKey)),
       );
@@ -205,6 +220,27 @@ export function GroupScreen({
     else window.alert("Couldn’t delete it. Try again.");
   };
 
+  const openMemberWorkouts = (uid: string) => {
+    const row = view.rows.find((r) => r.uid === uid);
+    if (!row) return;
+    setOpenMember({ uid, name: row.isMe ? "You" : row.name, isMe: row.isMe });
+    setMemberOpen(true);
+  };
+
+  const changeSharing = async (share: boolean) => {
+    setSharingBusy(true);
+    setSharingError(null);
+    try {
+      if (await setWorkoutSharing(groupId, share)) setSharingOpen(false);
+      else
+        setSharingError(
+          "Couldn’t save that. Check your connection and try again.",
+        );
+    } finally {
+      setSharingBusy(false);
+    }
+  };
+
   const convert = async () => {
     const name = window.prompt("Name the group", "Gym crew");
     if (!name?.trim()) return;
@@ -219,16 +255,22 @@ export function GroupScreen({
         subtitle={view.subtitle}
         days={view.days}
         rows={view.rows}
-        trainedToday={view.trainedToday}
+        today={view.today}
         planRows={view.planRows}
         busyPlanId={busyPlanId}
         cheerBusy={cheerBusy}
         isOwner={isOwner}
+        sharingWorkouts={view.sharingWorkouts}
         buddy={view.buddy}
         onInvite={() => setInviteOpen(true)}
         onPlan={() => setPlanOpen(true)}
         onImIn={(row) => void imIn(row)}
         onCheer={() => void cheer()}
+        onOpenMember={openMemberWorkouts}
+        onSharingSettings={() => {
+          setSharingError(null);
+          setSharingOpen(true);
+        }}
         onLeave={() => void leave()}
         onDelete={() => void remove()}
         onConvertToGroup={() => void convert()}
@@ -257,6 +299,22 @@ export function GroupScreen({
         memberships={data.memberships}
         templates={data.templates}
         myUid={myUid}
+      />
+      <ConnectedMemberWorkoutsSheet
+        open={memberOpen}
+        onOpenChange={setMemberOpen}
+        groupId={groupId}
+        member={openMember}
+        todayKey={data.todayKey}
+      />
+      <ShareWorkoutsSheet
+        open={sharingOpen}
+        onOpenChange={setSharingOpen}
+        audience={view.buddy ? view.buddy.otherName : view.title}
+        sharing={view.sharingWorkouts}
+        busy={sharingBusy}
+        error={sharingError}
+        onChange={(share) => void changeSharing(share)}
       />
     </>
   );

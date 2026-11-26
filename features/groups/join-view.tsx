@@ -121,7 +121,8 @@ export function JoinView(props: JoinViewProps) {
 
       <PrivacyNote>
         The group sees the days you train and plan, the workout name, and your
-        weekly goal. Never your sets, weights, notes or body weight.
+        weekly goal. Your sets and weights only if you choose to share them, and
+        never your notes or body weight.
       </PrivacyNote>
 
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">

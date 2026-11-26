@@ -9,6 +9,10 @@ import {
 import { activityTypeName } from "@/lib/activity-catalog";
 import { firestoreToActivityDoc } from "@/lib/activity-mapper";
 import { getFirestoreDb } from "@/lib/firebase";
+import type {
+  SharedWorkoutActivityInput,
+  SharedWorkoutSessionInput,
+} from "@/lib/shared-workouts";
 import { firestoreToWorkoutSessionDoc } from "@/lib/workout-session-mapper";
 import {
   computeWorkoutSignals,
@@ -20,16 +24,17 @@ import {
 const SESSION_LOOKBACK = 400;
 const ACTIVITY_LOOKBACK = 400;
 
-/**
- * Fetches a user's completed sessions and logged activities with the client
- * SDK and recomputes their show-up signals from source. Shared by group and
- * public-profile writers so both stay correct the same way.
- */
-export async function computeUserWorkoutSignals(
+export type UserWorkoutHistory = {
+  sessions: SharedWorkoutSessionInput[];
+  activities: SharedWorkoutActivityInput[];
+};
+
+/** Completed sessions and logged activities, newest first, with the client SDK. */
+export async function fetchUserWorkoutHistory(
   uid: string,
-): Promise<WorkoutSignals> {
+): Promise<UserWorkoutHistory> {
   const db = getFirestoreDb();
-  if (!db) return computeWorkoutSignals([]);
+  if (!db) return { sessions: [], activities: [] };
 
   const [sessionsSnap, activitiesSnap] = await Promise.all([
     getDocs(
@@ -49,26 +54,52 @@ export async function computeUserWorkoutSignals(
     ),
   ]);
 
-  const sessions = [];
+  const sessions: SharedWorkoutSessionInput[] = [];
   for (const d of sessionsSnap.docs) {
     const session = firestoreToWorkoutSessionDoc(
       d.data() as Record<string, unknown>,
     );
-    if (session) sessions.push(session);
+    if (session) sessions.push({ id: d.id, ...session });
   }
 
-  const activities: ActivityDaySummary[] = [];
+  const activities: SharedWorkoutActivityInput[] = [];
   for (const d of activitiesSnap.docs) {
     const activity = firestoreToActivityDoc(
       d.data() as Record<string, unknown>,
     );
     if (!activity) continue;
     activities.push({
+      id: d.id,
       activityDate: activity.activityDate,
-      at: activity.endedAt ?? activity.startedAt ?? activity.createdAt,
       label: activityTypeName(activity.activityTypeId),
+      durationMin: activity.durationMin,
+      distanceMiles: activity.distanceMiles,
+      at: activity.endedAt ?? activity.startedAt ?? activity.createdAt,
     });
   }
 
-  return computeWorkoutSignals(sessions, activities);
+  return { sessions, activities };
+}
+
+/** Show-up signals recomputed from already-fetched history. */
+export function signalsFromHistory(
+  history: UserWorkoutHistory,
+): WorkoutSignals {
+  const activities: ActivityDaySummary[] = history.activities.map((a) => ({
+    activityDate: a.activityDate,
+    at: a.at,
+    label: a.label,
+  }));
+  return computeWorkoutSignals(history.sessions, activities);
+}
+
+/**
+ * Fetches a user's completed sessions and logged activities with the client
+ * SDK and recomputes their show-up signals from source. Shared by group and
+ * public-profile writers so both stay correct the same way.
+ */
+export async function computeUserWorkoutSignals(
+  uid: string,
+): Promise<WorkoutSignals> {
+  return signalsFromHistory(await fetchUserWorkoutHistory(uid));
 }

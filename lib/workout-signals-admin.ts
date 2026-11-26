@@ -6,16 +6,22 @@
  * and public profiles the way it was before this existed.
  */
 import { Timestamp } from "firebase-admin/firestore";
+import { activityTypeName } from "@/lib/activity-catalog";
 import { getAdminFirestore } from "@/lib/firebase-admin";
+import { GROUP_LIMITS } from "@/lib/group-types";
 import { goalWeekStreak } from "@/lib/progress-insights";
 import type { WeeklyGoalTarget } from "@/lib/progress-types";
+import {
+  buildSharedWorkouts,
+  sharedWorkoutsDocToFirestore,
+  type SharedWorkoutActivityInput,
+  type SharedWorkoutSessionInput,
+} from "@/lib/shared-workouts";
 import { activityMapToRecord } from "@/lib/workout-activity";
 import { localDateKeyFromMs } from "@/lib/workout-date";
 import {
   trainedDaysThisAndLastWeek,
   computeWorkoutSignals,
-  type ActivityDaySummary,
-  type CompletedSessionSummary,
 } from "@/lib/workout-signals";
 
 const SESSION_LOOKBACK = 400;
@@ -42,7 +48,11 @@ function toDate(value: unknown): Date | null {
   return null;
 }
 
-async function fetchUserWorkoutSignals(uid: string) {
+function numOrNull(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+async function fetchUserWorkoutHistory(uid: string) {
   const firestore = getAdminFirestore();
   const [sessionsSnap, activitiesSnap] = await Promise.all([
     firestore
@@ -62,21 +72,26 @@ async function fetchUserWorkoutSignals(uid: string) {
       .get(),
   ]);
 
-  const sessions: CompletedSessionSummary[] = [];
+  // Raw `lines` ride along for opt-in sharing; buildSharedWorkouts sanitizes them.
+  const sessions: SharedWorkoutSessionInput[] = [];
   for (const sessionDoc of sessionsSnap.docs) {
     const data = sessionDoc.data();
     const startedAt = toDate(data.startedAt);
     if (!startedAt) continue;
     sessions.push({
+      id: sessionDoc.id,
       status: typeof data.status === "string" ? data.status : "",
+      title: typeof data.title === "string" ? data.title : "",
       workoutDate:
         typeof data.workoutDate === "string" ? data.workoutDate : null,
       endedAt: toDate(data.endedAt),
       startedAt,
+      activeDurationSec: numOrNull(data.activeDurationSec),
+      lines: data.lines,
     });
   }
 
-  const activities: ActivityDaySummary[] = [];
+  const activities: SharedWorkoutActivityInput[] = [];
   for (const activityDoc of activitiesSnap.docs) {
     const data = activityDoc.data();
     const activityDate =
@@ -85,10 +100,20 @@ async function fetchUserWorkoutSignals(uid: string) {
     const at =
       toDate(data.endedAt) ?? toDate(data.startedAt) ?? toDate(data.createdAt);
     if (!at) continue;
-    activities.push({ activityDate, at });
+    activities.push({
+      id: activityDoc.id,
+      activityDate,
+      label:
+        typeof data.activityTypeId === "string"
+          ? activityTypeName(data.activityTypeId)
+          : "",
+      durationMin: numOrNull(data.durationMin),
+      distanceMiles: numOrNull(data.distanceMiles),
+      at,
+    });
   }
 
-  return computeWorkoutSignals(sessions, activities);
+  return { sessions, activities };
 }
 
 function displayNameFrom(
@@ -119,7 +144,9 @@ export async function syncWorkoutSignalsForUser(uid: string): Promise<void> {
   const firestore = getAdminFirestore();
 
   try {
-    const signals = await fetchUserWorkoutSignals(uid);
+    const history = await fetchUserWorkoutHistory(uid);
+    const signals = computeWorkoutSignals(history.sessions, history.activities);
+    const todayKey = localDateKeyFromMs(Date.now());
     const lastWorkoutAt = signals.lastWorkoutAt
       ? Timestamp.fromDate(signals.lastWorkoutAt)
       : null;
@@ -142,8 +169,13 @@ export async function syncWorkoutSignalsForUser(uid: string): Promise<void> {
       const rosterStreak = goalWeekStreak(
         signals.activityByDay,
         weeklyGoal,
-        localDateKeyFromMs(Date.now()),
+        todayKey,
       ).current;
+      const sharedWorkouts = buildSharedWorkouts(
+        history.sessions,
+        history.activities,
+        todayKey,
+      );
 
       await Promise.all(
         membershipsSnap.docs.map(async (membership) => {
@@ -157,14 +189,30 @@ export async function syncWorkoutSignalsForUser(uid: string): Promise<void> {
               currentStreak: rosterStreak,
               workoutsThisWeek: signals.workoutsThisWeek,
               weeklyGoal,
-              // Days only, for the group's week grid (never what was lifted).
+              // Days and the workout name, for the group's week grid.
               trainedDays: trainedDaysThisAndLastWeek(
                 signals.activityByDay,
-                localDateKeyFromMs(Date.now()),
-              ).slice(-14),
+                todayKey,
+              ).slice(-GROUP_LIMITS.trainedDaysMax),
+              lastWorkoutLabel:
+                signals.lastWorkoutLabel?.slice(0, GROUP_LIMITS.workoutLabel) ??
+                null,
             };
             if (displayName) patch.displayName = displayName;
             await memberRef.set(patch, { merge: true });
+            // Opt-in only: the workouts themselves, for groups the member chose.
+            const memberSnap = await memberRef.get();
+            if (memberSnap.data()?.sharesWorkouts === true) {
+              await firestore
+                .doc(`groups/${membership.id}/sharedWorkouts/${uid}`)
+                .set(
+                  sharedWorkoutsDocToFirestore({
+                    uid,
+                    workouts: sharedWorkouts,
+                    updatedAtMs: Date.now(),
+                  }),
+                );
+            }
           } catch {
             /* best-effort per group */
           }

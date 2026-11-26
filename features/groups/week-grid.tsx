@@ -12,18 +12,22 @@ const MARK_WORD = {
 /**
  * One grid for the whole week: a row of day headers, then one row per member.
  * Today's column sits on a light grey band. `togetherDays` adds a small people
- * icon (buddy view).
+ * icon (buddy view). With `onOpenMember`, the name of anyone who shares their
+ * workouts (you included, to preview) becomes a button, marked by a dotted
+ * underline (no chevron: the name column is too narrow to spare the room).
  */
 export function WeekGrid({
   days,
   rows,
   togetherDays,
   showCounts = true,
+  onOpenMember,
 }: {
   days: WeekDay[];
   rows: MemberWeek[];
   togetherDays?: Set<string>;
   showCounts?: boolean;
+  onOpenMember?: (uid: string) => void;
 }) {
   const cols = showCounts
     ? "grid-cols-[minmax(0,5.5rem)_repeat(7,minmax(0,1fr))_2.5rem]"
@@ -58,21 +62,25 @@ export function WeekGrid({
       </div>
       {rows.map((row, r) => (
         <div key={row.uid} role="row" className={cn("grid items-center", cols)}>
-          <span
-            role="rowheader"
-            className="flex min-w-0 items-center gap-2 py-2"
-          >
-            <Avatar name={row.name} size="sm" />
-            <span
-              className={cn(
-                "truncate",
-                row.isMe
-                  ? "font-semibold text-zinc-900 dark:text-zinc-50"
-                  : "text-zinc-700 dark:text-zinc-300",
-              )}
-            >
-              {row.isMe ? "You" : row.name}
-            </span>
+          <span role="rowheader" className="flex min-w-0 items-center">
+            {onOpenMember && row.sharesWorkouts ? (
+              <button
+                type="button"
+                onClick={() => onOpenMember(row.uid)}
+                aria-label={
+                  row.isMe
+                    ? "See the workouts you share"
+                    : `See ${row.name}’s workouts`
+                }
+                className="flex min-h-11 min-w-0 items-center gap-2 rounded-lg text-left hover:bg-zinc-50 dark:hover:bg-zinc-900"
+              >
+                <MemberName row={row} tappable />
+              </button>
+            ) : (
+              <span className="flex min-h-11 min-w-0 items-center gap-2">
+                <MemberName row={row} />
+              </span>
+            )}
           </span>
           {days.map((d, i) => (
             <span
@@ -127,5 +135,32 @@ export function WeekLegend() {
         Today
       </span>
     </div>
+  );
+}
+
+/** `tappable`: a dotted underline hints the name opens their shared workouts. */
+function MemberName({
+  row,
+  tappable = false,
+}: {
+  row: MemberWeek;
+  tappable?: boolean;
+}) {
+  return (
+    <>
+      <Avatar name={row.name} size="sm" />
+      <span
+        className={cn(
+          "truncate",
+          tappable &&
+            "underline decoration-zinc-400 decoration-dotted underline-offset-4",
+          row.isMe
+            ? "font-semibold text-zinc-900 dark:text-zinc-50"
+            : "text-zinc-700 dark:text-zinc-300",
+        )}
+      >
+        {row.isMe ? "You" : row.name}
+      </span>
+    </>
   );
 }

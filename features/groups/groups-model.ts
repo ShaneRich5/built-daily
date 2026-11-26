@@ -12,6 +12,8 @@ import type {
   GroupMemberDoc,
   SharedPlanDoc,
 } from "@/lib/group-types";
+import type { SharedSet, SharedWorkout } from "@/lib/shared-workouts";
+import { formatSetSummary } from "@/lib/workout-journal-export";
 import { dateFromLocalDateKey } from "@/lib/workout-date";
 
 export type GroupMemberRow = { id: string; member: GroupMemberDoc };
@@ -38,6 +40,8 @@ export type MemberWeek = {
   goal: number;
   onTrack: boolean;
   trainedToday: boolean;
+  /** Opted in to showing this group their workouts (tap their row to see them). */
+  sharesWorkouts: boolean;
 };
 
 const LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -163,6 +167,7 @@ export function buildMemberWeek(
     onTrack:
       done >= member.weeklyGoal || done + plannedLeft >= member.weeklyGoal,
     trainedToday: trained.has(todayKey),
+    sharesWorkouts: member.sharesWorkouts,
   };
 }
 
@@ -216,21 +221,102 @@ export function trainedTodayOthers(week: MemberWeek[]): MemberWeek[] {
   return week.filter((m) => m.trainedToday && !m.isMe);
 }
 
-/** "Maya: Push day · Priya: Run" — workout names only. */
-export function trainedTodayDetail(
+export type TodayRow = {
+  uid: string;
+  name: string;
+  status: "trained" | "planned";
+  /** "Push day" / "Leg day planned" */
+  detail: string;
+  sharesWorkouts: boolean;
+};
+
+/**
+ * The group page's "Today" card (#48): everyone else who trained today, then
+ * anyone with something planned who hasn't trained yet. People with nothing
+ * planned simply aren't listed — there's no "not yet" state.
+ */
+export function buildTodayRows(
   members: GroupMemberRow[],
-  others: MemberWeek[],
+  week: MemberWeek[],
   todayKey: string,
-): string {
+): TodayRow[] {
   const byUid = new Map(members.map(({ member }) => [member.uid, member]));
-  return others
-    .map((o) => {
-      const m = byUid.get(o.uid);
+  const trained: TodayRow[] = [];
+  const planned: TodayRow[] = [];
+  for (const row of week) {
+    const m = byUid.get(row.uid);
+    if (row.isMe || !m) continue;
+    const base = {
+      uid: row.uid,
+      name: row.name,
+      sharesWorkouts: row.sharesWorkouts,
+    };
+    if (row.trainedToday) {
       const label =
-        m?.lastWorkoutDateKey === todayKey ? m.lastWorkoutLabel : null;
-      return label ? `${o.name}: ${label}` : o.name;
-    })
-    .join(" · ");
+        m.lastWorkoutDateKey === todayKey ? m.lastWorkoutLabel : null;
+      trained.push({ ...base, status: "trained", detail: label ?? "Trained" });
+      continue;
+    }
+    const labels = m.upcomingPlans
+      .filter((p) => p.dateKey === todayKey)
+      .map((p) => p.label);
+    if (labels.length > 0) {
+      planned.push({
+        ...base,
+        status: "planned",
+        detail: `${labels.join(" + ")} planned`,
+      });
+    }
+  }
+  return [...trained, ...planned];
+}
+
+export type SharedWorkoutWeek = {
+  /** "This week" / "Last week" */
+  title: string;
+  workouts: SharedWorkout[];
+};
+
+/** This week, then last week. Empty weeks stay so the sheet can say so. */
+export function sharedWorkoutsByWeek(
+  workouts: SharedWorkout[],
+  todayKey: string,
+): SharedWorkoutWeek[] {
+  const weekStart = startOfWeekDateKey(todayKey);
+  const lastStart = addDaysToDateKey(weekStart, -7);
+  return [
+    {
+      title: "This week",
+      workouts: workouts.filter(
+        (w) => w.dateKey >= weekStart && w.dateKey <= todayKey,
+      ),
+    },
+    {
+      title: "Last week",
+      workouts: workouts.filter(
+        (w) => w.dateKey >= lastStart && w.dateKey < weekStart,
+      ),
+    },
+  ];
+}
+
+/** "3 sets of 95 lb × 8", or each set when they differ: "95 lb × 8, 100 lb × 6". */
+export function sharedSetsLabel(sets: SharedSet[]): string {
+  const each = sets.map((s) => formatSetSummary({ ...s, note: null }));
+  if (each.length > 1 && each.every((e) => e === each[0])) {
+    return `${each.length} sets of ${each[0]}`;
+  }
+  return each.join(", ");
+}
+
+/** "48 min · 5 exercises", "25 min · 2.1 mi". */
+export function sharedWorkoutMeta(w: SharedWorkout): string {
+  const parts: string[] = [];
+  if (w.durationMin) parts.push(`${w.durationMin} min`);
+  if (w.distanceMiles) parts.push(`${w.distanceMiles} mi`);
+  const n = w.exercises.length;
+  if (n > 0) parts.push(`${n} exercise${n === 1 ? "" : "s"}`);
+  return parts.join(" · ");
 }
 
 /** "6:30 AM" from "06:30"; null for anytime. */

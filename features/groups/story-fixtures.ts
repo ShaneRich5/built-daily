@@ -1,5 +1,6 @@
 /** Mock "Morning Crew" for stories: week of Sun Nov 8 – Sat Nov 14 2026, today Tue Nov 10. */
 import type { GroupMemberDoc, SharedPlanDoc } from "@/lib/group-types";
+import type { SharedSet, SharedWorkout } from "@/lib/shared-workouts";
 import type {
   GroupMemberRow,
   GroupPlanRow,
@@ -31,6 +32,7 @@ function member(
       trainedDays,
       lastWorkoutLabel: null,
       upcomingPlans: upcoming.map(([dateKey, label]) => ({ dateKey, label })),
+      sharesWorkouts: false,
       ...extra,
     },
   };
@@ -51,7 +53,7 @@ export const crew: GroupMemberRow[] = [
     "Maya Chen",
     ["2026-11-08", "2026-11-10"],
     [["2026-11-13", "Pull day"]],
-    { lastWorkoutLabel: "Push day" },
+    { lastWorkoutLabel: "Push day", sharesWorkouts: true },
   ),
   member(
     "u-priya",
@@ -66,9 +68,16 @@ export const crew: GroupMemberRow[] = [
     ["2026-11-08"],
     [["2026-11-13", "Pull day"]],
   ),
-  member("u-dev", "Dev Kapoor", [], [["2026-11-11", "Full body"]], {
-    weeklyGoal: 2,
-  }),
+  member(
+    "u-dev",
+    "Dev Kapoor",
+    [],
+    [
+      ["2026-11-10", "Full body"],
+      ["2026-11-12", "Run"],
+    ],
+    { weeklyGoal: 2 },
+  ),
   member("u-alex", "Alex Kim", ["2026-11-09"], []),
 ];
 
@@ -155,4 +164,66 @@ export const buddyPair: GroupMemberRow[] = [
     [["2026-11-14", "Pull day"]],
     { currentStreak: 6 },
   ),
+];
+
+function sets(n: number, weight: number | null, reps: number): SharedSet[] {
+  return Array.from({ length: n }, () => ({
+    weight,
+    reps,
+    durationSec: null,
+    timedSetSec: null,
+    paceMph: null,
+    inclinePercent: null,
+    resistanceLevel: null,
+    distanceMiles: null,
+  }));
+}
+
+/** What Maya shares with the crew (she opted in). */
+export const mayaWorkouts: SharedWorkout[] = [
+  {
+    id: "s-push",
+    kind: "workout",
+    dateKey: "2026-11-10",
+    title: "Push day",
+    durationMin: 48,
+    distanceMiles: null,
+    atMs: new Date("2026-11-10T07:30:00").getTime(),
+    exercises: [
+      { name: "Bench press", metric: "weight_reps", sets: sets(3, 95, 8) },
+      {
+        name: "Incline dumbbell press",
+        metric: "weight_reps",
+        sets: [...sets(2, 30, 10), ...sets(1, 35, 8)],
+      },
+      { name: "Push-up", metric: "bodyweight_reps", sets: sets(2, null, 15) },
+    ],
+  },
+  {
+    id: "activity-run",
+    kind: "activity",
+    dateKey: "2026-11-08",
+    title: "Run",
+    durationMin: 25,
+    distanceMiles: 2.4,
+    atMs: new Date("2026-11-08T08:00:00").getTime(),
+    exercises: [],
+  },
+  {
+    id: "s-legs",
+    kind: "workout",
+    dateKey: "2026-11-05",
+    title: "Leg day",
+    durationMin: 55,
+    distanceMiles: null,
+    atMs: new Date("2026-11-05T18:10:00").getTime(),
+    exercises: [
+      { name: "Back squat", metric: "weight_reps", sets: sets(4, 115, 6) },
+      {
+        name: "Romanian deadlift",
+        metric: "weight_reps",
+        sets: sets(3, 95, 10),
+      },
+    ],
+  },
 ];

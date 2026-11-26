@@ -43,8 +43,16 @@ import { syncUpcomingPlansToGroups } from "@/lib/group-plan-sync";
 import { firestoreToProgressSettings } from "@/lib/progress-mapper";
 import type { WeeklyGoalTarget } from "@/lib/progress-types";
 import { goalWeekStreak } from "@/lib/progress-insights";
+import { buildSharedWorkouts } from "@/lib/shared-workouts";
+import {
+  deleteSharedWorkouts,
+  writeSharedWorkouts,
+} from "@/lib/shared-workout-repository";
 import { localDateKeyFromMs } from "@/lib/workout-date";
-import { computeUserWorkoutSignals } from "@/lib/workout-signals-client";
+import {
+  fetchUserWorkoutHistory,
+  signalsFromHistory,
+} from "@/lib/workout-signals-client";
 import { trainedDaysThisAndLastWeek } from "@/lib/workout-signals";
 
 export type SavedGroupMembership = {
@@ -207,6 +215,7 @@ function newMemberDoc(
     trainedDays: [],
     lastWorkoutLabel: null,
     upcomingPlans: [],
+    sharesWorkouts: false,
   };
 }
 
@@ -452,6 +461,9 @@ export async function leaveAccountabilityGroup(
     return deleteAccountabilityGroup(groupId);
   }
 
+  // Separate from the transaction so a missing rules deploy can't block leaving.
+  if (member.sharesWorkouts) await deleteSharedWorkouts(db, groupId, user.uid);
+
   await runTransaction(db, async (tx) => {
     const gRef = doc(db, "groups", groupId);
     const gSnap = await tx.get(gRef);
@@ -528,6 +540,14 @@ export async function deleteAccountabilityGroup(
     collection(db, "groups", groupId, "members"),
   );
 
+  // Shared workouts first: once member rows are gone nobody could read them,
+  // but they shouldn't outlive the group either.
+  await Promise.all(
+    membersSnap.docs
+      .filter((m) => m.data().sharesWorkouts === true)
+      .map((m) => deleteSharedWorkouts(db, groupId, m.id)),
+  );
+
   const batch = writeBatch(db);
   for (const m of membersSnap.docs) {
     batch.delete(m.ref);
@@ -569,23 +589,31 @@ export async function bumpGroupWorkoutSignals(): Promise<void> {
   );
   if (membershipsSnap.empty) return;
 
-  const [signals, weeklyGoal] = await Promise.all([
-    computeUserWorkoutSignals(user.uid),
+  const [history, weeklyGoal] = await Promise.all([
+    fetchUserWorkoutHistory(user.uid),
     currentWeeklyGoal(user.uid),
   ]);
+  const signals = signalsFromHistory(history);
   const todayKey = localDateKeyFromMs(Date.now());
   const rosterStreak = goalWeekStreak(
     signals.activityByDay,
     weeklyGoal,
     todayKey,
   ).current;
-  // Days and the workout name only — never sets, weights or notes.
+  // The member doc carries days and the workout name only — never sets,
+  // weights or notes.
   const trainedDays = trainedDaysThisAndLastWeek(
     signals.activityByDay,
     todayKey,
   ).slice(-GROUP_LIMITS.trainedDaysMax);
   const lastWorkoutLabel =
     signals.lastWorkoutLabel?.slice(0, GROUP_LIMITS.workoutLabel) ?? null;
+  // Built once; only written to groups the member opted in to (below).
+  const sharedWorkouts = buildSharedWorkouts(
+    history.sessions,
+    history.activities,
+    todayKey,
+  );
 
   await Promise.all(
     membershipsSnap.docs.map(async (membershipDoc) => {
@@ -607,6 +635,16 @@ export async function bumpGroupWorkoutSignals(): Promise<void> {
           trainedDays,
           lastWorkoutLabel,
         });
+        // Only groups this member opted in to see the workouts themselves.
+        const memberSnap = await getDoc(memberRef);
+        if (memberSnap.data()?.sharesWorkouts === true) {
+          await writeSharedWorkouts(
+            db,
+            membershipDoc.id,
+            user.uid,
+            sharedWorkouts,
+          );
+        }
       } catch {
         /* best-effort per group */
       }

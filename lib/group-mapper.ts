@@ -237,6 +237,7 @@ export function firestoreToMemberDoc(
       GROUP_LIMITS.workoutLabel,
     ),
     upcomingPlans: asUpcomingPlans(data.upcomingPlans),
+    sharesWorkouts: data.sharesWorkouts === true,
   };
 }
 

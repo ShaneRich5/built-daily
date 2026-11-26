@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { JoinGroupForm } from "@/components/join-group-form";
 import {
@@ -14,10 +14,13 @@ import {
   type SavedGroupMember,
   type SavedGroupMembership,
 } from "@/lib/group-repository";
+import { subscribeSharedWorkouts } from "@/lib/shared-workout-repository";
+import type { SharedWorkoutsDoc } from "@/lib/shared-workouts";
 import {
   crewCountsByDay,
   formatPlanTime,
   nextSevenDays,
+  sharedWorkoutsByWeek,
 } from "@/features/groups/groups-model";
 import {
   InviteSheet,
@@ -28,6 +31,7 @@ import {
   type PlanTemplateOption,
 } from "@/features/groups/plan-together-sheet";
 import { membershipLabel } from "@/features/groups/use-group-data";
+import { MemberWorkoutsSheet } from "@/features/groups/workout-sharing-sheets";
 
 function browserOrigin(): string {
   return typeof window === "undefined" ? "" : window.location.origin;
@@ -145,6 +149,53 @@ export function ConnectedPlanSheet({
         if (created) onCreated?.(created);
         return Boolean(created);
       }}
+    />
+  );
+}
+
+/** Someone's shared workouts, read only while the sheet is open. */
+export function ConnectedMemberWorkoutsSheet({
+  open,
+  onOpenChange,
+  groupId,
+  member,
+  todayKey,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  groupId: string;
+  /** Who to show. Kept after closing so the sheet doesn't blank as it slides away. */
+  member: { uid: string; name: string; isMe: boolean } | null;
+  todayKey: string;
+}) {
+  const uid = open ? (member?.uid ?? null) : null;
+  // Tagged with the uid it belongs to, so switching members never flashes
+  // the previous person's workouts.
+  const [loaded, setLoaded] = useState<{
+    uid: string;
+    doc: SharedWorkoutsDoc | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!uid) return;
+    return subscribeSharedWorkouts(groupId, uid, (doc) =>
+      setLoaded({ uid, doc }),
+    );
+  }, [groupId, uid]);
+
+  const current = loaded && loaded.uid === member?.uid ? loaded : null;
+  return (
+    <MemberWorkoutsSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      name={member?.name ?? ""}
+      isMe={member?.isMe ?? false}
+      weeks={
+        current?.doc
+          ? sharedWorkoutsByWeek(current.doc.workouts, todayKey)
+          : null
+      }
+      notSharing={current !== null && current.doc === null}
     />
   );
 }
