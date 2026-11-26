@@ -8,6 +8,7 @@
  */
 import {
   getCatalogExerciseById,
+  remapRetiredExercise,
   type CatalogExercise,
   type ExerciseMetric,
 } from "@/lib/exercise-catalog";
@@ -40,9 +41,10 @@ export function parseAlternates(raw: unknown): AlternateExercise[] {
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
     const o = item as Record<string, unknown>;
-    const exerciseId = typeof o.exerciseId === "string" ? o.exerciseId : "";
-    const nameSnapshot =
-      typeof o.nameSnapshot === "string" ? o.nameSnapshot.slice(0, 200) : "";
+    const { exerciseId, nameSnapshot } = remapRetiredExercise(
+      typeof o.exerciseId === "string" ? o.exerciseId : "",
+      typeof o.nameSnapshot === "string" ? o.nameSnapshot.slice(0, 200) : "",
+    );
     const metric =
       typeof o.metric === "string" && METRICS.has(o.metric)
         ? (o.metric as ExerciseMetric)

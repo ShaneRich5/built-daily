@@ -1,4 +1,5 @@
 import {
+  canonicalExerciseId,
   getCatalogExerciseById,
   type ExerciseMetric,
 } from "@/lib/exercise-catalog";
@@ -111,7 +112,11 @@ export async function getExerciseHistory(
     const lines = Array.isArray(data.lines)
       ? (data.lines as SessionLine[])
       : [];
-    const matching = lines.filter((line) => line.exerciseId === exerciseId);
+    const matching = lines.filter(
+      (line) =>
+        canonicalExerciseId(line.exerciseId) ===
+        canonicalExerciseId(exerciseId),
+    );
     if (matching.length === 0) continue;
 
     exerciseName ??= matching[0].nameSnapshot;

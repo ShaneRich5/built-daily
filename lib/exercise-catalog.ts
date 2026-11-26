@@ -269,8 +269,6 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
     "legs",
   ),
   ex("leg-press-calf-raise", "Leg press calf raise", "weight_reps", "legs"),
-  ex("adductor-machine", "Adductor machine", "weight_reps", "legs"),
-  ex("abductor-machine", "Abductor machine", "weight_reps", "legs"),
   ex("multi-hip-machine", "Multi-hip machine", "weight_reps", "legs"),
   ex("pendulum-squat", "Pendulum squat", "weight_reps", "legs"),
   ex("belt-squat", "Belt squat machine", "weight_reps", "legs"),
@@ -363,10 +361,48 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
 
 const byId = new Map(EXERCISE_CATALOG.map((e) => [e.id, e]));
 
+/**
+ * Ids that were merged into another catalog entry (same machine, two names).
+ * Old sessions, templates and planner entries still store them, so the read
+ * paths map them onto the kept id and history stays in one place.
+ */
+const RETIRED_EXERCISE_IDS: Record<string, string> = {
+  "adductor-machine": "hip-adduction-machine",
+  "abductor-machine": "hip-abduction-machine",
+};
+
+/** The kept id for a retired catalog id; any other id comes back unchanged. */
+export function canonicalExerciseId(id: string): string {
+  return RETIRED_EXERCISE_IDS[id] ?? id;
+}
+
+/**
+ * For a stored line: swap a retired id (and the old name saved with it) for
+ * the kept catalog entry. Lines with current or custom ids pass through.
+ */
+export function remapRetiredExercise(
+  exerciseId: string,
+  nameSnapshot: string,
+): { exerciseId: string; nameSnapshot: string } {
+  const kept = canonicalExerciseId(exerciseId);
+  if (kept === exerciseId) return { exerciseId, nameSnapshot };
+  return {
+    exerciseId: kept,
+    nameSnapshot: byId.get(kept)?.name ?? nameSnapshot,
+  };
+}
+
 export function getCatalogExerciseById(
   id: string,
 ): CatalogExercise | undefined {
-  return byId.get(id);
+  return byId.get(canonicalExerciseId(id));
+}
+
+/** True when `q` matches a retired id that now points at `exercise`, so "adductor" still finds it. */
+function retiredIdMatchesQuery(exercise: CatalogExercise, q: string): boolean {
+  return Object.entries(RETIRED_EXERCISE_IDS).some(
+    ([retired, kept]) => kept === exercise.id && retired.includes(q),
+  );
 }
 
 function targetingMatchesQuery(exercise: CatalogExercise, q: string): boolean {
@@ -384,6 +420,7 @@ export function filterCatalogExercises(query: string): CatalogExercise[] {
     (item) =>
       item.name.toLowerCase().includes(q) ||
       item.id.toLowerCase().includes(q) ||
+      retiredIdMatchesQuery(item, q) ||
       targetingMatchesQuery(item, q),
   );
 }
@@ -426,7 +463,7 @@ export function catalogExerciseFromCustomName(
 export function resolveCatalogExercises(ids: string[]): CatalogExercise[] {
   const out: CatalogExercise[] = [];
   for (const id of ids) {
-    const found = byId.get(id);
+    const found = getCatalogExerciseById(id);
     if (found) out.push(found);
   }
   return out;
@@ -450,7 +487,7 @@ export function resolveExercisesFromUrl(
   const fromPlan = new Map((planLines ?? []).map((l) => [l.exerciseId, l]));
   const out: CatalogExercise[] = [];
   for (const id of orderedIds) {
-    const cat = byId.get(id);
+    const cat = getCatalogExerciseById(id);
     if (cat) {
       out.push(cat);
       continue;
