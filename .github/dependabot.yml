@@ -9,6 +9,13 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # TypeScript 7.0 ships no JS API, so typescript-eslint can't load it and
+    # lint (CI + pre-commit) breaks. Hold at 5.9 until TypeScript 7.1 is stable
+    # and typescript-eslint supports it, then remove this and upgrade on purpose.
+    # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+    ignore:
+      - dependency-name: typescript
+        versions: [">=7.0.0"]
     groups:
       minor-and-patch:
         update-types: [minor, patch]
