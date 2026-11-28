@@ -56,3 +56,31 @@ describe("merged hip machines", () => {
     });
   });
 });
+
+describe("equipment tags and search words", () => {
+  const ids = (query: string) => filterCatalogExercises(query).map((e) => e.id);
+
+  it("tags the existing entries", () => {
+    expect(getCatalogExerciseById("db-curl")?.equipment).toBe("free_weights");
+    expect(getCatalogExerciseById("leg-press")?.equipment).toBe("machine");
+    expect(getCatalogExerciseById("cable-fly")?.equipment).toBe("cable");
+    expect(getCatalogExerciseById("pushup")?.equipment).toBe("bodyweight");
+    expect(getCatalogExerciseById("treadmill")?.equipment).toBe(
+      "cardio_machine",
+    );
+  });
+
+  it("finds free weights by their usual names", () => {
+    for (const query of ["free weight", "free weights", "dumbbells", "db"]) {
+      expect(ids(query)).toContain("db-curl");
+    }
+    expect(ids("free weights")).toContain("squat");
+    expect(ids("kb")).toContain("kb-swing");
+    expect(ids("free weights")).not.toContain("leg-press");
+  });
+
+  it("finds machines and cables", () => {
+    expect(ids("machines")).toContain("leg-press");
+    expect(ids("cables")).toContain("cable-fly");
+  });
+});

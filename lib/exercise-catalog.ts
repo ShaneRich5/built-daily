@@ -1,3 +1,8 @@
+import {
+  equipmentForId,
+  equipmentMatchesQuery,
+  type ExerciseEquipment,
+} from "@/lib/exercise-equipment";
 import type { MuscleGroup } from "@/lib/progress-types";
 
 export type ExerciseMetric =
@@ -11,6 +16,8 @@ export type CatalogExercise = {
   primary?: MuscleGroup;
   /** Other groups that work as helpers. */
   secondary?: MuscleGroup[];
+  /** Free weights, machine, cable… Optional so custom exercises can skip it. */
+  equipment?: ExerciseEquipment;
 };
 
 /**
@@ -357,7 +364,12 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   ex("stationary-bike", "Stationary bike", "cardio", "cardio"),
   ex("row-erg", "Rowing machine", "cardio", "cardio"),
   ex("assault-bike", "Assault / air bike", "cardio", "cardio"),
-].sort((a, b) => a.name.localeCompare(b.name, "en"));
+]
+  .map((exercise) => {
+    const equipment = equipmentForId(exercise.id);
+    return equipment ? { ...exercise, equipment } : exercise;
+  })
+  .sort((a, b) => a.name.localeCompare(b.name, "en"));
 
 const byId = new Map(EXERCISE_CATALOG.map((e) => [e.id, e]));
 
@@ -421,8 +433,16 @@ export function filterCatalogExercises(query: string): CatalogExercise[] {
       item.name.toLowerCase().includes(q) ||
       item.id.toLowerCase().includes(q) ||
       retiredIdMatchesQuery(item, q) ||
-      targetingMatchesQuery(item, q),
+      targetingMatchesQuery(item, q) ||
+      equipmentMatchesQuery(item.equipment, q),
   );
+}
+
+export function filterCatalogByEquipment(
+  exercises: CatalogExercise[],
+  equipment: ExerciseEquipment,
+): CatalogExercise[] {
+  return exercises.filter((exercise) => exercise.equipment === equipment);
 }
 
 /**
