@@ -1,15 +1,20 @@
 "use client";
 
 import { Check, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import {
   catalogExerciseFromCustomName,
   EXERCISE_CATALOG,
   filterCatalogByMuscle,
+  filterCatalogByEquipment,
   filterCatalogExercises,
   type CatalogExercise,
 } from "@/lib/exercise-catalog";
+import {
+  CATALOG_EQUIPMENT_FILTERS,
+  type ExerciseEquipment,
+} from "@/lib/exercise-equipment";
 import {
   CATALOG_MUSCLE_FILTERS,
   muscleTargetSummary,
@@ -25,7 +30,7 @@ export type ExerciseSearchMode =
   /** Pick one stand-in for a template line (it goes back through `onReplace`). */
   | { kind: "alternate"; forName: string };
 
-type Filter = "suggested" | "recent" | "all" | MuscleGroup;
+type Filter = "suggested" | "recent" | "all" | ExerciseEquipment | MuscleGroup;
 
 type ExerciseSearchSheetProps = {
   open: boolean;
@@ -38,6 +43,10 @@ type ExerciseSearchSheetProps = {
   /** Replace and alternate modes: the single exercise picked. */
   onReplace: (exercise: CatalogExercise) => void;
 };
+
+function isEquipmentFilter(filter: Filter): filter is ExerciseEquipment {
+  return CATALOG_EQUIPMENT_FILTERS.some((option) => option.id === filter);
+}
 
 function exerciseMeta(exercise: CatalogExercise): string {
   const { primary, secondary } = targetingForExercise(exercise);
@@ -69,13 +78,18 @@ export function ExerciseSearchSheet({
   const [picked, setPicked] = useState<CatalogExercise[]>([]);
   const room = mode.kind === "add" ? mode.room : 1;
 
-  const filters: Array<{ id: Filter; label: string }> = [
+  // Three groups, in order: lists, equipment, muscles (dividers show between them).
+  const listFilters: Array<{ id: Filter; label: string }> = [
     ...(suggested.length > 0
       ? [{ id: "suggested" as const, label: "Suggested" }]
       : []),
     ...(recent.length > 0 ? [{ id: "recent" as const, label: "Recent" }] : []),
     { id: "all", label: "All" },
-    ...CATALOG_MUSCLE_FILTERS,
+  ];
+  const filterGroups = [
+    listFilters,
+    CATALOG_EQUIPMENT_FILTERS,
+    CATALOG_MUSCLE_FILTERS,
   ];
 
   const results = useMemo(() => {
@@ -85,6 +99,8 @@ export function ExerciseSearchSheet({
     else if (filter === "suggested") base = suggested;
     else if (filter === "recent") base = recent;
     else base = EXERCISE_CATALOG;
+    if (isEquipmentFilter(filter))
+      return filterCatalogByEquipment(base, filter);
     const group =
       filter === "suggested" || filter === "recent" || filter === "all"
         ? null
@@ -182,25 +198,35 @@ export function ExerciseSearchSheet({
           role="group"
           aria-label="Filter exercises"
         >
-          {filters.map((f) => {
-            const active = filter === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setFilter(f.id)}
-                className={cn(
-                  "h-9 shrink-0 rounded-full border px-3 text-[13px] font-medium",
-                  active
-                    ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
-                    : "border-zinc-200 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300",
-                )}
-              >
-                {f.label}
-              </button>
-            );
-          })}
+          {filterGroups.map((group, groupIndex) => (
+            <Fragment key={groupIndex}>
+              {groupIndex > 0 ? (
+                <span
+                  className="mx-0.5 w-px shrink-0 self-stretch bg-zinc-200 dark:bg-zinc-700"
+                  aria-hidden
+                />
+              ) : null}
+              {group.map((f) => {
+                const active = filter === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setFilter(f.id)}
+                    className={cn(
+                      "h-9 shrink-0 rounded-full border px-3 text-[13px] font-medium",
+                      active
+                        ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                        : "border-zinc-200 bg-white text-zinc-700 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300",
+                    )}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </Fragment>
+          ))}
         </div>
       </div>
 
