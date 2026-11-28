@@ -554,6 +554,7 @@ export function WorkoutSessionScreen({
         }
         suggested={session.suggestedForSearch}
         recent={session.recentExercises}
+        pastCustom={session.pastCustomExercises}
         onAdd={(picked) =>
           addExercises(picked, panel === "addMaybe" ? "maybe" : "plan")
         }

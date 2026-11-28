@@ -3,8 +3,8 @@
 import { Check, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { filterPastCustom } from "@/lib/custom-exercise";
 import {
-  catalogExerciseFromCustomName,
   EXERCISE_CATALOG,
   filterCatalogByMuscle,
   filterCatalogExercises,
@@ -17,6 +17,7 @@ import {
 } from "@/lib/exercise-muscle";
 import type { MuscleGroup } from "@/lib/progress-types";
 import { cn } from "@/lib/utils";
+import { CustomExerciseForm } from "@/features/workout-session/custom-exercise-form";
 import { metricLabel } from "@/features/workout-session/session-model";
 
 export type ExerciseSearchMode =
@@ -33,6 +34,8 @@ type ExerciseSearchSheetProps = {
   mode: ExerciseSearchMode;
   suggested: CatalogExercise[];
   recent: CatalogExercise[];
+  /** Custom exercises from past workouts, so they can be found by name again. */
+  pastCustom?: CatalogExercise[];
   /** Add mode: the picked exercises, in the order they were tapped. */
   onAdd: (exercises: CatalogExercise[]) => void;
   /** Replace and alternate modes: the single exercise picked. */
@@ -57,6 +60,7 @@ export function ExerciseSearchSheet({
   mode,
   suggested,
   recent,
+  pastCustom = [],
   onAdd,
   onReplace,
 }: ExerciseSearchSheetProps) {
@@ -66,6 +70,7 @@ export function ExerciseSearchSheet({
   const [filter, setFilter] = useState<Filter>(
     suggested.length > 0 ? "suggested" : recent.length > 0 ? "recent" : "all",
   );
+  const [creating, setCreating] = useState(false);
   const [picked, setPicked] = useState<CatalogExercise[]>([]);
   const room = mode.kind === "add" ? mode.room : 1;
 
@@ -81,7 +86,11 @@ export function ExerciseSearchSheet({
   const results = useMemo(() => {
     const searching = query.trim().length > 0;
     let base: CatalogExercise[];
-    if (searching) base = filterCatalogExercises(query);
+    if (searching)
+      base = [
+        ...filterCatalogExercises(query),
+        ...filterPastCustom(query, pastCustom),
+      ];
     else if (filter === "suggested") base = suggested;
     else if (filter === "recent") base = recent;
     else base = EXERCISE_CATALOG;
@@ -90,7 +99,7 @@ export function ExerciseSearchSheet({
         ? null
         : filter;
     return group ? filterCatalogByMuscle(base, group) : base;
-  }, [query, filter, suggested, recent]);
+  }, [query, filter, suggested, recent, pastCustom]);
 
   const pickedIndex = (exercise: CatalogExercise) =>
     picked.findIndex((p) => p.id === exercise.id);
@@ -109,15 +118,14 @@ export function ExerciseSearchSheet({
   };
 
   const customName = query.trim();
-  const addCustom = () => {
-    const custom = catalogExerciseFromCustomName(customName);
-    if (!custom) return;
+  const addCustom = (custom: CatalogExercise) => {
     if (isReplace) {
       onReplace(custom);
       return;
     }
-    if (picked.length >= room) return;
-    setPicked((prev) => [...prev, custom]);
+    // Picking one you already added again would count it twice.
+    if (pickedIndex(custom) < 0) setPicked((prev) => [...prev, custom]);
+    setCreating(false);
     setQuery("");
   };
 
@@ -148,6 +156,28 @@ export function ExerciseSearchSheet({
         : `Add ${picked.length} exercise${picked.length === 1 ? "" : "s"}`}
     </button>
   );
+
+  if (creating) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Create your own exercise"
+        description="Pick how you’ll log it"
+        footer={footer}
+        className="h-[90dvh]"
+      >
+        <CustomExerciseForm
+          initialName={customName}
+          actionLabel={isReplace ? "Use this exercise" : "Add to picks"}
+          canSubmit={isReplace || picked.length < room}
+          pastCustom={pastCustom}
+          onSubmit={addCustom}
+          onCancel={() => setCreating(false)}
+        />
+      </BottomSheet>
+    );
+  }
 
   return (
     <BottomSheet
@@ -213,6 +243,25 @@ export function ExerciseSearchSheet({
         </p>
       ) : null}
       <ul className="flex flex-col gap-1 px-4 pb-4">
+        <li>
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className={cn(
+              "flex min-h-14 w-full items-center gap-3 rounded-xl border border-dashed px-3 text-left text-[15px] font-medium",
+              results.length === 0
+                ? "border-emerald-700 bg-emerald-50 text-emerald-900 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-200"
+                : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900",
+            )}
+          >
+            <Plus className="size-4 shrink-0" aria-hidden />
+            <span className="min-w-0">
+              {customName
+                ? `Create “${customName}” as your own exercise`
+                : "Create your own exercise"}
+            </span>
+          </button>
+        </li>
         {results.map((exercise) => {
           const index = pickedIndex(exercise);
           const isPicked = index >= 0;
@@ -263,19 +312,8 @@ export function ExerciseSearchSheet({
         })}
         {results.length === 0 ? (
           <li className="px-3 py-6 text-center text-sm text-zinc-500">
-            No matches{customName ? ` for “${customName}”` : ""}.
-          </li>
-        ) : null}
-        {customName ? (
-          <li>
-            <button
-              type="button"
-              onClick={addCustom}
-              className="mt-1 flex min-h-12 w-full items-center gap-2 rounded-xl border border-dashed border-zinc-300 px-3 text-left text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            >
-              <Plus className="size-4" aria-hidden />
-              {isReplace ? "Use" : "Add"} “{customName}” as a custom exercise
-            </button>
+            No matches{customName ? ` for “${customName}”` : ""}. Create it
+            above.
           </li>
         ) : null}
       </ul>

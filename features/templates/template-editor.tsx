@@ -24,7 +24,10 @@ import {
   type PlanLine,
   type WorkoutPlanDoc,
 } from "@/lib/workout-types";
-import { recentExercises } from "@/features/workout-session/exercise-suggestions";
+import {
+  customExercisesFromSessions,
+  recentExercises,
+} from "@/features/workout-session/exercise-suggestions";
 import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-sheet";
 import { TemplateLineRow } from "@/features/templates/template-line-row";
 import {
@@ -73,6 +76,7 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
   const [searchFor, setSearchFor] = useState<SearchTarget | null>(null);
   const [searchKey, setSearchKey] = useState(0);
   const [recent, setRecent] = useState<CatalogExercise[]>([]);
+  const [pastCustom, setPastCustom] = useState<CatalogExercise[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,7 +104,9 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
     void getRecentCompletedSessions(30)
       .catch(() => [])
       .then((sessions) => {
-        if (!cancelled) setRecent(recentExercises(sessions));
+        if (cancelled) return;
+        setRecent(recentExercises(sessions));
+        setPastCustom(customExercisesFromSessions(sessions));
       });
     return () => {
       cancelled = true;
@@ -439,6 +445,7 @@ export function TemplateEditor({ planId, initialPlan }: TemplateEditorProps) {
         }
         suggested={recent}
         recent={recent}
+        pastCustom={pastCustom}
         onAdd={addExercises}
         onReplace={pickAlternate}
       />

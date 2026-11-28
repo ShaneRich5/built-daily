@@ -2,6 +2,7 @@ import {
   getCatalogExerciseById,
   type CatalogExercise,
 } from "@/lib/exercise-catalog";
+import { pastCustomExercises } from "@/lib/custom-exercise";
 import type { SavedWorkoutSession } from "@/lib/workout-session-repository";
 import type { SessionLine } from "@/lib/workout-types";
 
@@ -31,6 +32,15 @@ export function recentExercises(
     }
   }
   return out;
+}
+
+/** Custom exercises from recent workouts (newest first), one per name. */
+export function customExercisesFromSessions(
+  sessions: SavedWorkoutSession[],
+): CatalogExercise[] {
+  return pastCustomExercises(
+    sessions.flatMap(({ session }) => session.lines.map(exerciseFromLine)),
+  );
 }
 
 /**
