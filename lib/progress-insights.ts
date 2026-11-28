@@ -1,4 +1,5 @@
 import { startOfWeekDateKey } from "@/lib/calendar-views";
+import { getCatalogExerciseById } from "@/lib/exercise-catalog";
 import {
   activityByDayFromSessions,
   shiftLocalDateKey,
@@ -437,6 +438,9 @@ export function computeProgressStats(
       if (prev) prev.n += 1;
       else
         exerciseCounts.set(line.exerciseId, { name: line.nameSnapshot, n: 1 });
+      // Warm-ups have no muscle group, so they can't be your "favorite" one.
+      if (getCatalogExerciseById(line.exerciseId)?.category === "warmup")
+        continue;
       const mg = muscleGroupForExercise(line.exerciseId, line.nameSnapshot);
       muscleCounts.set(mg, (muscleCounts.get(mg) ?? 0) + 1);
     }

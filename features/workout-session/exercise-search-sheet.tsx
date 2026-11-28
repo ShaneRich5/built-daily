@@ -8,6 +8,7 @@ import {
   EXERCISE_CATALOG,
   filterCatalogByMuscle,
   filterCatalogExercises,
+  filterWarmups,
   type CatalogExercise,
 } from "@/lib/exercise-catalog";
 import {
@@ -25,7 +26,7 @@ export type ExerciseSearchMode =
   /** Pick one stand-in for a template line (it goes back through `onReplace`). */
   | { kind: "alternate"; forName: string };
 
-type Filter = "suggested" | "recent" | "all" | MuscleGroup;
+type Filter = "suggested" | "recent" | "all" | "warmup" | MuscleGroup;
 
 type ExerciseSearchSheetProps = {
   open: boolean;
@@ -41,7 +42,10 @@ type ExerciseSearchSheetProps = {
 
 function exerciseMeta(exercise: CatalogExercise): string {
   const { primary, secondary } = targetingForExercise(exercise);
-  const muscles = muscleTargetSummary(primary, secondary);
+  const muscles =
+    exercise.category === "warmup"
+      ? "Warm-up"
+      : muscleTargetSummary(primary, secondary);
   return muscles
     ? `${muscles} · ${metricLabel(exercise.metric)}`
     : metricLabel(exercise.metric);
@@ -75,6 +79,7 @@ export function ExerciseSearchSheet({
       : []),
     ...(recent.length > 0 ? [{ id: "recent" as const, label: "Recent" }] : []),
     { id: "all", label: "All" },
+    { id: "warmup" as const, label: "Warm-up" },
     ...CATALOG_MUSCLE_FILTERS,
   ];
 
@@ -85,6 +90,7 @@ export function ExerciseSearchSheet({
     else if (filter === "suggested") base = suggested;
     else if (filter === "recent") base = recent;
     else base = EXERCISE_CATALOG;
+    if (filter === "warmup") return filterWarmups(base);
     const group =
       filter === "suggested" || filter === "recent" || filter === "all"
         ? null

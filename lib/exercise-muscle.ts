@@ -51,8 +51,9 @@ export function muscleGroupForExercise(
   exerciseId: string,
   nameSnapshot: string,
 ): MuscleGroup {
-  const fromCatalog = getCatalogExerciseById(exerciseId)?.primary;
-  if (fromCatalog) return fromCatalog;
+  const catalog = getCatalogExerciseById(exerciseId);
+  if (catalog?.category === "warmup") return "other";
+  if (catalog?.primary) return catalog.primary;
   for (const { re, group } of NAME_HINTS) {
     if (re.test(nameSnapshot) || re.test(exerciseId)) return group;
   }
@@ -123,6 +124,8 @@ export function targetingForExercise(exercise: TargetedExercise): {
   secondary?: MuscleGroup[];
 } {
   const catalog = getCatalogExerciseById(exercise.id);
+  // Name hints would read "Leg swings" as a leg exercise.
+  if (catalog?.category === "warmup") return {};
   const primary = catalog?.primary ?? exercise.primary;
   const secondary = catalog?.secondary ?? exercise.secondary;
   if (primary && primary !== "other") {

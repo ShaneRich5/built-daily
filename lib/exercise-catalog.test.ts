@@ -6,6 +6,10 @@ import {
   getCatalogExerciseById,
   resolveCatalogExercises,
 } from "@/lib/exercise-catalog";
+import {
+  muscleGroupForExercise,
+  targetingForExercise,
+} from "@/lib/exercise-muscle";
 import { firestoreToWorkoutSessionDoc } from "@/lib/workout-session-mapper";
 
 describe("merged hip machines", () => {
@@ -54,5 +58,28 @@ describe("merged hip machines", () => {
       exerciseId: "hip-adduction-machine",
       nameSnapshot: "Hip adduction machine",
     });
+  });
+});
+
+describe("warm-up exercises", () => {
+  it("tags warm-ups with a category and no muscle group", () => {
+    const warmups = EXERCISE_CATALOG.filter((e) => e.category === "warmup");
+    expect(warmups.length).toBeGreaterThanOrEqual(8);
+    for (const exercise of warmups) expect(exercise.primary).toBeUndefined();
+    expect(warmups.map((e) => e.id)).toContain("dynamic-stretching");
+  });
+
+  it("is found by searching warm-up or mobility", () => {
+    expect(filterCatalogExercises("warm-up").map((e) => e.id)).toContain(
+      "foam-rolling",
+    );
+    expect(filterCatalogExercises("mobility").length).toBeGreaterThan(0);
+  });
+
+  it("keeps warm-ups out of muscle scores and out of muscle inference", () => {
+    expect(muscleGroupForExercise("leg-swings", "Leg swings")).toBe("other");
+    expect(
+      targetingForExercise({ id: "leg-swings", name: "Leg swings" }),
+    ).toEqual({});
   });
 });

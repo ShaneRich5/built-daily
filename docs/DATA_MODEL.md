@@ -525,6 +525,8 @@ Defined in [`lib/exercise-catalog.ts`](../lib/exercise-catalog.ts). Not stored i
 
 Muscle tags live on the catalog, not on persisted session lines. [`lib/exercise-muscle.ts`](../lib/exercise-muscle.ts) resolves a group from catalog `primary`, then name hints, else `"other"`.
 
+Warm-up / mobility moves carry `category: "warmup"` and no `primary`. The muscle helpers treat them as `"other"` with no targeting (no name-hint guessing), and the "favorite muscle" stat skips them. Nothing new is stored on session lines.
+
 ### `ExerciseMetric`
 
 | Value             | Meaning                                                       |

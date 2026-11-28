@@ -3,6 +3,12 @@ import type { MuscleGroup } from "@/lib/progress-types";
 export type ExerciseMetric =
   "weight_reps" | "bodyweight_reps" | "duration" | "cardio";
 
+/**
+ * Optional tag for moves that are not strength work. Warm-ups have no muscle
+ * group, so they never count toward muscle scores or "favorite muscle".
+ */
+export type ExerciseCategory = "warmup";
+
 export type CatalogExercise = {
   id: string;
   name: string;
@@ -11,6 +17,8 @@ export type CatalogExercise = {
   primary?: MuscleGroup;
   /** Other groups that work as helpers. */
   secondary?: MuscleGroup[];
+  /** Set on warm-up / mobility moves; most exercises leave it out. */
+  category?: ExerciseCategory;
 };
 
 /**
@@ -27,6 +35,15 @@ function ex(
   return secondary && secondary.length > 0
     ? { id, name, metric, primary, secondary }
     : { id, name, metric, primary };
+}
+
+/** Warm-up / mobility entry: no muscle group, tagged so it gets its own filter. */
+function warmup(
+  id: string,
+  name: string,
+  metric: ExerciseMetric,
+): CatalogExercise {
+  return { id, name, metric, category: "warmup" };
 }
 
 export const EXERCISE_CATALOG: CatalogExercise[] = [
@@ -350,6 +367,21 @@ export const EXERCISE_CATALOG: CatalogExercise[] = [
   ex("sled-push", "Sled push", "weight_reps", "legs", ["core", "shoulders"]),
   ex("farmer-carry", "Farmer carry", "weight_reps", "legs", ["core", "arms"]),
 
+  // —— Warm-up / mobility ——
+  warmup("dynamic-stretching", "Dynamic stretching", "duration"),
+  warmup("foam-rolling", "Foam rolling", "duration"),
+  warmup("jumping-jacks", "Jumping jacks", "duration"),
+  warmup("jump-rope", "Jump rope", "duration"),
+  warmup("arm-circles", "Arm circles", "duration"),
+  warmup("hip-circles", "Hip circles", "duration"),
+  warmup("leg-swings", "Leg swings", "bodyweight_reps"),
+  warmup("cat-cow", "Cat-cow", "bodyweight_reps"),
+  warmup(
+    "worlds-greatest-stretch",
+    "World's greatest stretch",
+    "bodyweight_reps",
+  ),
+
   // —— Cardio machines ——
   ex("treadmill", "Treadmill", "cardio", "cardio"),
   ex("elliptical", "Elliptical", "cardio", "cardio"),
@@ -421,8 +453,22 @@ export function filterCatalogExercises(query: string): CatalogExercise[] {
       item.name.toLowerCase().includes(q) ||
       item.id.toLowerCase().includes(q) ||
       retiredIdMatchesQuery(item, q) ||
-      targetingMatchesQuery(item, q),
+      targetingMatchesQuery(item, q) ||
+      warmupMatchesQuery(item, q),
   );
+}
+
+/** "warm", "warm-up", "warmup" and "mobility" find the warm-up moves. */
+function warmupMatchesQuery(exercise: CatalogExercise, q: string): boolean {
+  return (
+    exercise.category === "warmup" &&
+    q.length >= 3 &&
+    ["warm-up", "warmup", "warm up", "mobility"].some((w) => w.startsWith(q))
+  );
+}
+
+export function filterWarmups(exercises: CatalogExercise[]): CatalogExercise[] {
+  return exercises.filter((exercise) => exercise.category === "warmup");
 }
 
 /**
