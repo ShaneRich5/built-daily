@@ -443,9 +443,10 @@ export function filterCatalogByMuscle(
   return [...primary, ...helper];
 }
 
-/** Ad-hoc exercise for a live session or template line (bodyweight-style logging). */
+/** Ad-hoc exercise for a live session or template line; `metric` is how it is logged. */
 export function catalogExerciseFromCustomName(
   name: string,
+  metric: ExerciseMetric = "weight_reps",
 ): CatalogExercise | null {
   const trimmed = name.trim().slice(0, 200);
   if (!trimmed) return null;
@@ -453,11 +454,7 @@ export function catalogExerciseFromCustomName(
     typeof crypto !== "undefined" && crypto.randomUUID
       ? `custom-${crypto.randomUUID()}`
       : `custom-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  return {
-    id,
-    name: trimmed,
-    metric: "bodyweight_reps",
-  };
+  return { id, name: trimmed, metric };
 }
 
 export function resolveCatalogExercises(ids: string[]): CatalogExercise[] {

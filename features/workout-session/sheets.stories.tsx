@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
+import type { CatalogExercise } from "@/lib/exercise-catalog";
 import { ExerciseDetailsSheet } from "@/features/workout-session/exercise-details-sheet";
 import { ExerciseSearchSheet } from "@/features/workout-session/exercise-search-sheet";
 import { MoveExerciseSheet } from "@/features/workout-session/move-exercise-sheet";
@@ -35,6 +36,12 @@ function Reopen({ onClick }: { onClick: () => void }) {
   );
 }
 
+/** Custom exercises from earlier workouts: they show up when you search by name. */
+const pastCustom: CatalogExercise[] = [
+  { id: "custom-dynamic-stretch", name: "Dynamic stretch", metric: "duration" },
+  { id: "custom-goblet-squat", name: "Goblet squat", metric: "weight_reps" },
+];
+
 export const AddExercises: Story = {
   name: "Search & add (multi-pick)",
   render: function Render() {
@@ -48,8 +55,35 @@ export const AddExercises: Story = {
           mode={{ kind: "add", afterName: "Cable chest fly", room: 36 }}
           suggested={suggested}
           recent={suggested}
+          pastCustom={pastCustom}
           onAdd={(picked) => {
             alert(`Add: ${picked.map((p) => p.name).join(", ")}`);
+            setOpen(false);
+          }}
+          onReplace={() => {}}
+        />
+      </>
+    );
+  },
+};
+
+export const CreateOwnExercise: Story = {
+  name: "Search · create your own (no past customs)",
+  render: function Render() {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        <Reopen onClick={() => setOpen(true)} />
+        <ExerciseSearchSheet
+          open={open}
+          onOpenChange={setOpen}
+          mode={{ kind: "add", afterName: null, room: 36 }}
+          suggested={[]}
+          recent={[]}
+          onAdd={(picked) => {
+            alert(
+              `Add: ${picked.map((p) => `${p.name} (${p.metric})`).join(", ")}`,
+            );
             setOpen(false);
           }}
           onReplace={() => {}}
@@ -72,6 +106,7 @@ export const ChangeExercise: Story = {
           mode={{ kind: "replace", currentName: "Cable chest fly" }}
           suggested={suggested}
           recent={[]}
+          pastCustom={pastCustom}
           onAdd={() => {}}
           onReplace={(exercise) => {
             alert(`Replace with ${exercise.name}`);

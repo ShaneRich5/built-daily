@@ -8,6 +8,7 @@ import {
   type SavedWorkoutSession,
 } from "@/lib/workout-session-repository";
 import {
+  customExercisesFromSessions,
   recentExercises,
   suggestNextExercises,
 } from "@/features/workout-session/exercise-suggestions";
@@ -140,6 +141,10 @@ export function useWorkoutSession(
     () => recentExercises(recent.sessions),
     [recent.sessions],
   );
+  const pastCustom = useMemo(
+    () => customExercisesFromSessions(recent.sessions),
+    [recent.sessions],
+  );
   // The search sheet's "Suggested" tab: next-up picks first, topped up with recent ones.
   const suggestedForSearch = useMemo(() => {
     const inWorkout = new Set(catalogExercises.map((exercise) => exercise.id));
@@ -168,6 +173,7 @@ export function useWorkoutSession(
     suggestions,
     suggestedForSearch,
     recentExercises: recent12,
+    pastCustomExercises: pastCustom,
   };
 }
 
